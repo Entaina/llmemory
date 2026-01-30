@@ -16,7 +16,7 @@ module Llmemory
       end
 
       def invoke(prompt)
-        response = connection.post("/v1/messages") do |req|
+        response = connection.post("v1/messages") do |req|
           req.body = {
             model: @model,
             max_tokens: 1024,

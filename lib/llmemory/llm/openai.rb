@@ -16,7 +16,7 @@ module Llmemory
       end
 
       def invoke(prompt)
-        response = connection.post("/chat/completions") do |req|
+        response = connection.post("chat/completions") do |req|
           req.body = {
             model: @model,
             messages: [{ role: "user", content: prompt }],
