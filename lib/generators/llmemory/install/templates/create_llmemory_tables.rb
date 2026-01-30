@@ -35,5 +35,39 @@ class CreateLlmemoryTables < ActiveRecord::Migration[7.0]
       t.timestamps
     end
     add_index :llmemory_checkpoints, [:user_id, :session_id], unique: true
+
+    # Graph-based long-term memory (nodes = entities)
+    create_table :llmemory_nodes do |t|
+      t.string :user_id, null: false
+      t.string :entity_type, null: false
+      t.string :name, null: false
+      t.jsonb :properties, default: {}
+      t.timestamps
+    end
+    add_index :llmemory_nodes, [:user_id, :entity_type, :name], unique: true
+
+    # Graph-based long-term memory (edges = SPO relations)
+    create_table :llmemory_edges do |t|
+      t.string :user_id, null: false
+      t.references :subject, null: false, foreign_key: { to_table: :llmemory_nodes }
+      t.string :predicate, null: false
+      t.references :object, null: false, foreign_key: { to_table: :llmemory_nodes }
+      t.jsonb :properties, default: {}
+      t.datetime :archived_at
+      t.timestamps
+    end
+    add_index :llmemory_edges, [:user_id, :subject_id, :predicate]
+
+    # Vector store for hybrid retrieval (requires pgvector extension)
+    enable_extension "vector"
+    create_table :llmemory_embeddings do |t|
+      t.string :user_id, null: false
+      t.string :source_type, null: false
+      t.string :source_id, null: false
+      t.vector :embedding, limit: 1536
+      t.text :text_content
+      t.timestamps
+    end
+    add_index :llmemory_embeddings, [:user_id, :source_type, :source_id], unique: true
   end
 end

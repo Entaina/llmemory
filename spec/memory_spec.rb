@@ -100,4 +100,25 @@ RSpec.describe Llmemory::Memory do
       expect(memory.user_id).to eq(user_id)
     end
   end
+
+  describe "long_term_type: :graph_based" do
+    it "uses graph-based long-term memory when long_term_type is :graph_based" do
+      long_term = described_class.new(user_id: user_id, session_id: session_id, long_term_type: :graph_based).instance_variable_get(:@long_term)
+      expect(long_term).to be_a(Llmemory::LongTerm::GraphBased::Memory)
+    end
+
+    it "retrieve works with graph-based long-term (mocked)" do
+      graph_long_term = double("GraphBased::Memory").tap do |lt|
+        allow(lt).to receive(:search_candidates).with(anything, user_id: user_id, top_k: 20).and_return([
+          { text: "User works_at OpenAI", timestamp: Time.now, score: 0.9 }
+        ])
+        allow(lt).to receive(:user_id).and_return(user_id)
+      end
+      retrieval_engine = Llmemory::Retrieval::Engine.new(graph_long_term)
+      memory = described_class.new(user_id: user_id, session_id: session_id, long_term: graph_long_term, retrieval_engine: retrieval_engine)
+      memory.add_message(role: :user, content: "Hi")
+      context = memory.retrieve("where does user work", max_tokens: 500)
+      expect(context).to include("User works_at OpenAI")
+    end
+  end
 end

@@ -9,11 +9,11 @@ module Llmemory
     DEFAULT_SESSION_ID = "default"
     STATE_KEY_MESSAGES = :messages
 
-    def initialize(user_id:, session_id: DEFAULT_SESSION_ID, checkpoint: nil, long_term: nil, retrieval_engine: nil)
+    def initialize(user_id:, session_id: DEFAULT_SESSION_ID, checkpoint: nil, long_term: nil, long_term_type: :file_based, retrieval_engine: nil)
       @user_id = user_id
       @session_id = session_id
       @checkpoint = checkpoint || ShortTerm::Checkpoint.new(user_id: user_id, session_id: session_id)
-      @long_term = long_term || LongTerm::FileBased::Memory.new(user_id: user_id, storage: LongTerm::FileBased::Storages.build)
+      @long_term = long_term || build_long_term(long_term_type)
       @retrieval_engine = retrieval_engine || Retrieval::Engine.new(@long_term)
     end
 
@@ -55,6 +55,18 @@ module Llmemory
     end
 
     private
+
+    def build_long_term(long_term_type)
+      case long_term_type.to_s.to_sym
+      when :graph_based
+        LongTerm::GraphBased::Memory.new(
+          user_id: @user_id,
+          storage: LongTerm::GraphBased::Storages.build
+        )
+      else
+        LongTerm::FileBased::Memory.new(user_id: @user_id, storage: LongTerm::FileBased::Storages.build)
+      end
+    end
 
     def save_state(messages:)
       @checkpoint.save_state(STATE_KEY_MESSAGES => messages)
