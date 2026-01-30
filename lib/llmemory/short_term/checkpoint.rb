@@ -35,6 +35,9 @@ module Llmemory
         when :memory then Stores::MemoryStore.new
         when :redis then Stores::RedisStore.new
         when :postgres then Stores::PostgresStore.new
+        when :active_record, :activerecord
+          require_relative "stores/active_record_store"
+          Stores::ActiveRecordStore.new
         else
           Stores::MemoryStore.new
         end

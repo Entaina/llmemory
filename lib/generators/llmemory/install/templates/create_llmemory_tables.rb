@@ -27,5 +27,13 @@ class CreateLlmemoryTables < ActiveRecord::Migration[7.0]
       t.datetime :updated_at, null: false
     end
     add_index :llmemory_categories, [:user_id, :category_name], unique: true
+
+    create_table :llmemory_checkpoints do |t|
+      t.string :user_id, null: false
+      t.string :session_id, null: false
+      t.jsonb :state, null: false, default: {}
+      t.timestamps
+    end
+    add_index :llmemory_checkpoints, [:user_id, :session_id], unique: true
   end
 end

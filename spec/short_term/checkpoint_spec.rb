@@ -29,4 +29,14 @@ RSpec.describe Llmemory::ShortTerm::Checkpoint do
       expect(checkpoint.restore_state).to be_nil
     end
   end
+
+  describe "with ActiveRecordStore", skip: (defined?(ActiveRecord) ? false : "ActiveRecord not in bundle") do
+    it "builds ActiveRecordStore when short_term_store is :active_record" do
+      Llmemory.configure { |c| c.short_term_store = :active_record }
+      cp = described_class.new(user_id: user_id)
+      expect(cp.send(:build_store)).to be_a(Llmemory::ShortTerm::Stores::ActiveRecordStore)
+    ensure
+      Llmemory.reset_configuration!
+    end
+  end
 end

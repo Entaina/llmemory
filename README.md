@@ -46,9 +46,9 @@ Llmemory.configure do |config|
   config.llm_provider = :openai
   config.llm_api_key = ENV["OPENAI_API_KEY"]
   config.llm_model = "gpt-4"
-  config.short_term_store = :redis
-  config.redis_url = ENV["REDIS_URL"]
-  config.long_term_store = :memory  # or :file or :postgres
+  config.short_term_store = :memory  # or :redis, :postgres, :active_record
+  config.redis_url = ENV["REDIS_URL"]  # for :redis
+  config.long_term_store = :memory  # or :file, :postgres, :active_record
   config.long_term_storage_path = "./llmemory_data"  # for :file
   config.database_url = ENV["DATABASE_URL"]          # for :postgres
   config.time_decay_half_life_days = 30
@@ -77,10 +77,13 @@ rails g llmemory:install
 rails db:migrate
 ```
 
+La migración crea las tablas de long-term (resources, items, categories) y la de short-term (checkpoints). Para usar ambas con ActiveRecord:
+
 ```ruby
 # config/application.rb o config/initializers/llmemory.rb
 Llmemory.configure do |config|
-  config.long_term_store = :active_record
+  config.short_term_store = :active_record   # historial de conversación en DB
+  config.long_term_store = :active_record    # hechos extraídos en DB
   # ... llm, etc.
 end
 ```
