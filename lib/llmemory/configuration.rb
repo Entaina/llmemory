@@ -8,6 +8,7 @@ module Llmemory
                   :llm_base_url,
                   :short_term_store,
                   :redis_url,
+                  :long_term_type,
                   :long_term_store,
                   :long_term_storage_path,
                   :database_url,
@@ -23,6 +24,7 @@ module Llmemory
       @llm_base_url = nil
       @short_term_store = :memory
       @redis_url = ENV["REDIS_URL"] || "redis://localhost:6379/0"
+      @long_term_type = :file_based
       @long_term_store = :memory
       @long_term_storage_path = ENV["LLMEMORY_STORAGE_PATH"] || "./llmemory_data"
       @database_url = ENV["DATABASE_URL"]

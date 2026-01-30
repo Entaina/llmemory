@@ -1,6 +1,6 @@
 # llmemory
 
-Persistent memory system for LLM agents. Implements short-term checkpointing, long-term file-based memory, retrieval with time decay, and maintenance jobs.
+Persistent memory system for LLM agents. Implements short-term checkpointing, long-term memory (file-based or **graph-based**), retrieval with time decay, and maintenance jobs.
 
 ## Installation
 
@@ -17,7 +17,11 @@ Then run `bundle install`.
 The recommended way to use llmemory in a chat is the unified `Llmemory::Memory` API. It abstracts short-term (conversation history) and long-term (extracted facts) and combines retrieval from both:
 
 ```ruby
+# File-based long-term (default): facts and categories
 memory = Llmemory::Memory.new(user_id: "user_123", session_id: "conv_456")
+
+# Or graph-based long-term: entities and relations (knowledge graph + vector search)
+memory = Llmemory::Memory.new(user_id: "user_123", session_id: "conv_456", long_term_type: :graph_based)
 
 # Add user and assistant messages
 memory.add_message(role: :user, content: "Soy vegano y trabajo en OpenAI")
@@ -48,6 +52,7 @@ Llmemory.configure do |config|
   config.llm_model = "gpt-4"
   config.short_term_store = :memory  # or :redis, :postgres, :active_record
   config.redis_url = ENV["REDIS_URL"]  # for :redis
+  config.long_term_type = :file_based  # or :graph_based (entities + relations)
   config.long_term_store = :memory  # or :file, :postgres, :active_record
   config.long_term_storage_path = "./llmemory_data"  # for :file
   config.database_url = ENV["DATABASE_URL"]          # for :postgres
@@ -70,6 +75,8 @@ Long-term memory can use different backends:
 
 Set `config.long_term_store = :file`, `:postgres` or `:active_record` so that `Llmemory::Memory` and `FileBased::Memory` use it when no `storage:` is passed.
 
+**Long-term type:** use `long_term_type: :graph_based` in `Llmemory::Memory.new(...)` for entity/relation memory (knowledge graph + hybrid retrieval). See [Long-Term Memory (Graph-Based)](#long-term-memory-graph-based) below.
+
 **Rails (ActiveRecord):** añade `activerecord` a tu Gemfile si no está. Luego:
 
 ```bash
@@ -77,7 +84,7 @@ rails g llmemory:install
 rails db:migrate
 ```
 
-La migración crea las tablas de long-term (resources, items, categories) y la de short-term (checkpoints). Para usar ambas con ActiveRecord:
+La migración crea las tablas de long-term file-based (resources, items, categories), short-term (checkpoints) y, para graph-based, nodos, aristas y embeddings (`llmemory_nodes`, `llmemory_edges`, `llmemory_embeddings`). Para embeddings se usa pgvector; asegúrate de tener la extensión `vector` en PostgreSQL. Para usar ambas con ActiveRecord:
 
 ```ruby
 # config/application.rb o config/initializers/llmemory.rb
@@ -101,6 +108,51 @@ memory = Llmemory::LongTerm::FileBased::Memory.new(user_id: "u1", storage: stora
 storage = Llmemory::LongTerm::FileBased::Storages.build(store: :active_record)
 memory = Llmemory::LongTerm::FileBased::Memory.new(user_id: "u1", storage: storage)
 ```
+
+## Long-Term Memory (Graph-Based)
+
+When you need **entities and relations** (e.g. “User works_at OpenAI”, “User prefers Ruby”) instead of flat facts and categories, use graph-based long-term memory. It combines:
+
+- **Knowledge graph** — Nodes (entities) and edges (subject–predicate–object relations).
+- **Vector store** — Embeddings (e.g. OpenAI `text-embedding-3-small`) for semantic search.
+- **Hybrid retrieval** — Vector search + graph traversal from matched nodes, then merged and ranked.
+- **Conflict resolution** — Exclusive predicates (e.g. `works_at`, `lives_in`) archive previous values when a new one is stored.
+
+### Unified API with graph-based
+
+```ruby
+memory = Llmemory::Memory.new(
+  user_id: "user_123",
+  session_id: "conv_456",
+  long_term_type: :graph_based
+)
+memory.add_message(role: :user, content: "Trabajo en Acme y vivo en Madrid")
+memory.consolidate!
+context = memory.retrieve("¿Dónde trabaja el usuario?")
+```
+
+### Lower-level graph-based API
+
+```ruby
+storage = Llmemory::LongTerm::GraphBased::Storages.build(store: :memory)  # or :active_record
+vector_store = Llmemory::VectorStore::MemoryStore.new(
+  embedding_provider: Llmemory::VectorStore::OpenAIEmbeddings.new
+)
+memory = Llmemory::LongTerm::GraphBased::Memory.new(
+  user_id: "user_123",
+  storage: storage,
+  vector_store: vector_store
+)
+memory.memorize("User works at Acme. User lives in Madrid.")
+context = memory.retrieve("where does user work", top_k: 10)
+candidates = memory.search_candidates("job", top_k: 20)
+```
+
+- **`memorize(conversation_text)`** — LLM extracts entities and relations (SPO triplets), upserts nodes/edges, resolves conflicts, and stores relation text in the vector store.
+- **`retrieve(query, top_k:)`** — Hybrid search: vector similarity + graph traversal; returns formatted context string.
+- **`search_candidates(query, user_id:, top_k:)`** — Used by `Retrieval::Engine`; returns `[{ text:, timestamp:, score: }]`.
+
+**Graph storage:** `:memory` (in-memory) or `:active_record` (Rails). For ActiveRecord, run `rails g llmemory:install` and migrate; the migration creates `llmemory_nodes`, `llmemory_edges`, and `llmemory_embeddings` (pgvector). Enable the `vector` extension in PostgreSQL for embeddings.
 
 ## Lower-Level APIs
 
