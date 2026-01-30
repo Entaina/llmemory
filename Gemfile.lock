@@ -1,0 +1,84 @@
+PATH
+  remote: .
+  specs:
+    llmemory (0.1.0)
+      faraday (~> 2.0)
+
+GEM
+  remote: https://rubygems.org/
+  specs:
+    addressable (2.8.8)
+      public_suffix (>= 2.0.2, < 8.0)
+    bigdecimal (4.0.1)
+    connection_pool (3.0.2)
+    crack (1.0.1)
+      bigdecimal
+      rexml
+    diff-lcs (1.6.2)
+    faraday (2.14.0)
+      faraday-net_http (>= 2.0, < 3.5)
+      json
+      logger
+    faraday-net_http (3.4.2)
+      net-http (~> 0.5)
+    hashdiff (1.2.1)
+    json (2.18.0)
+    logger (1.7.0)
+    net-http (0.9.1)
+      uri (>= 0.11.1)
+    pg (1.6.3)
+    pg (1.6.3-aarch64-linux)
+    pg (1.6.3-aarch64-linux-musl)
+    pg (1.6.3-arm64-darwin)
+    pg (1.6.3-x86_64-darwin)
+    pg (1.6.3-x86_64-linux)
+    pg (1.6.3-x86_64-linux-musl)
+    pgvector (0.3.2)
+    public_suffix (7.0.2)
+    rake (13.3.1)
+    redis (5.4.1)
+      redis-client (>= 0.22.0)
+    redis-client (0.26.4)
+      connection_pool
+    rexml (3.4.4)
+    rspec (3.13.2)
+      rspec-core (~> 3.13.0)
+      rspec-expectations (~> 3.13.0)
+      rspec-mocks (~> 3.13.0)
+    rspec-core (3.13.6)
+      rspec-support (~> 3.13.0)
+    rspec-expectations (3.13.5)
+      diff-lcs (>= 1.2.0, < 2.0)
+      rspec-support (~> 3.13.0)
+    rspec-mocks (3.13.7)
+      diff-lcs (>= 1.2.0, < 2.0)
+      rspec-support (~> 3.13.0)
+    rspec-support (3.13.7)
+    uri (1.1.1)
+    vcr (6.4.0)
+    webmock (3.26.1)
+      addressable (>= 2.8.0)
+      crack (>= 0.3.2)
+      hashdiff (>= 0.4.0, < 2.0.0)
+
+PLATFORMS
+  aarch64-linux
+  aarch64-linux-musl
+  arm64-darwin
+  ruby
+  x86_64-darwin
+  x86_64-linux
+  x86_64-linux-musl
+
+DEPENDENCIES
+  llmemory!
+  pg (~> 1.5)
+  pgvector (~> 0.2)
+  rake (~> 13.0)
+  redis (~> 5.0)
+  rspec (~> 3.12)
+  vcr (~> 6.2)
+  webmock (~> 3.18)
+
+BUNDLED WITH
+   2.6.7

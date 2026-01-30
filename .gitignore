@@ -1,0 +1,25 @@
+# Bundler
+/.bundle
+/vendor/bundle
+
+# RSpec
+/spec/examples.txt
+/coverage
+
+# Gem
+*.gem
+/pkg
+
+# IDE
+.idea
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+.env.local
