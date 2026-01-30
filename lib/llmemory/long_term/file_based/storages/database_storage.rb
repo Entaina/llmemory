@@ -1,0 +1,231 @@
+# frozen_string_literal: true
+
+require "json"
+require "securerandom"
+require_relative "base"
+
+module Llmemory
+  module LongTerm
+    module FileBased
+      module Storages
+        class DatabaseStorage < Base
+          def initialize(database_url: nil)
+            @database_url = database_url || Llmemory.configuration.database_url
+            @connection = nil
+          end
+
+          def save_resource(user_id, text)
+            ensure_tables!
+            id = "res_#{SecureRandom.hex(8)}"
+            conn.exec_params(
+              "INSERT INTO llmemory_resources (id, user_id, text, created_at) VALUES ($1, $2, $3, $4)",
+              [id, user_id, text, Time.now.utc.iso8601]
+            )
+            id
+          end
+
+          def save_item(user_id, category:, content:, source_resource_id:)
+            ensure_tables!
+            id = "item_#{SecureRandom.hex(8)}"
+            conn.exec_params(
+              "INSERT INTO llmemory_items (id, user_id, category, content, source_resource_id, created_at) VALUES ($1, $2, $3, $4, $5, $6)",
+              [id, user_id, category, content, source_resource_id, Time.now.utc.iso8601]
+            )
+            id
+          end
+
+          def load_category(user_id, category_name)
+            ensure_tables!
+            result = conn.exec_params(
+              "SELECT content FROM llmemory_categories WHERE user_id = $1 AND category_name = $2",
+              [user_id, category_name]
+            )
+            result.any? ? result.first["content"].to_s : ""
+          end
+
+          def save_category(user_id, category_name, content)
+            ensure_tables!
+            conn.exec_params(
+              <<~SQL,
+                INSERT INTO llmemory_categories (user_id, category_name, content, updated_at)
+                VALUES ($1, $2, $3, $4)
+                ON CONFLICT (user_id, category_name)
+                DO UPDATE SET content = $3, updated_at = $4
+              SQL
+              [user_id, category_name, content, Time.now.utc.iso8601]
+            )
+            true
+          end
+
+          def list_categories(user_id)
+            ensure_tables!
+            conn.exec_params("SELECT category_name FROM llmemory_categories WHERE user_id = $1", [user_id])
+              .map { |r| r["category_name"] }
+          end
+
+          def search_items(user_id, query)
+            ensure_tables!
+            pattern = "%#{conn.escape_string(query.to_s.downcase)}%"
+            rows = conn.exec_params(
+              "SELECT id, category, content, source_resource_id, created_at FROM llmemory_items WHERE user_id = $1 AND LOWER(content) LIKE $2",
+              [user_id, pattern]
+            )
+            rows_to_items(rows)
+          end
+
+          def search_resources(user_id, query)
+            ensure_tables!
+            pattern = "%#{conn.escape_string(query.to_s.downcase)}%"
+            rows = conn.exec_params(
+              "SELECT id, text, created_at FROM llmemory_resources WHERE user_id = $1 AND LOWER(text) LIKE $2",
+              [user_id, pattern]
+            )
+            rows_to_resources(rows)
+          end
+
+          def get_resources_since(user_id, hours:)
+            ensure_tables!
+            cutoff = (Time.now - (hours * 3600)).utc.iso8601
+            rows = conn.exec_params(
+              "SELECT id, text, created_at FROM llmemory_resources WHERE user_id = $1 AND created_at >= $2 ORDER BY created_at",
+              [user_id, cutoff]
+            )
+            rows_to_resources(rows)
+          end
+
+          def get_items_older_than(user_id, days:)
+            ensure_tables!
+            cutoff = (Time.now - (days * 86400)).utc.iso8601
+            rows = conn.exec_params(
+              "SELECT id, category, content, source_resource_id, created_at FROM llmemory_items WHERE user_id = $1 AND created_at < $2 ORDER BY created_at",
+              [user_id, cutoff]
+            )
+            rows_to_items(rows)
+          end
+
+          def get_all_items(user_id)
+            ensure_tables!
+            rows = conn.exec_params(
+              "SELECT id, category, content, source_resource_id, created_at FROM llmemory_items WHERE user_id = $1 ORDER BY created_at",
+              [user_id]
+            )
+            rows_to_items(rows)
+          end
+
+          def get_all_resources(user_id)
+            ensure_tables!
+            rows = conn.exec_params(
+              "SELECT id, text, created_at FROM llmemory_resources WHERE user_id = $1 ORDER BY created_at",
+              [user_id]
+            )
+            rows_to_resources(rows)
+          end
+
+          def get_items_since(user_id, hours:)
+            ensure_tables!
+            cutoff = (Time.now - (hours * 3600)).utc.iso8601
+            rows = conn.exec_params(
+              "SELECT id, category, content, source_resource_id, created_at FROM llmemory_items WHERE user_id = $1 AND created_at >= $2 ORDER BY created_at",
+              [user_id, cutoff]
+            )
+            rows_to_items(rows)
+          end
+
+          def replace_items(user_id, ids_to_remove, merged_item)
+            ensure_tables!
+            ids_to_remove.each do |id|
+              conn.exec_params("DELETE FROM llmemory_items WHERE user_id = $1 AND id = $2", [user_id, id])
+            end
+            created_at = merged_item[:created_at] || Time.now
+            created_at = created_at.utc.iso8601 if created_at.respond_to?(:utc)
+            id = "item_#{SecureRandom.hex(8)}"
+            conn.exec_params(
+              "INSERT INTO llmemory_items (id, user_id, category, content, source_resource_id, created_at) VALUES ($1, $2, $3, $4, $5, $6)",
+              [
+                id,
+                user_id,
+                merged_item[:category],
+                merged_item[:content],
+                merged_item[:source_resource_id],
+                created_at
+              ]
+            )
+          end
+
+          def archive_items(user_id, item_ids)
+            ensure_tables!
+            item_ids.each { |id| conn.exec_params("DELETE FROM llmemory_items WHERE user_id = $1 AND id = $2", [user_id, id]) }
+          end
+
+          def archive_resources(user_id, resource_ids)
+            ensure_tables!
+            resource_ids.each { |id| conn.exec_params("DELETE FROM llmemory_resources WHERE user_id = $1 AND id = $2", [user_id, id]) }
+          end
+
+          private
+
+          def conn
+            @connection ||= begin
+              require "pg"
+              PG.connect(@database_url)
+            end
+          end
+
+          def ensure_tables!
+            conn.exec(<<~SQL)
+              CREATE TABLE IF NOT EXISTS llmemory_resources (
+                id TEXT NOT NULL PRIMARY KEY,
+                user_id TEXT NOT NULL,
+                text TEXT NOT NULL,
+                created_at TIMESTAMPTZ NOT NULL
+              );
+              CREATE INDEX IF NOT EXISTS idx_llmemory_resources_user_id ON llmemory_resources(user_id);
+            SQL
+            conn.exec(<<~SQL)
+              CREATE TABLE IF NOT EXISTS llmemory_items (
+                id TEXT NOT NULL PRIMARY KEY,
+                user_id TEXT NOT NULL,
+                category TEXT NOT NULL,
+                content TEXT NOT NULL,
+                source_resource_id TEXT,
+                created_at TIMESTAMPTZ NOT NULL
+              );
+              CREATE INDEX IF NOT EXISTS idx_llmemory_items_user_id ON llmemory_items(user_id);
+            SQL
+            conn.exec(<<~SQL)
+              CREATE TABLE IF NOT EXISTS llmemory_categories (
+                user_id TEXT NOT NULL,
+                category_name TEXT NOT NULL,
+                content TEXT NOT NULL,
+                updated_at TIMESTAMPTZ NOT NULL,
+                PRIMARY KEY (user_id, category_name)
+              );
+            SQL
+          end
+
+          def rows_to_items(rows)
+            rows.map do |r|
+              {
+                id: r["id"],
+                category: r["category"],
+                content: r["content"],
+                source_resource_id: r["source_resource_id"],
+                created_at: Time.parse(r["created_at"])
+              }
+            end
+          end
+
+          def rows_to_resources(rows)
+            rows.map do |r|
+              {
+                id: r["id"],
+                text: r["text"],
+                created_at: Time.parse(r["created_at"])
+              }
+            end
+          end
+        end
+      end
+    end
+  end
+end

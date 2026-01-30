@@ -11,7 +11,7 @@ module Llmemory
       class Memory
         def initialize(user_id:, storage: nil, llm: nil, extractor: nil)
           @user_id = user_id
-          @storage = storage || Storage.new
+          @storage = storage || Storages.build
           @llm = llm || Llmemory::LLM.client
           @extractor = extractor || Llmemory::Extractors::FactExtractor.new(llm: @llm)
         end

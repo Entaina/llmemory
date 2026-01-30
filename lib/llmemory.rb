@@ -8,6 +8,7 @@ require_relative "llmemory/long_term"
 require_relative "llmemory/retrieval"
 require_relative "llmemory/maintenance"
 require_relative "llmemory/extractors"
+require_relative "llmemory/memory"
 
 module Llmemory
   class Error < StandardError; end

@@ -9,6 +9,7 @@ module Llmemory
                   :short_term_store,
                   :redis_url,
                   :long_term_store,
+                  :long_term_storage_path,
                   :database_url,
                   :vector_store,
                   :time_decay_half_life_days,
@@ -23,6 +24,7 @@ module Llmemory
       @short_term_store = :memory
       @redis_url = ENV["REDIS_URL"] || "redis://localhost:6379/0"
       @long_term_store = :memory
+      @long_term_storage_path = ENV["LLMEMORY_STORAGE_PATH"] || "./llmemory_data"
       @database_url = ENV["DATABASE_URL"]
       @vector_store = nil
       @time_decay_half_life_days = 30

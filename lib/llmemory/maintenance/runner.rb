@@ -26,7 +26,7 @@ module Llmemory
         private
 
         def default_storage(user_id)
-          Llmemory::LongTerm::FileBased::Storage.new
+          Llmemory::LongTerm::FileBased::Storages.build
         end
       end
     end
