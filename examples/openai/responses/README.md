@@ -1,11 +1,20 @@
-# Ejemplo: Chat con OpenAI usando llmemory
+# Ejemplo: Chat con OpenAI Responses API
 
-Este ejemplo muestra cómo integrar **llmemory** con la API de Chat Completions de OpenAI para un chat que:
+Este ejemplo muestra cómo integrar **llmemory** con la nueva **Responses API** de OpenAI (`/v1/responses`) para un chat que:
 
 1. **Recibe el mensaje del usuario**
-2. **Recupera contexto** de la memoria (conversación reciente + hechos a largo plazo)
-3. **Llama a OpenAI** con ese contexto en el sistema y el historial en `messages`
+2. **Recupera contexto** de la memoria a largo plazo de llmemory
+3. **Llama a OpenAI Responses API** con gestión de estado automática
 4. **Guarda en memoria** tanto el mensaje del usuario como la respuesta del asistente
+
+## Responses API vs Chat Completions API
+
+La Responses API es la interfaz más reciente de OpenAI, diseñada para:
+
+- **Gestión de estado automática**: OpenAI mantiene el historial de conversación usando `previous_response_id`
+- **Interfaz simplificada**: `input` + `instructions` en lugar de un array de `messages`
+- **Herramientas integradas**: acceso a web search, file search, code interpreter, etc.
+- **Multi-turn sin enviar todo el historial**: cada llamada solo envía el nuevo mensaje
 
 ## Estructura
 
@@ -24,22 +33,17 @@ Usuario escribe mensaje
           │
           ▼
 ┌───────────────────┐
-│ memory.retrieve   │  Se obtiene contexto: conversación reciente + hechos
-│ (query, max_tokens)│  relevantes de memoria a largo plazo
+│ memory.retrieve   │  Se obtiene contexto de hechos relevantes
+│ (query, max_tokens)│  de la memoria a largo plazo de llmemory
 └─────────┬─────────┘
           │
           ▼
-┌───────────────────┐
-│ build_messages    │  Se construye el array de mensajes para OpenAI:
-│                   │  - system: instrucciones + contexto de memoria
-│                   │  - history: mensajes ya guardados (user/assistant)
-│                   │  - el nuevo mensaje del usuario ya está en history
-└─────────┬─────────┘
-          │
-          ▼
-┌───────────────────┐
-│ call_openai       │  POST /v1/chat/completions con messages y model
-└─────────┬─────────┘
+┌───────────────────────────────┐
+│ call_openai_responses         │  POST /v1/responses con:
+│                               │  - input: mensaje del usuario
+│                               │  - instructions: system prompt + contexto
+│                               │  - previous_response_id: para continuidad
+└─────────┬─────────────────────┘
           │
           ▼
 ┌───────────────────┐
@@ -76,9 +80,26 @@ chat = Examples::OpenAI::Responses::Chat.new(
 respuesta = chat.chat("¿Qué sabes de mis preferencias?")
 puts respuesta
 
+# La conversación continúa automáticamente gracias a previous_response_id
+respuesta2 = chat.chat("Cuéntame más sobre eso")
+puts respuesta2
+
+# Reiniciar el estado de conversación de OpenAI (pero llmemory mantiene el historial)
+chat.reset_conversation!
+
 # Opcional: consolidar la conversación en memoria a largo plazo
 chat.consolidate!
 ```
+
+## Parámetros clave de la Responses API
+
+| Parámetro | Descripción |
+|-----------|-------------|
+| `input` | El mensaje del usuario (string o array de items) |
+| `instructions` | System prompt con instrucciones y contexto |
+| `previous_response_id` | ID de la respuesta anterior para multi-turn |
+| `store` | Si OpenAI debe almacenar la respuesta (true para usar previous_response_id) |
+| `model` | El modelo a usar (ej: `gpt-4o-mini`, `gpt-4o`) |
 
 ## Dependencias
 
@@ -86,4 +107,13 @@ chat.consolidate!
 - **faraday**: ya es dependencia de llmemory; el ejemplo lo usa para llamar a la API de OpenAI.
 - **OPENAI_API_KEY**: variable de entorno con tu API key de OpenAI.
 
-El ejemplo usa el modelo configurado en llmemory (por defecto `gpt-4o-mini` en el script). Puedes cambiarlo en `Llmemory.configure` o en la inicialización del ejemplo.
+## Diferencias con Chat Completions
+
+| Aspecto | Chat Completions | Responses API |
+|---------|------------------|---------------|
+| Endpoint | `/v1/chat/completions` | `/v1/responses` |
+| Historial | Enviar todos los `messages` cada vez | `previous_response_id` |
+| System prompt | Mensaje con `role: "system"` | Campo `instructions` |
+| Entrada usuario | Último mensaje en `messages` | Campo `input` |
+
+Si prefieres la API clásica de Chat Completions, consulta el ejemplo en `examples/openai/completions/`.

@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-# Ejemplo de chat con OpenAI usando la Responses API y llmemory para contexto.
-# Usa la API de Responses (/v1/responses) con gestión de estado automática.
-# Ejecutar desde la raíz de la gema: bundle exec ruby examples/openai/responses/chat.rb
+# Ejemplo de chat con OpenAI usando llmemory para contexto y persistencia.
+# Usa la API de Chat Completions (/v1/chat/completions).
+# Ejecutar desde la raíz de la gema: bundle exec ruby examples/openai/completions/chat.rb
 # Requiere OPENAI_API_KEY en el entorno.
 
 require "bundler/setup"
@@ -12,10 +12,8 @@ require "json"
 
 module Examples
   module OpenAI
-    module Responses
+    module Completions
       class Chat
-        attr_reader :previous_response_id
-
         def initialize(user_id: "default_user", session_id: "default_session")
           Llmemory.configure do |config|
             config.llm_provider = :openai
@@ -25,16 +23,16 @@ module Examples
           @memory = Llmemory::Memory.new(user_id: user_id, session_id: session_id)
           @model = Llmemory.configuration.llm_model
           @api_key = Llmemory.configuration.llm_api_key
-          @previous_response_id = nil
         end
 
-        # Recibe el mensaje del usuario, llama a OpenAI Responses API con el contexto de la memoria,
+        # Recibe el mensaje del usuario, llama a OpenAI con el contexto de la memoria,
         # guarda mensaje y respuesta en memoria y devuelve la respuesta del asistente.
         def chat(user_message)
           @memory.add_message(role: :user, content: user_message)
 
           context = @memory.retrieve(user_message, max_tokens: 2000)
-          response_content = call_openai_responses(user_message, context)
+          messages = build_messages(context, user_message)
+          response_content = call_openai(messages)
 
           @memory.add_message(role: :assistant, content: response_content)
           response_content
@@ -49,80 +47,55 @@ module Examples
           @memory.messages
         end
 
-        # Reinicia el estado de la conversación de la Responses API.
-        def reset_conversation!
-          @previous_response_id = nil
-        end
-
         private
 
-        def build_instructions(context)
-          if context.to_s.strip.empty?
+        def build_messages(context, new_user_message)
+          system_content = if context.to_s.strip.empty?
             "Eres un asistente útil. Mantén respuestas concisas cuando sea posible."
           else
-            <<~TEXT.strip
+            <<~TEXT
               Eres un asistente útil. Usa la siguiente información recordada del usuario para personalizar tu respuesta.
               Mantén respuestas concisas cuando sea posible.
 
               #{context}
             TEXT
           end
+
+          msgs = [{ role: "system", content: system_content.strip }]
+
+          history = @memory.messages
+          history.each do |m|
+            role = (m[:role] || m["role"]).to_s
+            content = (m[:content] || m["content"]).to_s
+            msgs << { role: role, content: content }
+          end
+
+          msgs
         end
 
-        def call_openai_responses(user_message, context)
+        def call_openai(messages)
           conn = Faraday.new(url: "https://api.openai.com/v1") do |f|
             f.request :json
             f.response :json
             f.adapter Faraday.default_adapter
           end
 
-          body = {
-            model: @model,
-            input: user_message,
-            instructions: build_instructions(context),
-            temperature: 0.7,
-            store: true # Necesario para usar previous_response_id
-          }
-
-          # Si hay una respuesta previa, usarla para continuidad de conversación
-          body[:previous_response_id] = @previous_response_id if @previous_response_id
-
-          response = conn.post("responses") do |req|
+          response = conn.post("chat/completions") do |req|
             req.headers["Authorization"] = "Bearer #{@api_key}"
             req.headers["Content-Type"] = "application/json"
-            req.body = body.to_json
+            req.body = {
+              model: @model,
+              messages: messages,
+              temperature: 0.7
+            }.to_json
           end
 
           unless response.success?
-            raise "OpenAI Responses API error: #{response.status} #{response.body}"
+            raise "OpenAI API error: #{response.status} #{response.body}"
           end
 
-          result = response.body.is_a?(Hash) ? response.body : JSON.parse(response.body.to_s)
-
-          # Guardar el response_id para la siguiente llamada (gestión de estado de OpenAI)
-          @previous_response_id = result["id"]
-
-          # Extraer el texto de la respuesta del output
-          extract_output_text(result)
-        end
-
-        def extract_output_text(result)
-          output = result["output"]
-          return "" unless output.is_a?(Array)
-
-          # Buscar el primer mensaje del asistente con contenido de texto
-          output.each do |item|
-            next unless item["type"] == "message" && item["role"] == "assistant"
-
-            content = item["content"]
-            next unless content.is_a?(Array)
-
-            content.each do |c|
-              return c["text"].strip if c["type"] == "output_text" && c["text"]
-            end
-          end
-
-          ""
+          body = response.body.is_a?(Hash) ? response.body : JSON.parse(response.body.to_s)
+          body.dig("choices", 0, "message", "content")&.strip || ""
         end
       end
     end
@@ -136,9 +109,9 @@ if __FILE__ == $PROGRAM_NAME
     exit 1
   end
 
-  chat = Examples::OpenAI::Responses::Chat.new(user_id: "demo", session_id: "cli")
+  chat = Examples::OpenAI::Completions::Chat.new(user_id: "demo", session_id: "cli")
 
-  puts "Chat con memoria (llmemory + OpenAI Responses API). Escribe mensajes y 'salir' para terminar.\n\n"
+  puts "Chat con memoria (llmemory + OpenAI Chat Completions API). Escribe mensajes y 'salir' para terminar.\n\n"
 
   loop do
     print "Tú: "
