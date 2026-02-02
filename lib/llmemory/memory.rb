@@ -9,13 +9,14 @@ module Llmemory
     DEFAULT_SESSION_ID = "default"
     STATE_KEY_MESSAGES = :messages
 
-    def initialize(user_id:, session_id: DEFAULT_SESSION_ID, checkpoint: nil, long_term: nil, long_term_type: nil, retrieval_engine: nil)
+    def initialize(user_id:, session_id: DEFAULT_SESSION_ID, checkpoint: nil, long_term: nil, long_term_type: nil, retrieval_engine: nil, api_key: nil)
       @user_id = user_id
       @session_id = session_id
       @checkpoint = checkpoint || ShortTerm::Checkpoint.new(user_id: user_id, session_id: session_id)
+      @llm = api_key.to_s.empty? ? nil : Llmemory::LLM.client(api_key: api_key)
       type = long_term_type || Llmemory.configuration.long_term_type || :file_based
       @long_term = long_term || build_long_term(type)
-      @retrieval_engine = retrieval_engine || Retrieval::Engine.new(@long_term)
+      @retrieval_engine = retrieval_engine || Retrieval::Engine.new(@long_term, llm: @llm)
     end
 
     def add_message(role:, content:)
@@ -58,14 +59,16 @@ module Llmemory
     private
 
     def build_long_term(long_term_type)
+      llm_opts = @llm ? { llm: @llm } : {}
       case long_term_type.to_s.to_sym
       when :graph_based
         LongTerm::GraphBased::Memory.new(
           user_id: @user_id,
-          storage: LongTerm::GraphBased::Storages.build
+          storage: LongTerm::GraphBased::Storages.build,
+          **llm_opts
         )
       else
-        LongTerm::FileBased::Memory.new(user_id: @user_id, storage: LongTerm::FileBased::Storages.build)
+        LongTerm::FileBased::Memory.new(user_id: @user_id, storage: LongTerm::FileBased::Storages.build, **llm_opts)
       end
     end
 

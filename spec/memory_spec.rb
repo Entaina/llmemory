@@ -101,6 +101,22 @@ RSpec.describe Llmemory::Memory do
     end
   end
 
+  describe "api_key" do
+    it "builds LLM client with the given API key and passes it to long-term and retrieval" do
+      llm_double = double("LLM")
+      expect(Llmemory::LLM).to receive(:client).with(api_key: "sk-custom-key").and_return(llm_double)
+      memory = described_class.new(user_id: user_id, session_id: session_id, api_key: "sk-custom-key")
+      expect(memory).to be_a(described_class)
+      long_term = memory.instance_variable_get(:@long_term)
+      expect(long_term.instance_variable_get(:@llm)).to eq(llm_double)
+    end
+
+    it "does not build a custom LLM client when api_key is nil" do
+      expect(Llmemory::LLM).not_to receive(:client).with(api_key: anything)
+      described_class.new(user_id: user_id, session_id: session_id)
+    end
+  end
+
   describe "long_term_type: :graph_based" do
     it "uses graph-based long-term memory when long_term_type is :graph_based" do
       long_term = described_class.new(user_id: user_id, session_id: session_id, long_term_type: :graph_based).instance_variable_get(:@long_term)
