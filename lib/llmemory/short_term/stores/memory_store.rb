@@ -26,6 +26,15 @@ module Llmemory
           true
         end
 
+        def list_users
+          @store.keys.map { |k| k.split(":", 2).first }.uniq
+        end
+
+        def list_sessions(user_id:)
+          prefix = "#{user_id}:"
+          @store.keys.select { |k| k.start_with?(prefix) }.map { |k| k.split(":", 2).last }
+        end
+
         private
 
         def key_for(user_id, session_id)

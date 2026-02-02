@@ -124,6 +124,27 @@ module Llmemory
             resource_ids.each { |id| File.delete(resource_path(user_id, id)) if File.file?(resource_path(user_id, id)) }
           end
 
+          def list_users
+            return [] unless Dir.exist?(@base_path)
+            Dir.children(@base_path).select { |e| File.directory?(File.join(@base_path, e)) && !e.start_with?(".") }
+          end
+
+          def list_resources(user_id:, limit: nil)
+            list = get_all_resources(user_id)
+            limit ? list.take(limit) : list
+          end
+
+          def list_items(user_id:, category: nil, limit: nil)
+            list = get_all_items(user_id)
+            list = list.select { |i| (i[:category] || i["category"]).to_s == category.to_s } if category
+            list = list.take(limit) if limit
+            list
+          end
+
+          def count_items(user_id:)
+            get_all_items(user_id).size
+          end
+
           private
 
           def user_path(user_id, *parts)

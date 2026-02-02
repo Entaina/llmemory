@@ -17,7 +17,7 @@ module Llmemory
             raise NotImplementedError, "#{self.class}#find_node_by_name must be implemented"
           end
 
-          def list_nodes(user_id)
+          def list_nodes(user_id, entity_type: nil, limit: nil)
             raise NotImplementedError, "#{self.class}#list_nodes must be implemented"
           end
 
@@ -31,6 +31,22 @@ module Llmemory
 
           def archive_edge(user_id, edge_id, archived_at: nil)
             raise NotImplementedError, "#{self.class}#archive_edge must be implemented"
+          end
+
+          def list_users
+            raise NotImplementedError, "#{self.class}#list_users must be implemented"
+          end
+
+          def list_edges(user_id, subject_id: nil, predicate: nil, limit: nil)
+            raise NotImplementedError, "#{self.class}#list_edges must be implemented"
+          end
+
+          def count_nodes(user_id)
+            raise NotImplementedError, "#{self.class}#count_nodes must be implemented"
+          end
+
+          def count_edges(user_id)
+            raise NotImplementedError, "#{self.class}#count_edges must be implemented"
           end
         end
       end

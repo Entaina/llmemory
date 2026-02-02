@@ -31,4 +31,36 @@ RSpec.describe Llmemory::LongTerm::FileBased::Storages::MemoryStorage do
     results = storage.search_items(user_id, "Python")
     expect(results.any? { |r| r[:content].include?("Python") }).to be true
   end
+
+  describe "inspection" do
+    it "list_users returns unique user ids" do
+      storage.save_resource("u1", "t1")
+      storage.save_item("u1", category: "c", content: "x", source_resource_id: "r1")
+      storage.save_category("u2", "cat", "content")
+      expect(storage.list_users.sort).to eq(%w[u1 u2])
+    end
+
+    it "list_resources respects limit" do
+      storage.save_resource(user_id, "a")
+      storage.save_resource(user_id, "b")
+      storage.save_resource(user_id, "c")
+      expect(storage.list_resources(user_id: user_id).size).to eq(3)
+      expect(storage.list_resources(user_id: user_id, limit: 2).size).to eq(2)
+    end
+
+    it "list_items filters by category and respects limit" do
+      storage.save_item(user_id, category: "work", content: "a", source_resource_id: "r1")
+      storage.save_item(user_id, category: "work", content: "b", source_resource_id: "r1")
+      storage.save_item(user_id, category: "life", content: "c", source_resource_id: "r1")
+      expect(storage.list_items(user_id: user_id).size).to eq(3)
+      expect(storage.list_items(user_id: user_id, category: "work").size).to eq(2)
+      expect(storage.list_items(user_id: user_id, limit: 2).size).to eq(2)
+    end
+
+    it "count_items returns item count" do
+      storage.save_item(user_id, category: "x", content: "a", source_resource_id: "r1")
+      storage.save_item(user_id, category: "x", content: "b", source_resource_id: "r1")
+      expect(storage.count_items(user_id: user_id)).to eq(2)
+    end
+  end
 end

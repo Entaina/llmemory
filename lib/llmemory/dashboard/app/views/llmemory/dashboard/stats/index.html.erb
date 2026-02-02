@@ -1,0 +1,32 @@
+<div class="card">
+  <h2>Stats: <%= @user_id %></h2>
+  <div class="stats-grid">
+    <div class="stat-box">
+      <div class="value"><%= @sessions.size %></div>
+      <div class="label">Short-term sessions</div>
+    </div>
+    <% if graph_based? %>
+      <div class="stat-box">
+        <div class="value"><%= @nodes_count %></div>
+        <div class="label">Nodes</div>
+      </div>
+      <div class="stat-box">
+        <div class="value"><%= @edges_count %></div>
+        <div class="label">Edges</div>
+      </div>
+    <% else %>
+      <div class="stat-box">
+        <div class="value"><%= @items_count %></div>
+        <div class="label">Items</div>
+      </div>
+      <div class="stat-box">
+        <div class="value"><%= @categories_count %></div>
+        <div class="label">Categories</div>
+      </div>
+      <div class="stat-box">
+        <div class="value"><%= @resources_count %></div>
+        <div class="label">Resources</div>
+      </div>
+    <% end %>
+  </div>
+</div>

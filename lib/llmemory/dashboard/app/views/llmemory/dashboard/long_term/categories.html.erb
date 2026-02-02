@@ -1,0 +1,12 @@
+<div class="card">
+  <h2>Categories: <%= @user_id %></h2>
+  <p><a href="<%= user_long_term_path(@user_id) %>">Back to long-term</a></p>
+  <% if @category_names.blank? %>
+    <p class="empty">No categories.</p>
+  <% else %>
+    <% @category_names.each do |name| %>
+      <h3><%= name %></h3>
+      <pre><%= ERB::Util.html_escape(@categories_content[name].to_s) %></pre>
+    <% end %>
+  <% end %>
+</div>

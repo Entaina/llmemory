@@ -26,6 +26,16 @@ module Llmemory
           true
         end
 
+        def list_users
+          keys = redis.keys("llmemory:checkpoint:*:*")
+          keys.map { |k| k.split(":")[2] }.uniq
+        end
+
+        def list_sessions(user_id:)
+          keys = redis.keys("llmemory:checkpoint:#{user_id}:*")
+          keys.map { |k| k.split(":", 4).last }
+        end
+
         private
 
         def redis

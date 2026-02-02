@@ -1,0 +1,43 @@
+<div class="card">
+  <h2>Search</h2>
+  <%= form_tag search_path, method: :get do %>
+    <%= text_field_tag :q, @query, placeholder: "Query" %>
+    <%= submit_tag "Search" %>
+  <% end %>
+  <% if @query.present? && @user_id.blank? %>
+    <p class="empty">Specify a user (e.g. add ?user_id=USER_ID to the URL) to search within that user's memory.</p>
+  <% end %>
+  <% if @query.present? && @user_id.present? %>
+    <h3>Short-term</h3>
+    <% if @short_term_results.blank? %>
+      <p class="empty">No matches.</p>
+    <% else %>
+      <% @short_term_results.each do |r| %>
+        <div class="message">
+          <strong>[<%= r[:session_id] %>] <%= r[:role] %>:</strong>
+          <%= truncate(r[:content], length: 200) %>
+        </div>
+      <% end %>
+    <% end %>
+    <% if file_based? %>
+      <h3>Long-term (file)</h3>
+      <% if @file_based_results.blank? %>
+        <p class="empty">No matches.</p>
+      <% else %>
+        <% @file_based_results.each do |r| %>
+          <p><%= r[:type] == "resource" ? "[resource]" : "[#{r[:category]}]" %> <%= truncate(r[:content] || r[:text], length: 150) %></p>
+        <% end %>
+      <% end %>
+    <% end %>
+    <% if graph_based? %>
+      <h3>Graph nodes</h3>
+      <% if @graph_results.blank? %>
+        <p class="empty">No matches.</p>
+      <% else %>
+        <% @graph_results.each do |n| %>
+          <p>[<%= n.respond_to?(:entity_type) ? n.entity_type : n[:entity_type] %>] <%= n.respond_to?(:name) ? n.name : n[:name] %></p>
+        <% end %>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>

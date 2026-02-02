@@ -64,6 +64,22 @@ module Llmemory
           def archive_resources(user_id, resource_ids)
             raise NotImplementedError, "#{self.class}#archive_resources must be implemented"
           end
+
+          def list_users
+            raise NotImplementedError, "#{self.class}#list_users must be implemented"
+          end
+
+          def list_resources(user_id:, limit: nil)
+            raise NotImplementedError, "#{self.class}#list_resources must be implemented"
+          end
+
+          def list_items(user_id:, category: nil, limit: nil)
+            raise NotImplementedError, "#{self.class}#list_items must be implemented"
+          end
+
+          def count_items(user_id:)
+            raise NotImplementedError, "#{self.class}#count_items must be implemented"
+          end
         end
       end
     end

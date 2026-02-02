@@ -55,8 +55,11 @@ module Llmemory
             record_to_node(rec) if rec
           end
 
-          def list_nodes(user_id)
-            LlmemoryGraphNode.where(user_id: user_id).map { |r| record_to_node(r) }
+          def list_nodes(user_id, entity_type: nil, limit: nil)
+            scope = LlmemoryGraphNode.where(user_id: user_id)
+            scope = scope.where(entity_type: entity_type) if entity_type
+            scope = scope.limit(limit) if limit && limit.to_i.positive?
+            scope.map { |r| record_to_node(r) }
           end
 
           def save_edge(user_id, edge)
@@ -97,6 +100,26 @@ module Llmemory
             return false unless rec
             rec.update!(archived_at: archived_at || Time.current)
             true
+          end
+
+          def list_users
+            (LlmemoryGraphNode.distinct.pluck(:user_id) + LlmemoryGraphEdge.distinct.pluck(:user_id)).uniq
+          end
+
+          def list_edges(user_id, subject_id: nil, predicate: nil, limit: nil)
+            scope = LlmemoryGraphEdge.where(user_id: user_id, archived_at: nil)
+            scope = scope.where(subject_id: subject_id) if subject_id
+            scope = scope.where(predicate: predicate) if predicate
+            scope = scope.limit(limit) if limit && limit.to_i.positive?
+            scope.map { |r| record_to_edge(r) }
+          end
+
+          def count_nodes(user_id)
+            LlmemoryGraphNode.where(user_id: user_id).count
+          end
+
+          def count_edges(user_id)
+            LlmemoryGraphEdge.where(user_id: user_id, archived_at: nil).count
           end
 
           private

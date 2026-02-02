@@ -18,8 +18,10 @@ Gem::Specification.new do |spec|
   spec.metadata["source_code_uri"] = spec.homepage
 
   spec.files = Dir.chdir(__dir__) do
-    Dir["{lib}/**/*", "LICENSE.txt", "README.md"].select { |f| File.file?(f) }
+    Dir["{lib,exe}/**/*", "LICENSE.txt", "README.md"].select { |f| File.file?(f) }
   end
+  spec.bindir = "exe"
+  spec.executables = spec.files.grep(%r{^exe/}) { |f| File.basename(f) }
   spec.require_paths = ["lib"]
 
   spec.add_dependency "faraday", "~> 2.0"

@@ -43,8 +43,10 @@ module Llmemory
             @nodes[user_id].values.find { |n| n.entity_type == entity_type.to_s && n.name.to_s == name.to_s }
           end
 
-          def list_nodes(user_id)
-            @nodes[user_id].values.to_a
+          def list_nodes(user_id, entity_type: nil, limit: nil)
+            list = @nodes[user_id].values
+            list = list.select { |n| n.entity_type.to_s == entity_type.to_s } if entity_type
+            limit ? list.take(limit) : list
           end
 
           def save_edge(user_id, edge)
@@ -98,6 +100,23 @@ module Llmemory
               archived_at: t
             )
             true
+          end
+
+          def list_users
+            (@nodes.keys + @edges.keys).uniq
+          end
+
+          def list_edges(user_id, subject_id: nil, predicate: nil, limit: nil)
+            list = find_edges(user_id, subject_id: subject_id, predicate: predicate, object_id: nil, include_archived: false)
+            limit ? list.take(limit) : list
+          end
+
+          def count_nodes(user_id)
+            @nodes[user_id].size
+          end
+
+          def count_edges(user_id)
+            @edges[user_id].count { |e| !e.archived? }
           end
         end
       end

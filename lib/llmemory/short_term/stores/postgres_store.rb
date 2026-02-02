@@ -44,6 +44,21 @@ module Llmemory
           true
         end
 
+        def list_users
+          ensure_table!
+          result = conn.exec("SELECT DISTINCT user_id FROM llmemory_checkpoints")
+          result.map { |r| r["user_id"] }
+        end
+
+        def list_sessions(user_id:)
+          ensure_table!
+          result = conn.exec_params(
+            "SELECT session_id FROM llmemory_checkpoints WHERE user_id = $1",
+            [user_id]
+          )
+          result.map { |r| r["session_id"] }
+        end
+
         private
 
         def conn

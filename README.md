@@ -1,6 +1,6 @@
 # llmemory
 
-Persistent memory system for LLM agents. Implements short-term checkpointing, long-term memory (file-based or **graph-based**), retrieval with time decay, and maintenance jobs.
+Persistent memory system for LLM agents. Implements short-term checkpointing, long-term memory (file-based or **graph-based**), retrieval with time decay, and maintenance jobs. You can inspect memory from the **CLI** or, in Rails apps, from an optional **dashboard**.
 
 ## Installation
 
@@ -187,6 +187,53 @@ Llmemory::Maintenance::Runner.run_nightly(user_id, storage: memory.storage)
 Llmemory::Maintenance::Runner.run_weekly(user_id, storage: memory.storage)
 Llmemory::Maintenance::Runner.run_monthly(user_id, storage: memory.storage)
 ```
+
+## Inspecting memory
+
+### CLI
+
+The gem ships an executable to inspect memory from the terminal (no extra dependencies; uses Ruby’s OptParse):
+
+```bash
+llmemory --help
+llmemory users
+llmemory short-term USER_ID [--session SESSION_ID] [--list-sessions]
+llmemory facts USER_ID [--category CATEGORY] [--limit N]
+llmemory categories USER_ID
+llmemory resources USER_ID [--limit N]
+llmemory nodes USER_ID [--type TYPE] [--limit N]      # graph-based
+llmemory edges USER_ID [--subject NODE_ID] [--limit N]
+llmemory graph USER_ID [--format dot|json]
+llmemory search USER_ID "query" [--type short|long|all]
+llmemory stats [USER_ID]
+```
+
+Use `--store TYPE` where applicable to override the configured store (e.g. `memory`, `redis`, `postgres`, `active_record` for short-term; same or `file` for long-term file-based).
+
+### Dashboard (Rails, optional)
+
+If you use Rails and want a web UI to browse memory, load the dashboard and mount the engine. **Rails is not a dependency of the gem**; the dashboard is only loaded when you require it.
+
+1. In an initializer or early in boot (e.g. `config/initializers/llmemory.rb`):
+
+```ruby
+require "llmemory/dashboard"
+```
+
+2. In `config/routes.rb`:
+
+```ruby
+mount Llmemory::Dashboard::Engine, at: "/llmemory"
+```
+
+3. Visit `/llmemory`. You get:
+   - List of users with memory
+   - Short-term: conversation messages per session
+   - Long-term (file-based): resources, items by category, category summaries
+   - Long-term (graph-based): nodes and edges
+   - Search and stats
+
+The dashboard uses your existing `Llmemory.configuration` (short-term store, long-term store/type, etc.) and does not add any gem dependency; it only runs when Rails is present and you require `llmemory/dashboard`.
 
 ## License
 

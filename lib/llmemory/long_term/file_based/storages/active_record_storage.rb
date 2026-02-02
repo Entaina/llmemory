@@ -114,6 +114,30 @@ module Llmemory
             LlmemoryResource.where(user_id: user_id, id: resource_ids).destroy_all
           end
 
+          def list_users
+            (LlmemoryResource.distinct.pluck(:user_id) +
+             LlmemoryItem.distinct.pluck(:user_id) +
+             LlmemoryCategory.distinct.pluck(:user_id)).uniq
+          end
+
+          def list_resources(user_id:, limit: nil)
+            scope = LlmemoryResource.where(user_id: user_id).order(:created_at)
+            scope = scope.limit(limit) if limit && limit.to_i.positive?
+            scope.map { |r| row_to_resource(r) }
+          end
+
+          def list_items(user_id:, category: nil, limit: nil)
+            scope = LlmemoryItem.where(user_id: user_id)
+            scope = scope.where(category: category) if category
+            scope = scope.order(:created_at)
+            scope = scope.limit(limit) if limit && limit.to_i.positive?
+            scope.map { |r| row_to_item(r) }
+          end
+
+          def count_items(user_id:)
+            LlmemoryItem.where(user_id: user_id).count
+          end
+
           private
 
           def sanitize_like(str)

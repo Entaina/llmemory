@@ -162,6 +162,41 @@ module Llmemory
             resource_ids.each { |id| conn.exec_params("DELETE FROM llmemory_resources WHERE user_id = $1 AND id = $2", [user_id, id]) }
           end
 
+          def list_users
+            ensure_tables!
+            (conn.exec("SELECT DISTINCT user_id FROM llmemory_resources").map { |r| r["user_id"] } +
+             conn.exec("SELECT DISTINCT user_id FROM llmemory_items").map { |r| r["user_id"] } +
+             conn.exec("SELECT DISTINCT user_id FROM llmemory_categories").map { |r| r["user_id"] }).uniq
+          end
+
+          def list_resources(user_id:, limit: nil)
+            ensure_tables!
+            sql = "SELECT id, text, created_at FROM llmemory_resources WHERE user_id = $1 ORDER BY created_at"
+            sql += " LIMIT #{limit.to_i}" if limit && limit.to_i.positive?
+            rows = conn.exec_params(sql, [user_id])
+            rows_to_resources(rows)
+          end
+
+          def list_items(user_id:, category: nil, limit: nil)
+            ensure_tables!
+            sql = "SELECT id, category, content, source_resource_id, created_at FROM llmemory_items WHERE user_id = $1"
+            params = [user_id]
+            if category
+              sql += " AND category = $2"
+              params << category
+            end
+            sql += " ORDER BY created_at"
+            sql += " LIMIT #{limit.to_i}" if limit && limit.to_i.positive?
+            rows = params.size == 1 ? conn.exec_params(sql, params) : conn.exec_params(sql, params)
+            rows_to_items(rows)
+          end
+
+          def count_items(user_id:)
+            ensure_tables!
+            result = conn.exec_params("SELECT COUNT(*) AS c FROM llmemory_items WHERE user_id = $1", [user_id])
+            result.first["c"].to_i
+          end
+
           private
 
           def conn

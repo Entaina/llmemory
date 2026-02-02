@@ -46,6 +46,14 @@ module Llmemory
           true
         end
 
+        def list_users
+          Llmemory::ShortTerm::Stores::ActiveRecordCheckpoint.distinct.pluck(:user_id)
+        end
+
+        def list_sessions(user_id:)
+          Llmemory::ShortTerm::Stores::ActiveRecordCheckpoint.where(user_id: user_id).pluck(:session_id)
+        end
+
         private
 
         def deserialize(data)

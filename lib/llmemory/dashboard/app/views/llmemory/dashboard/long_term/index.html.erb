@@ -1,0 +1,42 @@
+<div class="card">
+  <h2>Long-term memory (file-based): <%= @user_id %></h2>
+  <p><a href="<%= user_long_term_categories_path(@user_id) %>">View categories</a></p>
+  <h3>Items (facts)</h3>
+  <% if @items.blank? %>
+    <p class="empty">No items.</p>
+  <% else %>
+    <table>
+      <thead>
+        <tr><th>Category</th><th>Content</th><th>Created</th></tr>
+      </thead>
+      <tbody>
+        <% @items.each do |i| %>
+          <tr>
+            <td><%= i[:category] || i["category"] %></td>
+            <td><%= truncate((i[:content] || i["content"]).to_s, length: 120) %></td>
+            <td><%= i[:created_at] || i["created_at"] %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% end %>
+  <h3>Resources</h3>
+  <% if @resources.blank? %>
+    <p class="empty">No resources.</p>
+  <% else %>
+    <table>
+      <thead>
+        <tr><th>ID</th><th>Text (excerpt)</th><th>Created</th></tr>
+      </thead>
+      <tbody>
+        <% @resources.each do |r| %>
+          <tr>
+            <td><%= r[:id] || r["id"] %></td>
+            <td><%= truncate((r[:text] || r["text"]).to_s, length: 100) %></td>
+            <td><%= r[:created_at] || r["created_at"] %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% end %>
+</div>

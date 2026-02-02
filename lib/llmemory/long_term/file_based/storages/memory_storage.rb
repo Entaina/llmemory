@@ -93,6 +93,29 @@ module Llmemory
           def archive_resources(user_id, resource_ids)
             @resources[user_id].reject! { |r| resource_ids.include?(r[:id]) }
           end
+
+          def list_users
+            (@resources.keys + @items.keys + @categories.keys).uniq
+          end
+
+          def list_resources(user_id:, limit: nil)
+            list = @resources[user_id].dup
+            limit ? list.take(limit) : list
+          end
+
+          def list_items(user_id:, category: nil, limit: nil)
+            list = if category
+              @items[user_id].select { |i| i[:category].to_s == category.to_s }
+            else
+              @items[user_id].dup
+            end
+            list = list.take(limit) if limit
+            list
+          end
+
+          def count_items(user_id:)
+            @items[user_id].size
+          end
         end
       end
     end

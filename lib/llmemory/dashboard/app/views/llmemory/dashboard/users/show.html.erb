@@ -1,0 +1,14 @@
+<div class="card">
+  <h2>User: <%= @user_id %></h2>
+  <p>
+    <a href="<%= user_short_term_path(@user_id) %>">Short-term memory</a>
+    <% if file_based? %>
+      | <a href="<%= user_long_term_path(@user_id) %>">Long-term (file)</a>
+    <% end %>
+    <% if graph_based? %>
+      | <a href="<%= user_graph_path(@user_id) %>">Graph</a>
+    <% end %>
+    | <a href="<%= user_stats_path(@user_id) %>">Stats</a>
+  </p>
+  <p>Sessions: <%= @sessions.join(", ") %></p>
+</div>

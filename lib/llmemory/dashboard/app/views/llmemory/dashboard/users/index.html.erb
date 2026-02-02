@@ -1,0 +1,30 @@
+<div class="card">
+  <h2>Users with memory</h2>
+  <% if @users.blank? %>
+    <p class="empty">No users found.</p>
+  <% else %>
+    <table>
+      <thead>
+        <tr><th>User ID</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        <% @users.each do |user_id| %>
+          <tr>
+            <td><%= user_id %></td>
+            <td>
+              <a href="<%= user_path(user_id) %>">View</a>
+              <a href="<%= user_short_term_path(user_id) %>">Short-term</a>
+              <% if file_based? %>
+                <a href="<%= user_long_term_path(user_id) %>">Long-term</a>
+              <% end %>
+              <% if graph_based? %>
+                <a href="<%= user_graph_path(user_id) %>">Graph</a>
+              <% end %>
+              <a href="<%= user_stats_path(user_id) %>">Stats</a>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% end %>
+</div>

@@ -1,0 +1,25 @@
+<div class="card">
+  <h2>Short-term memory: <%= @user_id %></h2>
+  <p>
+    Session: <%= @session_id %>
+    <% if @sessions.any? %>
+      | Other sessions:
+      <% @sessions.each do |sess| %>
+        <% next if sess == @session_id %>
+        <a href="<%= user_short_term_path(@user_id) %>?session_id=<%= sess %>"><%= sess %></a>
+      <% end %>
+    <% end %>
+  </p>
+  <% if @messages.blank? %>
+    <p class="empty">No messages in this session.</p>
+  <% else %>
+    <% @messages.each do |m| %>
+      <% role = m[:role] || m["role"] %>
+      <% content = (m[:content] || m["content"]).to_s %>
+      <div class="message <%= role %>">
+        <strong><%= role %>:</strong>
+        <%= content.gsub(/\n/, "<br>").html_safe %>
+      </div>
+    <% end %>
+  <% end %>
+</div>
