@@ -214,24 +214,48 @@ Use `--store TYPE` where applicable to override the configured store (e.g. `memo
 
 If you use Rails and want a web UI to browse memory, load the dashboard and mount the engine. **Rails is not a dependency of the gem**; the dashboard is only loaded when you require it.
 
-1. In an initializer or early in boot (e.g. `config/initializers/llmemory.rb`):
+The dashboard must be **required early in boot** (in `config/application.rb`), not in an initializer, so that Rails registers the engine’s routes correctly (same as other engines like mailbin).
+
+**1. Require the dashboard in `config/application.rb`** (e.g. right after `Bundler.require`):
 
 ```ruby
-require "llmemory/dashboard"
+# config/application.rb
+Bundler.require(*Rails.groups)
+
+require "llmemory/dashboard" if Rails.env.development?  # optional: only in development
 ```
 
-2. In `config/routes.rb`:
+**2. Configure llmemory** in `config/initializers/llmemory.rb` (store, LLM, etc.):
 
 ```ruby
-mount Llmemory::Dashboard::Engine, at: "/llmemory"
+# config/initializers/llmemory.rb
+Llmemory.configure do |config|
+  config.llm_provider = :openai
+  config.llm_api_key = ENV["OPENAI_API_KEY"]
+  config.short_term_store = :active_record
+  config.long_term_type = :graph_based
+  config.long_term_store = :active_record
+  # ...
+end
 ```
 
-3. Visit `/llmemory`. You get:
-   - List of users with memory
-   - Short-term: conversation messages per session
-   - Long-term (file-based): resources, items by category, category summaries
-   - Long-term (graph-based): nodes and edges
-   - Search and stats
+**3. Mount the engine** in `config/routes.rb` (you can wrap it in a development check or behind auth):
+
+```ruby
+# config/routes.rb
+Rails.application.routes.draw do
+  # ...
+  mount Llmemory::Dashboard::Engine, at: "/llmemory" if Rails.env.development?
+end
+```
+
+**4. Visit** `/llmemory`. You get:
+
+- List of users with memory
+- Short-term: conversation messages per session
+- Long-term (file-based): resources, items by category, category summaries
+- Long-term (graph-based): nodes and edges
+- Search and stats
 
 The dashboard uses your existing `Llmemory.configuration` (short-term store, long-term store/type, etc.) and does not add any gem dependency; it only runs when Rails is present and you require `llmemory/dashboard`.
 

@@ -3,7 +3,7 @@
 module Llmemory
   module Dashboard
     class ApplicationController < ActionController::Base
-      helper_method :short_term_store, :file_based_storage, :graph_based_storage
+      helper_method :short_term_store, :file_based_storage, :graph_based_storage, :file_based?, :graph_based?
 
       protected
 
