@@ -26,7 +26,7 @@ RSpec.describe Llmemory::LongTerm::GraphBased::Storages::MemoryStorage do
     it "list_edges returns edges with optional filters" do
       storage.save_node(user_id, Llmemory::LongTerm::GraphBased::Node.new(id: "n1", entity_type: "person", name: "A"))
       storage.save_node(user_id, Llmemory::LongTerm::GraphBased::Node.new(id: "n2", entity_type: "company", name: "B"))
-      storage.save_edge(user_id, Llmemory::LongTerm::GraphBased::Edge.new(subject_id: "n1", predicate: "works_at", object_id: "n2"))
+      storage.save_edge(user_id, Llmemory::LongTerm::GraphBased::Edge.new(subject_id: "n1", predicate: "works_at", target_id: "n2"))
       edges = storage.list_edges(user_id)
       expect(edges.size).to eq(1)
       expect(edges.first.predicate).to eq("works_at")
@@ -36,7 +36,7 @@ RSpec.describe Llmemory::LongTerm::GraphBased::Storages::MemoryStorage do
     it "count_nodes and count_edges return counts" do
       storage.save_node(user_id, Llmemory::LongTerm::GraphBased::Node.new(entity_type: "person", name: "X"))
       storage.save_node(user_id, Llmemory::LongTerm::GraphBased::Node.new(entity_type: "person", name: "Y"))
-      storage.save_edge(user_id, Llmemory::LongTerm::GraphBased::Edge.new(subject_id: "node_1", predicate: "knows", object_id: "node_2"))
+      storage.save_edge(user_id, Llmemory::LongTerm::GraphBased::Edge.new(subject_id: "node_1", predicate: "knows", target_id: "node_2"))
       expect(storage.count_nodes(user_id)).to eq(2)
       expect(storage.count_edges(user_id)).to eq(1)
     end

@@ -17,9 +17,9 @@ module Llmemory
 
           subject_id = new_edge.subject_id
           existing = @graph.find_edges(subject: subject_id, predicate: new_edge.predicate, include_archived: false)
-          to_archive = existing.reject { |e| e.object_id == new_edge.object_id }
+          to_archive = existing.reject { |e| e.target_id == new_edge.target_id }
           to_archive.each do |e|
-            @graph.archive_edge(e.id, reason: "replaced by #{new_edge.object_id}")
+            @graph.archive_edge(e.id, reason: "replaced by #{new_edge.target_id}")
           end
           to_archive.map(&:id)
         end

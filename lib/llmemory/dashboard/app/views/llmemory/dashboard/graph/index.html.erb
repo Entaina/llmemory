@@ -32,7 +32,7 @@
           <tr>
             <td><%= e.respond_to?(:subject_id) ? e.subject_id : e[:subject_id] %></td>
             <td><%= e.respond_to?(:predicate) ? e.predicate : e[:predicate] %></td>
-            <td><%= e.respond_to?(:object_id) ? e.object_id : e[:object_id] %></td>
+            <td><%= e.respond_to?(:target_id) ? e.target_id : e[:object_id] %></td>
           </tr>
         <% end %>
       </tbody>

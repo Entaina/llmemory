@@ -32,7 +32,7 @@ module Llmemory
               id = e.respond_to?(:id) ? e.id : e[:id]
               subj = e.respond_to?(:subject_id) ? e.subject_id : e[:subject_id]
               pred = e.respond_to?(:predicate) ? e.predicate : e[:predicate]
-              obj = e.respond_to?(:object_id) ? e.object_id : e[:object_id]
+              obj = e.respond_to?(:target_id) ? e.target_id : e[:object_id]
               puts "#{id}: #{subj} --#{pred}--> #{obj}"
             end
           end

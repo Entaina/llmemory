@@ -38,7 +38,7 @@ module Llmemory
               user_id: @user_id,
               subject_id: subject_id,
               predicate: r[:predicate],
-              object_id: object_id,
+              target_id: object_id,
               properties: {},
               created_at: Time.now,
               archived_at: nil
@@ -109,7 +109,7 @@ module Llmemory
             traversed = @kg.traverse(start_node: node, depth: 1)
             traversed[:edges].each do |e|
               subj = @kg.find_node_by_id(e.subject_id)
-              obj = @kg.find_node_by_id(e.object_id)
+              obj = @kg.find_node_by_id(e.target_id)
               edge_text = "#{subj&.name} #{e.predicate} #{obj&.name}"
               out << { text: edge_text, score: 0.85, created_at: e.created_at } unless out.any? { |o| o[:text] == edge_text }
             end

@@ -70,7 +70,7 @@ module Llmemory
               rec.update!(
                 subject_id: e.subject_id,
                 predicate: e.predicate,
-                object_id: e.object_id,
+                object_id: e.target_id,
                 properties: e.properties || {}
               )
             else
@@ -79,7 +79,7 @@ module Llmemory
                 user_id: user_id,
                 subject_id: e.subject_id,
                 predicate: e.predicate,
-                object_id: e.object_id,
+                object_id: e.target_id,
                 properties: e.properties || {}
               )
             end
@@ -142,7 +142,7 @@ module Llmemory
               user_id: r.user_id,
               subject_id: r.subject_id,
               predicate: r.predicate,
-              object_id: r.object_id,
+              target_id: r.object_id,
               properties: r.properties || {},
               created_at: r.created_at,
               archived_at: r.archived_at

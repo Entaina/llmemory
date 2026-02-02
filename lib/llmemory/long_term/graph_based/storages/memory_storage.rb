@@ -58,7 +58,7 @@ module Llmemory
                 user_id: user_id,
                 subject_id: e.subject_id,
                 predicate: e.predicate,
-                object_id: e.object_id,
+                target_id: e.target_id,
                 properties: e.properties || {},
                 created_at: e.created_at || Time.now,
                 archived_at: nil
@@ -78,7 +78,7 @@ module Llmemory
               next false unless include_archived || !e.archived?
               next false if subject_id && e.subject_id != subject_id
               next false if predicate && e.predicate != predicate.to_s
-              next false if object_id && e.object_id != object_id
+              next false if object_id && e.target_id != object_id
               true
             end
             list
@@ -94,7 +94,7 @@ module Llmemory
               user_id: e.user_id,
               subject_id: e.subject_id,
               predicate: e.predicate,
-              object_id: e.object_id,
+              target_id: e.target_id,
               properties: e.properties,
               created_at: e.created_at,
               archived_at: t

@@ -49,7 +49,7 @@ module Llmemory
             user_id: @user_id,
             subject_id: subject_id,
             predicate: predicate.to_s,
-            object_id: object_id,
+            target_id: object_id,
             properties: properties,
             created_at: Time.now,
             archived_at: nil
@@ -87,7 +87,7 @@ module Llmemory
             edges = @storage.find_edges(@user_id, subject_id: node_id, include_archived: false)
             edges.each do |e|
               result_edges << e
-              queue << [e.object_id, d + 1] unless visited[e.object_id]
+              queue << [e.target_id, d + 1] unless visited[e.target_id]
             end
             edges_out = @storage.find_edges(@user_id, object_id: node_id, include_archived: false)
             edges_out.each do |e|

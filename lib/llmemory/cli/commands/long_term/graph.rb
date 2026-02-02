@@ -62,7 +62,7 @@ module Llmemory
             end
             edges.each do |e|
               subj = e.respond_to?(:subject_id) ? e.subject_id : e[:subject_id]
-              obj = e.respond_to?(:object_id) ? e.object_id : e[:object_id]
+              obj = e.respond_to?(:target_id) ? e.target_id : e[:object_id]
               pred = e.respond_to?(:predicate) ? e.predicate : e[:predicate]
               lines << "  \"#{subj}\" -> \"#{obj}\" [label=\"#{pred}\"];"
             end
