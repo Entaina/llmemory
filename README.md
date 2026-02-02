@@ -259,6 +259,81 @@ end
 
 The dashboard uses your existing `Llmemory.configuration` (short-term store, long-term store/type, etc.) and does not add any gem dependency; it only runs when Rails is present and you require `llmemory/dashboard`.
 
+## MCP Server (Model Context Protocol)
+
+llmemory includes an MCP server that allows LLM agents (like Claude Code) to interact directly with the memory system. This gives agents "agency" over their own memory—they can search, save, and retrieve memories autonomously.
+
+### Starting the Server
+
+```bash
+# Via CLI
+llmemory mcp serve
+
+# Or via standalone executable
+llmemory-mcp
+
+# With custom server name
+llmemory mcp serve --name my-memory
+```
+
+### Available Tools
+
+| Tool | Description |
+|------|-------------|
+| `memory_search` | Search memories by semantic query |
+| `memory_save` | Save new observations/facts to long-term memory |
+| `memory_retrieve` | Get context optimized for LLM inference |
+| `memory_timeline` | Get chronological timeline of recent memories |
+| `memory_add_message` | Add message to short-term conversation |
+| `memory_consolidate` | Extract facts from conversation to long-term |
+| `memory_stats` | Get memory statistics for a user |
+| `memory_info` | Documentation on how to use the tools |
+
+### Configuration for Claude Code
+
+Add to `~/.claude/claude_code_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "llmemory": {
+      "command": "llmemory",
+      "args": ["mcp", "serve"],
+      "env": {
+        "OPENAI_API_KEY": "sk-..."
+      }
+    }
+  }
+}
+```
+
+Or with the standalone executable:
+
+```json
+{
+  "mcpServers": {
+    "llmemory": {
+      "command": "llmemory-mcp"
+    }
+  }
+}
+```
+
+### Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `LLMEMORY_DEBUG` | Set to `1` to enable debug output on stderr |
+| `OPENAI_API_KEY` | API key for LLM/embeddings |
+| `REDIS_URL` | Redis URL for short-term store |
+| `DATABASE_URL` | Database URL for persistence |
+
+### Recommended Workflow
+
+1. **Start of conversation**: Use `memory_retrieve` to get relevant context
+2. **During conversation**: Use `memory_save` for important observations
+3. **End of conversation**: Use `memory_consolidate` to persist facts
+
 ## License
 
 MIT. See [LICENSE.txt](LICENSE.txt).

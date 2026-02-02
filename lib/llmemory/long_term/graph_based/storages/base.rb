@@ -48,6 +48,10 @@ module Llmemory
           def count_edges(user_id)
             raise NotImplementedError, "#{self.class}#count_edges must be implemented"
           end
+
+          def get_edges_around(user_id, reference, before: 5, after: 5)
+            raise NotImplementedError, "#{self.class}#get_edges_around must be implemented"
+          end
         end
       end
     end

@@ -3,7 +3,7 @@
 RSpec.describe Llmemory::Extractors::EntityRelationExtractor do
   let(:llm_double) do
     double("LLM").tap do |d|
-      allow(d).to receive(:invoke).with(/Extract entities and relations/).and_return(<<~JSON)
+      allow(d).to receive(:invoke).with(/Infer entities and relations/).and_return(<<~JSON)
         {"entities": [{"type": "person", "name": "User"}, {"type": "company", "name": "OpenAI"}],
          "relations": [{"subject": "User", "predicate": "works_at", "object": "OpenAI"}]}
       JSON
@@ -22,7 +22,7 @@ RSpec.describe Llmemory::Extractors::EntityRelationExtractor do
     end
 
     it "normalizes predicate to snake_case" do
-      allow(llm_double).to receive(:invoke).with(/Extract entities and relations/).and_return(
+      allow(llm_double).to receive(:invoke).with(/Infer entities and relations/).and_return(
         '{"entities": [], "relations": [{"subject": "A", "predicate": "works at", "object": "B"}]}'
       )
       result = extractor.extract("A works at B.")

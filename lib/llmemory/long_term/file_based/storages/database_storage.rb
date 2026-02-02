@@ -197,7 +197,41 @@ module Llmemory
             result.first["c"].to_i
           end
 
+          def get_items_around(user_id, reference, before: 5, after: 5)
+            ensure_tables!
+            items = get_all_items(user_id)
+            find_around(items, reference, before, after)
+          end
+
+          def get_resources_around(user_id, reference, before: 5, after: 5)
+            ensure_tables!
+            resources = get_all_resources(user_id)
+            find_around(resources, reference, before, after)
+          end
+
           private
+
+          def find_around(items, reference, before, after)
+            return { before: [], target: nil, after: [] } if items.empty?
+
+            idx = if reference.is_a?(String) && reference.match?(/^\d{4}-/)
+              target_time = Time.parse(reference)
+              items.index { |i| i[:created_at] >= target_time } || items.size
+            else
+              items.index { |i| i[:id] == reference }
+            end
+
+            return { before: [], target: nil, after: [] } unless idx
+
+            start_idx = [idx - before, 0].max
+            end_idx = [idx + after, items.size - 1].min
+
+            {
+              before: items[start_idx...idx] || [],
+              target: items[idx],
+              after: items[(idx + 1)..end_idx] || []
+            }
+          end
 
           def conn
             @connection ||= begin

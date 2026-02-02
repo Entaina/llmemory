@@ -1,0 +1,44 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+$LOAD_PATH.unshift(File.expand_path("../lib", __dir__)) unless $LOAD_PATH.include?(File.expand_path("../lib", __dir__))
+
+require "llmemory"
+require "llmemory/mcp"
+
+# Parse minimal arguments
+name = "llmemory"
+ARGV.each_with_index do |arg, i|
+  if arg == "--name" && ARGV[i + 1]
+    name = ARGV[i + 1]
+  elsif arg == "--help" || arg == "-h"
+    puts "Usage: llmemory-mcp [--name NAME]"
+    puts ""
+    puts "Starts an MCP (Model Context Protocol) server for llmemory."
+    puts ""
+    puts "Options:"
+    puts "  --name NAME    Server name (default: llmemory)"
+    puts "  --help, -h     Show this help"
+    puts ""
+    puts "Environment variables:"
+    puts "  LLMEMORY_DEBUG    Set to 1 to enable debug output on stderr"
+    puts ""
+    puts "Example configuration for Claude Code (~/.claude/claude_code_config.json):"
+    puts '  {'
+    puts '    "mcpServers": {'
+    puts '      "llmemory": {'
+    puts '        "command": "llmemory-mcp"'
+    puts '      }'
+    puts '    }'
+    puts '  }'
+    exit 0
+  end
+end
+
+# Silence stderr for clean protocol unless debugging
+unless ENV["LLMEMORY_DEBUG"]
+  $stderr.reopen(File::NULL, "w")
+end
+
+server = Llmemory::MCP::Server.new(name: name)
+server.run_stdio

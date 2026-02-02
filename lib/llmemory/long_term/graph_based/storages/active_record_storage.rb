@@ -123,6 +123,32 @@ module Llmemory
             LlmemoryGraphEdge.where(user_id: user_id, archived_at: nil).count
           end
 
+          def get_edges_around(user_id, reference, before: 5, after: 5)
+            edges = LlmemoryGraphEdge.where(user_id: user_id, archived_at: nil)
+              .order(:created_at)
+              .map { |r| record_to_edge(r) }
+
+            return { before: [], target: nil, after: [] } if edges.empty?
+
+            idx = if reference.is_a?(String) && reference.match?(/^\d{4}-/)
+              target_time = Time.parse(reference)
+              edges.index { |e| e.created_at >= target_time } || edges.size
+            else
+              edges.index { |e| e.id == reference || e.id.to_s == reference.to_s }
+            end
+
+            return { before: [], target: nil, after: [] } unless idx
+
+            start_idx = [idx - before, 0].max
+            end_idx = [idx + after, edges.size - 1].min
+
+            {
+              before: edges[start_idx...idx] || [],
+              target: edges[idx],
+              after: edges[(idx + 1)..end_idx] || []
+            }
+          end
+
           private
 
           def record_to_node(r)

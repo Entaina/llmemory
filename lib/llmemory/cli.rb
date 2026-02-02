@@ -7,6 +7,7 @@ require_relative "cli/commands/short_term"
 require_relative "cli/commands/long_term"
 require_relative "cli/commands/stats"
 require_relative "cli/commands/search"
+require_relative "cli/commands/mcp"
 
 module Llmemory
   class CLI
@@ -47,7 +48,8 @@ module Llmemory
         "edges" => Cli::Commands::LongTerm::Edges,
         "graph" => Cli::Commands::LongTerm::Graph,
         "search" => Cli::Commands::Search,
-        "stats" => Cli::Commands::Stats
+        "stats" => Cli::Commands::Stats,
+        "mcp" => Cli::Commands::Mcp
       }[normalized]
     end
 
@@ -68,6 +70,7 @@ module Llmemory
           graph USER_ID            Export graph (--format dot|json)
           search USER_ID "query"   Search in memory
           stats [USER_ID]          Show statistics
+          mcp [serve]              Start MCP server for LLM agents
 
         Run 'llmemory <command> --help' for command-specific options.
       HELP

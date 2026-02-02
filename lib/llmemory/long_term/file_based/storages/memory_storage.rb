@@ -116,6 +116,42 @@ module Llmemory
           def count_items(user_id:)
             @items[user_id].size
           end
+
+          def get_items_around(user_id, reference, before: 5, after: 5)
+            items = @items[user_id].sort_by { |i| i[:created_at] }
+            find_around(items, reference, :id, before, after)
+          end
+
+          def get_resources_around(user_id, reference, before: 5, after: 5)
+            resources = @resources[user_id].sort_by { |r| r[:created_at] }
+            find_around(resources, reference, :id, before, after)
+          end
+
+          private
+
+          def find_around(items, reference, id_key, before, after)
+            return { before: [], target: nil, after: [] } if items.empty?
+
+            idx = if reference.is_a?(String) && reference.match?(/^\d{4}-/)
+              # ISO timestamp - find closest item at or after this time
+              target_time = Time.parse(reference)
+              items.index { |i| i[:created_at] >= target_time } || items.size
+            else
+              # Item ID
+              items.index { |i| i[id_key] == reference }
+            end
+
+            return { before: [], target: nil, after: [] } unless idx
+
+            start_idx = [idx - before, 0].max
+            end_idx = [idx + after, items.size - 1].min
+
+            {
+              before: items[start_idx...idx] || [],
+              target: items[idx],
+              after: items[(idx + 1)..end_idx] || []
+            }
+          end
         end
       end
     end

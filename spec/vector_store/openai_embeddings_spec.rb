@@ -4,7 +4,7 @@ RSpec.describe Llmemory::VectorStore::OpenAIEmbeddings do
   let(:client) { described_class.new(api_key: "test-key") }
 
   before do
-    stub_request(:post, "https://api.openai.com/embeddings")
+    stub_request(:post, "https://api.openai.com/v1/embeddings")
       .with(
         headers: { "Authorization" => "Bearer test-key", "Content-Type" => "application/json" },
         body: "{\"input\":\"hello\",\"model\":\"text-embedding-3-small\"}"
@@ -33,7 +33,7 @@ RSpec.describe Llmemory::VectorStore::OpenAIEmbeddings do
 
   context "when API returns error" do
     before do
-      stub_request(:post, "https://api.openai.com/embeddings")
+      stub_request(:post, "https://api.openai.com/v1/embeddings")
         .with(headers: { "Authorization" => "Bearer test-key" })
         .to_return(status: 500, body: "Internal error")
     end

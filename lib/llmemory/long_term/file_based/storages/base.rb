@@ -80,6 +80,14 @@ module Llmemory
           def count_items(user_id:)
             raise NotImplementedError, "#{self.class}#count_items must be implemented"
           end
+
+          def get_items_around(user_id, reference, before: 5, after: 5)
+            raise NotImplementedError, "#{self.class}#get_items_around must be implemented"
+          end
+
+          def get_resources_around(user_id, reference, before: 5, after: 5)
+            raise NotImplementedError, "#{self.class}#get_resources_around must be implemented"
+          end
         end
       end
     end

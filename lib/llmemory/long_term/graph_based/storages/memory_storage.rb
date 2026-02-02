@@ -118,6 +118,29 @@ module Llmemory
           def count_edges(user_id)
             @edges[user_id].count { |e| !e.archived? }
           end
+
+          def get_edges_around(user_id, reference, before: 5, after: 5)
+            edges = @edges[user_id].reject(&:archived?).sort_by(&:created_at)
+            return { before: [], target: nil, after: [] } if edges.empty?
+
+            idx = if reference.is_a?(String) && reference.match?(/^\d{4}-/)
+              target_time = Time.parse(reference)
+              edges.index { |e| e.created_at >= target_time } || edges.size
+            else
+              edges.index { |e| e.id == reference }
+            end
+
+            return { before: [], target: nil, after: [] } unless idx
+
+            start_idx = [idx - before, 0].max
+            end_idx = [idx + after, edges.size - 1].min
+
+            {
+              before: edges[start_idx...idx] || [],
+              target: edges[idx],
+              after: edges[(idx + 1)..end_idx] || []
+            }
+          end
         end
       end
     end
