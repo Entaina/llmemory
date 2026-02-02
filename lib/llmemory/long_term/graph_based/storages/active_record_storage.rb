@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-require "securerandom"
 require_relative "base"
 require_relative "active_record_models"
 require_relative "../node"
@@ -33,15 +32,13 @@ module Llmemory
               rec.update!(properties: n.properties || {}, updated_at: Time.current)
               rec.id
             else
-              id = n.id || "node_#{SecureRandom.hex(8)}"
-              LlmemoryGraphNode.create!(
-                id: id,
+              rec = LlmemoryGraphNode.create!(
                 user_id: user_id,
                 entity_type: n.entity_type.to_s,
                 name: n.name.to_s,
                 properties: n.properties || {}
               )
-              id
+              rec.id
             end
           end
 
@@ -64,8 +61,11 @@ module Llmemory
 
           def save_edge(user_id, edge)
             e = edge.is_a?(Edge) ? edge : Edge.from_h(edge.to_h)
-            id = e.id || "edge_#{SecureRandom.hex(8)}"
-            rec = LlmemoryGraphEdge.find_by(user_id: user_id, id: id)
+            rec = if e.id && e.id.is_a?(Integer)
+              LlmemoryGraphEdge.find_by(user_id: user_id, id: e.id)
+            else
+              nil
+            end
             if rec
               rec.update!(
                 subject_id: e.subject_id,
@@ -73,17 +73,17 @@ module Llmemory
                 object_id: e.target_id,
                 properties: e.properties || {}
               )
+              rec.id
             else
-              LlmemoryGraphEdge.create!(
-                id: id,
+              rec = LlmemoryGraphEdge.create!(
                 user_id: user_id,
                 subject_id: e.subject_id,
                 predicate: e.predicate,
                 object_id: e.target_id,
                 properties: e.properties || {}
               )
+              rec.id
             end
-            id
           end
 
           def find_edges(user_id, subject_id: nil, predicate: nil, object_id: nil, include_archived: false)
@@ -110,6 +110,7 @@ module Llmemory
             scope = LlmemoryGraphEdge.where(user_id: user_id, archived_at: nil)
             scope = scope.where(subject_id: subject_id) if subject_id
             scope = scope.where(predicate: predicate) if predicate
+            scope = scope.order(created_at: :desc) if limit && limit.to_i.positive?
             scope = scope.limit(limit) if limit && limit.to_i.positive?
             scope.map { |r| record_to_edge(r) }
           end

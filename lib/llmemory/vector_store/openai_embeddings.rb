@@ -17,7 +17,7 @@ module Llmemory
 
       def embed(text)
         return Array.new(DEFAULT_DIMS, 0.0) if text.to_s.strip.empty?
-        response = connection.post("/embeddings") do |req|
+        response = connection.post("embeddings") do |req|
           req.headers["Authorization"] = "Bearer #{@api_key}"
           req.headers["Content-Type"] = "application/json"
           req.body = { input: text.to_s.strip, model: @model }.to_json

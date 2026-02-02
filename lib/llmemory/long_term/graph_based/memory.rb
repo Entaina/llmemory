@@ -21,32 +21,48 @@ module Llmemory
         end
 
         def memorize(conversation_text)
-          data = @extractor.extract(conversation_text)
+          data = @extractor.extract(conversation_text) rescue { entities: [], relations: [] }
+          data = { entities: [], relations: [] } unless data.is_a?(Hash)
+          entities = Array(data[:entities] || data["entities"])
+          relations = Array(data[:relations] || data["relations"])
+
+          return true if entities.empty? && relations.empty?
+
           name_to_id = {}
 
-          data[:entities].each do |e|
-            id = @kg.add_node(entity_type: e[:type], name: e[:name], properties: {})
-            name_to_id[e[:name]] ||= id
+          entities.each do |e|
+            next unless e.is_a?(Hash)
+            entity_type = e[:type] || e["type"] || "concept"
+            name = e[:name] || e["name"]
+            next if name.nil? || name.to_s.strip.empty?
+            id = @kg.add_node(entity_type: entity_type, name: name.to_s.strip, properties: {})
+            name_to_id[name.to_s.strip] ||= id
           end
 
-          data[:relations].each do |r|
-            subject_id = name_to_id[r[:subject]] || @kg.add_node(entity_type: "concept", name: r[:subject], properties: {})
-            object_id = name_to_id[r[:object]] || @kg.add_node(entity_type: "concept", name: r[:object], properties: {})
+          relations.each do |r|
+            next unless r.is_a?(Hash)
+            subject = (r[:subject] || r["subject"]).to_s.strip
+            predicate = (r[:predicate] || r["predicate"]).to_s.strip
+            object = (r[:object] || r["object"]).to_s.strip
+            next if subject.empty? || predicate.empty? || object.empty?
+
+            subject_id = name_to_id[subject] || @kg.add_node(entity_type: "concept", name: subject, properties: {})
+            object_id = name_to_id[object] || @kg.add_node(entity_type: "concept", name: object, properties: {})
 
             edge = Edge.new(
               id: nil,
               user_id: @user_id,
               subject_id: subject_id,
-              predicate: r[:predicate],
+              predicate: predicate,
               target_id: object_id,
               properties: {},
               created_at: Time.now,
               archived_at: nil
             )
             @conflict_resolver.resolve(edge)
-            edge_id = @kg.add_edge(subject: subject_id, predicate: r[:predicate], object: object_id, properties: {})
+            edge_id = @kg.add_edge(subject: subject_id, predicate: predicate, object: object_id, properties: {})
 
-            text = "#{r[:subject]} #{r[:predicate]} #{r[:object]}"
+            text = "#{subject} #{predicate} #{object}"
             embedding = @vector_store.respond_to?(:embed) ? @vector_store.embed(text) : nil
             if embedding && @vector_store.respond_to?(:store)
               @vector_store.store(id: "edge_#{edge_id}", embedding: embedding, metadata: { text: text, created_at: Time.now }, user_id: @user_id)
@@ -84,7 +100,13 @@ module Llmemory
 
         def build_vector_store
           emb = Llmemory::VectorStore::OpenAIEmbeddings.new
-          Llmemory::VectorStore::MemoryStore.new(embedding_provider: emb)
+          store_type = (Llmemory.configuration.long_term_store || :memory).to_s.to_sym
+          if store_type == :active_record || store_type == :activerecord
+            require_relative "../../vector_store/active_record_store"
+            Llmemory::VectorStore::ActiveRecordStore.new(embedding_provider: emb)
+          else
+            Llmemory::VectorStore::MemoryStore.new(embedding_provider: emb)
+          end
         end
 
         def hybrid_search(query, top_k:)
@@ -112,6 +134,19 @@ module Llmemory
               obj = @kg.find_node_by_id(e.target_id)
               edge_text = "#{subj&.name} #{e.predicate} #{obj&.name}"
               out << { text: edge_text, score: 0.85, created_at: e.created_at } unless out.any? { |o| o[:text] == edge_text }
+            end
+          end
+
+          # When vector store is empty (e.g. in-memory not persisted), use graph edges as fallback
+          # so long-term context is still recovered from persisted nodes/edges.
+          if out.empty? && @graph_storage.respond_to?(:list_edges)
+            edges = @graph_storage.list_edges(@user_id, limit: top_k)
+            edges.each do |e|
+              subj = @kg.find_node_by_id(e.subject_id)
+              obj = @kg.find_node_by_id(e.target_id)
+              next unless subj && obj
+              edge_text = "#{subj.name} #{e.predicate} #{obj.name}"
+              out << { text: edge_text, score: 0.7, created_at: e.created_at }
             end
           end
 

@@ -42,7 +42,7 @@ module Llmemory
     def consolidate!
       msgs = messages
       return true if msgs.empty?
-      conversation_text = msgs.map { |m| "#{m[:role]}: #{m[:content]}" }.join("\n")
+      conversation_text = msgs.map { |m| format_message(m) }.join("\n")
       @long_term.memorize(conversation_text)
       true
     end
@@ -79,14 +79,17 @@ module Llmemory
     def format_short_term_context(msgs)
       return "" if msgs.empty?
       lines = ["=== RECENT CONVERSATION ===", ""]
-      msgs.each do |m|
-        role = m[:role] || m["role"]
-        content = m[:content] || m["content"]
-        lines << "#{role}: #{content}"
-      end
+      msgs.each { |m| lines << format_message(m) }
       lines << ""
       lines << "=== END RECENT CONVERSATION ==="
       lines.join("\n")
+    end
+
+    # Formats a message hash, handling both symbol and string keys.
+    def format_message(m)
+      role = m[:role] || m["role"]
+      content = m[:content] || m["content"]
+      "#{role}: #{content}"
     end
 
     def combine_contexts(short_context, long_context)

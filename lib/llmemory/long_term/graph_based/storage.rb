@@ -8,7 +8,7 @@ module Llmemory
     module GraphBased
       module Storages
         def self.build(store: nil)
-          case (store || :memory).to_s.to_sym
+          case (store || Llmemory.configuration.long_term_store).to_s.to_sym
           when :memory
             MemoryStorage.new
           when :active_record, :activerecord
