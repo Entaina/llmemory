@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "mcp"
+require_relative "authentication"
 require_relative "tools/memory_search"
 require_relative "tools/memory_save"
 require_relative "tools/memory_retrieve"
@@ -30,7 +31,121 @@ module Llmemory
         transport.open
       end
 
+      def run_http(port: 3100, host: "0.0.0.0", ssl_cert: nil, ssl_key: nil)
+        require "webrick"
+
+        @http_transport = ::MCP::Server::Transports::StreamableHTTPTransport.new(@server)
+        app = build_rack_app(@http_transport)
+
+        webrick_options = {
+          Port: port,
+          BindAddress: host,
+          Logger: WEBrick::Log.new($stderr, WEBrick::Log::INFO),
+          AccessLog: []
+        }
+
+        # Configure SSL/HTTPS if certificates provided
+        use_ssl = ssl_cert && ssl_key
+        if use_ssl
+          require "webrick/https"
+          require "openssl"
+
+          webrick_options[:SSLEnable] = true
+          webrick_options[:SSLCertificate] = OpenSSL::X509::Certificate.new(File.read(ssl_cert))
+          webrick_options[:SSLPrivateKey] = OpenSSL::PKey::RSA.new(File.read(ssl_key))
+        end
+
+        webrick_server = WEBrick::HTTPServer.new(webrick_options)
+
+        webrick_server.mount_proc "/" do |req, res|
+          rack_env = build_rack_env(req)
+          status, headers, body = app.call(rack_env)
+
+          res.status = status
+          headers.each { |key, value| res[key] = value }
+          res.body = body.is_a?(Array) ? body.join : body
+        end
+
+        trap("INT") { webrick_server.shutdown }
+        trap("TERM") { webrick_server.shutdown }
+
+        protocol = use_ssl ? "https" : "http"
+        $stderr.puts "llmemory MCP server listening on #{protocol}://#{host}:#{port}"
+        $stderr.puts "Authentication: #{ENV["MCP_TOKEN"] ? "enabled (MCP_TOKEN set)" : "disabled"}"
+
+        webrick_server.start
+      ensure
+        @http_transport&.close
+      end
+
+      # Returns a Rack app for use with custom servers (Puma, etc.)
+      def rack_app
+        transport = ::MCP::Server::Transports::StreamableHTTPTransport.new(@server)
+        build_rack_app(transport)
+      end
+
       private
+
+      def build_rack_app(transport)
+        app = ->(env) { transport.handle_request(RackRequest.new(env)) }
+
+        # Wrap with authentication if MCP_TOKEN is set
+        if ENV["MCP_TOKEN"]
+          app = Authentication.new(app)
+        end
+
+        app
+      end
+
+      def build_rack_env(req)
+        env = {
+          "REQUEST_METHOD" => req.request_method,
+          "SCRIPT_NAME" => "",
+          "PATH_INFO" => req.path,
+          "QUERY_STRING" => req.query_string || "",
+          "SERVER_NAME" => req.host,
+          "SERVER_PORT" => req.port.to_s,
+          "HTTP_HOST" => req["Host"],
+          "rack.input" => StringIO.new(req.body || ""),
+          "rack.url_scheme" => req.ssl? ? "https" : "http"
+        }
+
+        # Copy HTTP headers
+        req.header.each do |key, values|
+          header_key = "HTTP_#{key.upcase.tr("-", "_")}"
+          env[header_key] = values.is_a?(Array) ? values.join(", ") : values
+        end
+
+        env
+      end
+
+      # Simple wrapper to make Rack env look like a Rack request
+      class RackRequest
+        def initialize(env)
+          @env = env
+        end
+
+        def env
+          @env
+        end
+
+        def body
+          @env["rack.input"]
+        end
+
+        def params
+          @params ||= parse_query_string(@env["QUERY_STRING"] || "")
+        end
+
+        private
+
+        def parse_query_string(qs)
+          qs.split("&").each_with_object({}) do |pair, hash|
+            key, value = pair.split("=", 2)
+            hash[key] = value if key
+          end
+        end
+      end
 
       def all_tools
         [

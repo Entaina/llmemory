@@ -265,6 +265,8 @@ llmemory includes an MCP server that allows LLM agents (like Claude Code) to int
 
 ### Starting the Server
 
+**Stdio mode** (default, for local use with Claude Code):
+
 ```bash
 # Via CLI
 llmemory mcp serve
@@ -276,14 +278,42 @@ llmemory-mcp
 llmemory mcp serve --name my-memory
 ```
 
+**HTTP mode** (for remote access or web integrations):
+
+```bash
+# Start HTTP server on default port 3100
+llmemory mcp serve --http
+
+# Custom port and host
+llmemory mcp serve --http --port 8080 --host 127.0.0.1
+
+# With authentication (recommended for HTTP/HTTPS)
+MCP_TOKEN=your-secret-token llmemory mcp serve --http
+```
+
+**HTTPS mode** (secure remote access):
+
+```bash
+# Start HTTPS server with SSL certificates
+llmemory mcp serve --http --port 443 \
+  --ssl-cert /path/to/cert.pem \
+  --ssl-key /path/to/key.pem
+
+# With authentication (strongly recommended)
+MCP_TOKEN=your-secret-token llmemory mcp serve --http --port 443 \
+  --ssl-cert /path/to/cert.pem \
+  --ssl-key /path/to/key.pem
+```
+
 ### Available Tools
 
 | Tool | Description |
 |------|-------------|
 | `memory_search` | Search memories by semantic query |
 | `memory_save` | Save new observations/facts to long-term memory |
-| `memory_retrieve` | Get context optimized for LLM inference |
+| `memory_retrieve` | Get context optimized for LLM inference (supports timeline context) |
 | `memory_timeline` | Get chronological timeline of recent memories |
+| `memory_timeline_context` | Get N items before/after a specific memory |
 | `memory_add_message` | Add message to short-term conversation |
 | `memory_consolidate` | Extract facts from conversation to long-term |
 | `memory_stats` | Get memory statistics for a user |
@@ -323,16 +353,94 @@ Or with the standalone executable:
 
 | Variable | Description |
 |----------|-------------|
+| `MCP_TOKEN` | Token for HTTP authentication (if set, requests must include valid token) |
 | `LLMEMORY_DEBUG` | Set to `1` to enable debug output on stderr |
 | `OPENAI_API_KEY` | API key for LLM/embeddings |
 | `REDIS_URL` | Redis URL for short-term store |
 | `DATABASE_URL` | Database URL for persistence |
+
+### HTTP Authentication
+
+When `MCP_TOKEN` is set, the HTTP server requires authentication. Requests must include the token via:
+
+- **Authorization header**: `Authorization: Bearer <token>` or `Authorization: <token>`
+- **Query parameter**: `?token=<token>`
+
+Example with curl:
+
+```bash
+# Using Authorization header
+curl -H "Authorization: Bearer your-secret-token" \
+  -H "Accept: application/json, text/event-stream" \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}' \
+  http://localhost:3100/
+
+# Using query parameter
+curl "http://localhost:3100/?token=your-secret-token" \
+  -H "Accept: application/json, text/event-stream" \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{}}'
+```
 
 ### Recommended Workflow
 
 1. **Start of conversation**: Use `memory_retrieve` to get relevant context
 2. **During conversation**: Use `memory_save` for important observations
 3. **End of conversation**: Use `memory_consolidate` to persist facts
+
+### Timeline Context
+
+The `memory_retrieve` tool supports **timeline context** - showing N events before and after matched memories. This provides situational context around relevant memories:
+
+```json
+{
+  "name": "memory_retrieve",
+  "arguments": {
+    "query": "trabajo",
+    "user_id": "user123",
+    "include_timeline_context": true,
+    "timeline_window": 3
+  }
+}
+```
+
+This returns:
+- Recent conversation (short-term)
+- Relevant memories (long-term)
+- **Timeline context**: 3 events before and after each match
+
+You can also use `memory_timeline_context` directly to explore temporal context around a specific memory:
+
+```json
+{
+  "name": "memory_timeline_context",
+  "arguments": {
+    "user_id": "user123",
+    "item_id": "item_42",
+    "before": 5,
+    "after": 5
+  }
+}
+```
+
+Example output:
+```
+Timeline Context around 'item_42':
+
+BEFORE (3 items):
+  - [2024-01-14] [personal] Usuario vive en Madrid
+  - [2024-01-15] [technical] Usuario programa en Python
+  - [2024-01-16] [preferences] Usuario usa VS Code
+
+TARGET:
+>>> [2024-01-17] [work] Usuario trabaja en Acme Corp
+
+AFTER (3 items):
+  - [2024-01-18] [personal] Usuario tiene un gato
+  - [2024-01-19] [work] Usuario lidera equipo backend
+  - [2024-01-20] [preferences] Usuario prefiere café
+```
 
 ## License
 
