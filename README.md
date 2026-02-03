@@ -33,6 +33,9 @@ context = memory.retrieve("¿Qué preferencias tiene el usuario?", max_tokens: 2
 # Optionally consolidate current conversation into long-term (extract facts)
 memory.consolidate!
 
+# Compact short-term memory when it gets too large (summarizes old messages)
+memory.compact!(max_bytes: 8192)  # or use config default
+
 # Clear session (short-term) while keeping long-term intact
 memory.clear_session!
 ```
@@ -41,6 +44,7 @@ memory.clear_session!
 - **`messages`** — Returns the current conversation history.
 - **`retrieve(query, max_tokens: nil)`** — Returns combined context: recent conversation + relevant long-term memories.
 - **`consolidate!`** — Extracts facts from the current conversation and stores them in long-term.
+- **`compact!(max_bytes: nil)`** — Compacts short-term memory by summarizing old messages when byte size exceeds limit. Uses LLM to create a summary, keeping recent messages intact.
 - **`clear_session!`** — Clears short-term only.
 
 ## Configuration
@@ -59,6 +63,7 @@ Llmemory.configure do |config|
   config.time_decay_half_life_days = 30
   config.max_retrieval_tokens = 2000
   config.prune_after_days = 90
+  config.compact_max_bytes = 8192  # max bytes before compact! triggers
 end
 ```
 

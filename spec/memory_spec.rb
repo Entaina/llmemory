@@ -117,6 +117,60 @@ RSpec.describe Llmemory::Memory do
     end
   end
 
+  describe "#compact!" do
+    let(:memory) { described_class.new(user_id: user_id, session_id: session_id) }
+
+    it "returns false when messages byte size is within max" do
+      memory.add_message(role: :user, content: "Hello")
+      memory.add_message(role: :assistant, content: "Hi there")
+      expect(memory.compact!(max_bytes: 10_000)).to be false
+      expect(memory.messages.size).to eq(2)
+    end
+
+    it "compacts messages when byte size exceeds max" do
+      llm_double = double("LLM")
+      allow(llm_double).to receive(:invoke).and_return("Summary of old conversation")
+      allow(Llmemory::LLM).to receive(:client).and_return(llm_double)
+
+      10.times { |i| memory.add_message(role: :user, content: "Message number #{i} with some extra content to increase size") }
+      original_size = memory.messages.size
+      expect(original_size).to eq(10)
+
+      result = memory.compact!(max_bytes: 200)
+      expect(result).to be true
+
+      msgs = memory.messages
+      expect(msgs.size).to be < original_size
+      expect(msgs.first[:role]).to eq(:system)
+      expect(msgs.first[:content]).to eq("Summary of old conversation")
+    end
+
+    it "uses configuration default when max_bytes not provided" do
+      allow(Llmemory.configuration).to receive(:compact_max_bytes).and_return(100)
+
+      llm_double = double("LLM")
+      allow(llm_double).to receive(:invoke).and_return("Summarized")
+      allow(Llmemory::LLM).to receive(:client).and_return(llm_double)
+
+      5.times { |i| memory.add_message(role: :user, content: "Message #{i} with enough content to exceed limit") }
+      expect(memory.compact!).to be true
+    end
+
+    it "falls back to truncated text on LLM error" do
+      llm_double = double("LLM")
+      allow(llm_double).to receive(:invoke).and_raise(Llmemory::LLMError.new("API error"))
+      allow(Llmemory::LLM).to receive(:client).and_return(llm_double)
+
+      10.times { |i| memory.add_message(role: :user, content: "Message #{i} with content") }
+      result = memory.compact!(max_bytes: 200)
+      expect(result).to be true
+
+      msgs = memory.messages
+      expect(msgs.first[:role]).to eq(:system)
+      expect(msgs.first[:content]).to include("user: Message 0")
+    end
+  end
+
   describe "long_term_type: :graph_based" do
     it "uses graph-based long-term memory when long_term_type is :graph_based" do
       long_term = described_class.new(user_id: user_id, session_id: session_id, long_term_type: :graph_based).instance_variable_get(:@long_term)

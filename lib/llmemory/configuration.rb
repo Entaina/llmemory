@@ -15,7 +15,8 @@ module Llmemory
                   :vector_store,
                   :time_decay_half_life_days,
                   :max_retrieval_tokens,
-                  :prune_after_days
+                  :prune_after_days,
+                  :compact_max_bytes
 
     def initialize
       @llm_provider = :openai
@@ -32,6 +33,7 @@ module Llmemory
       @time_decay_half_life_days = 30
       @max_retrieval_tokens = 2000
       @prune_after_days = 90
+      @compact_max_bytes = 8192
     end
   end
 

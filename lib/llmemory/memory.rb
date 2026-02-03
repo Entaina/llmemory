@@ -52,11 +52,76 @@ module Llmemory
       true
     end
 
+    def compact!(max_bytes: nil)
+      max = max_bytes || Llmemory.configuration.compact_max_bytes
+      msgs = messages
+      current_bytes = messages_byte_size(msgs)
+      return false if current_bytes <= max
+
+      old_msgs, recent_msgs = split_messages_by_bytes(msgs, max)
+      return false if old_msgs.empty?
+
+      summary = summarize_messages(old_msgs)
+      compacted = [{ role: :system, content: summary }] + recent_msgs
+      save_state(messages: compacted)
+      true
+    end
+
     def user_id
       @user_id
     end
 
     private
+
+    def summarize_messages(msgs)
+      conversation = msgs.map { |m| format_message(m) }.join("\n")
+      prompt = <<~PROMPT
+        Summarize the following conversation into a concise summary that preserves key information, decisions, and context. Write it as a brief narrative (max 200 words).
+
+        Conversation:
+        #{conversation}
+
+        Summary:
+      PROMPT
+      llm_client.invoke(prompt.strip).to_s.strip
+    rescue Llmemory::LLMError
+      msgs.map { |m| format_message(m) }.join("\n")[0..500]
+    end
+
+    def llm_client
+      @llm ||= Llmemory::LLM.client
+    end
+
+    def messages_byte_size(msgs)
+      msgs.sum { |m| message_byte_size(m) }
+    end
+
+    def message_byte_size(msg)
+      role = msg[:role] || msg["role"]
+      content = msg[:content] || msg["content"]
+      role.to_s.bytesize + content.to_s.bytesize
+    end
+
+    def split_messages_by_bytes(msgs, max_bytes)
+      target_recent_bytes = max_bytes / 2
+      recent_bytes = 0
+      split_index = msgs.size
+
+      (msgs.size - 1).downto(0) do |i|
+        msg_bytes = message_byte_size(msgs[i])
+        if recent_bytes + msg_bytes <= target_recent_bytes
+          recent_bytes += msg_bytes
+          split_index = i
+        else
+          break
+        end
+      end
+
+      split_index = [split_index, msgs.size - 1].min
+      split_index = [split_index, 1].max if msgs.size > 1
+
+      [msgs[0...split_index], msgs[split_index..]]
+    end
 
     def build_long_term(long_term_type)
       llm_opts = @llm ? { llm: @llm } : {}
