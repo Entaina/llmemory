@@ -88,6 +88,17 @@ module Llmemory
         def run_server
           require_relative "../../mcp"
 
+          unless Llmemory::MCP.available?
+            $stderr.puts "Error: The 'mcp' gem is required for MCP server functionality."
+            $stderr.puts ""
+            $stderr.puts "Install it with:"
+            $stderr.puts "  gem install mcp"
+            $stderr.puts ""
+            $stderr.puts "Or add to your Gemfile:"
+            $stderr.puts "  gem 'mcp', '~> 0.6'"
+            exit 1
+          end
+
           server = Llmemory::MCP::Server.new(name: @server_name)
 
           if @http_mode

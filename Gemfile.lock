@@ -1,9 +1,8 @@
 PATH
   remote: .
   specs:
-    llmemory (0.1.11)
+    llmemory (0.1.12)
       faraday (~> 2.0)
-      mcp (~> 0.6)
 
 GEM
   remote: https://rubygems.org/
@@ -78,6 +77,7 @@ PLATFORMS
 
 DEPENDENCIES
   llmemory!
+  mcp (~> 0.6)
   pg (~> 1.5)
   pgvector (~> 0.2)
   rake (~> 13.0)

@@ -263,6 +263,20 @@ The dashboard uses your existing `Llmemory.configuration` (short-term store, lon
 
 llmemory includes an MCP server that allows LLM agents (like Claude Code) to interact directly with the memory system. This gives agents "agency" over their own memory—they can search, save, and retrieve memories autonomously.
 
+### Installation
+
+The MCP server requires the `mcp` gem, which is **optional**. Install it separately:
+
+```bash
+gem install mcp
+```
+
+Or add to your Gemfile:
+
+```ruby
+gem "mcp", "~> 0.6"
+```
+
 ### Starting the Server
 
 **Stdio mode** (default, for local use with Claude Code):
