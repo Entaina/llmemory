@@ -21,10 +21,9 @@ namespace :release do
       abort "Bump type must be: patch, minor, or major"
     end
 
-    current = Gem::Version.new(Llmemory::VERSION)
-    seg = current.segments
+    seg = Gem::Version.new(Llmemory::VERSION).segments
     new_version = case bump_type
-    when "patch" then current.bump
+    when "patch" then Gem::Version.new("#{seg[0]}.#{seg[1] || 0}.#{(seg[2] || 0) + 1}")
     when "minor" then Gem::Version.new("#{seg[0]}.#{(seg[1] || 0) + 1}.0")
     when "major" then Gem::Version.new("#{(seg[0] || 0) + 1}.0.0")
     end
@@ -44,7 +43,7 @@ namespace :release do
     puts "  Updated Gemfile.lock"
 
     # 3. Update CHANGELOG.txt
-    changelog_path = File.expand_path("../../../CHANGELOG.txt", __dir__)
+    changelog_path = File.expand_path("../../CHANGELOG.txt", __dir__)
     changelog_content = if File.exist?(changelog_path)
       File.read(changelog_path)
     else
