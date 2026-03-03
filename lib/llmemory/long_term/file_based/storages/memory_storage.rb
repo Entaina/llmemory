@@ -22,7 +22,7 @@ module Llmemory
             id
           end
 
-          def save_item(user_id, category:, content:, source_resource_id:)
+          def save_item(user_id, category:, content:, source_resource_id:, importance: 0.7)
             @item_id_seq += 1
             id = "item_#{@item_id_seq}"
             @items[user_id] << {
@@ -30,6 +30,7 @@ module Llmemory
               category: category,
               content: content,
               source_resource_id: source_resource_id,
+              importance: importance,
               created_at: Time.now
             }
             id

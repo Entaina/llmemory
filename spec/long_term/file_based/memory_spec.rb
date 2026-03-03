@@ -53,5 +53,37 @@ RSpec.describe Llmemory::LongTerm::FileBased::Memory do
       candidates = memory.search_candidates("Python", user_id: "other_user", top_k: 10)
       expect(candidates).to eq([])
     end
+
+    it "returns category summaries with evergreen flag" do
+      memory.memorize("User prefers Python")
+      candidates = memory.search_candidates("prefers", top_k: 10)
+      evergreen_candidates = candidates.select { |c| c[:evergreen] }
+      expect(evergreen_candidates).not_to be_empty
+    end
+  end
+
+  describe "#memorize with noise_filter" do
+    it "filters noise when noise_filter_enabled" do
+      allow(Llmemory.configuration).to receive(:noise_filter_enabled).and_return(true)
+      allow(Llmemory.configuration).to receive(:noise_filter_min_chars).and_return(10)
+      allow(Llmemory.configuration).to receive(:daily_logs_enabled).and_return(false)
+
+      llm_captured = []
+      llm_spy = double("LLM").tap do |d|
+        allow(d).to receive(:invoke).with(/Extract discrete facts/) do |arg|
+          llm_captured << arg
+          '[{"content": "User said hello"}]'
+        end
+        allow(d).to receive(:invoke).with(/Classify this fact/).and_return("general")
+        allow(d).to receive(:invoke).with(/Memory Synchronization Specialist/).and_return("# Profile\n- User said hello")
+      end
+
+      mem = described_class.new(user_id: user_id, storage: storage, llm: llm_spy)
+      mem.memorize("SHORT\nuser: Hello world this is long enough")
+
+      expect(llm_captured.size).to eq(1)
+      expect(llm_captured.first).not_to include("SHORT")
+      expect(llm_captured.first).to include("Hello world")
+    end
   end
 end

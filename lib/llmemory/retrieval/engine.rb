@@ -53,7 +53,8 @@ module Llmemory
           {
             text: c[:text] || c["text"],
             timestamp: parse_timestamp(c[:timestamp] || c["timestamp"] || c[:created_at] || c["created_at"]),
-            score: (c[:score] || c["score"] || 1.0).to_f
+            score: (c[:score] || c["score"] || 1.0).to_f,
+            evergreen: c[:evergreen] || c["evergreen"]
           }
         end
       end

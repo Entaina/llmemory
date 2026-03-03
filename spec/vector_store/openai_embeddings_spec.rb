@@ -42,4 +42,42 @@ RSpec.describe Llmemory::VectorStore::OpenAIEmbeddings do
       expect { client.embed("hello") }.to raise_error(Llmemory::LLMError, /Embeddings API/)
     end
   end
+
+  describe "embedding cache" do
+    it "returns cached embedding on second call when cache enabled" do
+      allow(Llmemory.configuration).to receive(:embedding_cache_enabled).and_return(true)
+
+      result1 = client.embed("hello")
+      result2 = client.embed("hello")
+
+      expect(result1).to eq(result2)
+      expect(a_request(:post, %r{embeddings}).with(body: hash_including("input" => "hello"))).to have_been_made.times(1)
+    end
+
+    it "makes API call on each request when cache disabled" do
+      allow(Llmemory.configuration).to receive(:embedding_cache_enabled).and_return(false)
+
+      client.embed("hello")
+      client.embed("hello")
+
+      expect(a_request(:post, %r{embeddings})).to have_been_made.times(2)
+    end
+
+    it "does not cache different texts" do
+      allow(Llmemory.configuration).to receive(:embedding_cache_enabled).and_return(true)
+
+      stub_request(:post, "https://api.openai.com/v1/embeddings")
+        .with(body: hash_including("input" => "world"))
+        .to_return(
+          status: 200,
+          body: { data: [{ embedding: [0.2] * 1536 }] }.to_json,
+          headers: { "Content-Type" => "application/json" }
+        )
+
+      client.embed("hello")
+      client.embed("world")
+
+      expect(a_request(:post, %r{embeddings})).to have_been_made.times(2)
+    end
+  end
 end

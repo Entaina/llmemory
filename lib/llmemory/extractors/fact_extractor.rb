@@ -14,7 +14,9 @@ module Llmemory
           Extract discrete facts from this conversation.
           Focus on preferences, behaviors, and important details.
           Conversation: #{conversation_text}
-          Return as JSON array of objects with "content" key. Example: [{"content": "User prefers Ruby"}, {"content": "User is vegan"}]
+          Return as JSON array of objects with "content" and "importance" (0-1) keys.
+          Importance: 0.8-0.95 for preferences/corrections/decisions, 0.5-0.8 for factual context, 0.3-0.5 for ephemeral.
+          Example: [{"content": "User prefers Ruby", "importance": 0.9}, {"content": "User mentioned the weather", "importance": 0.4}]
         PROMPT
         response = @llm.invoke(prompt.strip)
         parse_items_response(response)
@@ -56,7 +58,12 @@ module Llmemory
       def parse_items_response(response)
         json = extract_json_array(response)
         return [] unless json
-        json.map { |item| item.is_a?(Hash) ? item : { "content" => item.to_s } }
+        json.map do |item|
+          h = item.is_a?(Hash) ? item : { "content" => item.to_s }
+          imp = h["importance"] || h[:importance]
+          h["importance"] = imp.nil? ? 0.7 : (imp.to_f.between?(0, 1) ? imp.to_f : 0.7)
+          h
+        end
       end
 
       def extract_json_array(response)

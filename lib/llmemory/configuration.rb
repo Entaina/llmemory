@@ -33,7 +33,15 @@ module Llmemory
                   :session_prune_after_days,
                   :session_max_entries_per_user,
                   :daily_logs_enabled,
-                  :auto_recall_enabled
+                  :auto_recall_enabled,
+                  :noise_filter_enabled,
+                  :noise_filter_min_chars,
+                  :flush_once_per_cycle_seconds,
+                  :overflow_recovery_enabled,
+                  :embedding_cache_enabled,
+                  :embedding_cache_max_entries,
+                  :max_message_chars,
+                  :message_sanitizer_enabled
 
     def initialize
       @llm_provider = :openai
@@ -68,6 +76,14 @@ module Llmemory
       @session_max_entries_per_user = 500
       @daily_logs_enabled = false
       @auto_recall_enabled = false
+      @noise_filter_enabled = false
+      @noise_filter_min_chars = 10
+      @flush_once_per_cycle_seconds = 60
+      @overflow_recovery_enabled = false
+      @embedding_cache_enabled = true
+      @embedding_cache_max_entries = 10_000
+      @max_message_chars = 32_000
+      @message_sanitizer_enabled = false
     end
   end
 

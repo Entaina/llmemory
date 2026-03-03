@@ -1,5 +1,12 @@
 # frozen_string_literal: true
 
+require "simplecov"
+SimpleCov.start do
+  add_filter "/spec/"
+  add_filter "/exe/"
+  minimum_coverage 0
+end
+
 require "webmock/rspec"
 require "llmemory"
 

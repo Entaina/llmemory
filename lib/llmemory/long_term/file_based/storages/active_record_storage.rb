@@ -30,16 +30,18 @@ module Llmemory
             id
           end
 
-          def save_item(user_id, category:, content:, source_resource_id:)
+          def save_item(user_id, category:, content:, source_resource_id:, importance: 0.7)
             id = "item_#{SecureRandom.hex(8)}"
-            LlmemoryItem.create!(
+            attrs = {
               id: id,
               user_id: user_id,
               category: category,
               content: content,
               source_resource_id: source_resource_id,
               created_at: Time.current
-            )
+            }
+            attrs[:importance] = importance if LlmemoryItem.column_names.include?("importance")
+            LlmemoryItem.create!(attrs)
             id
           end
 
@@ -96,14 +98,16 @@ module Llmemory
           def replace_items(user_id, ids_to_remove, merged_item)
             LlmemoryItem.where(user_id: user_id, id: ids_to_remove).destroy_all
             created_at = merged_item[:created_at] || Time.current
-            LlmemoryItem.create!(
+            attrs = {
               id: "item_#{SecureRandom.hex(8)}",
               user_id: user_id,
               category: merged_item[:category],
               content: merged_item[:content],
               source_resource_id: merged_item[:source_resource_id],
               created_at: created_at
-            )
+            }
+            attrs[:importance] = merged_item[:importance] if LlmemoryItem.column_names.include?("importance") && merged_item[:importance]
+            LlmemoryItem.create!(attrs)
           end
 
           def archive_items(user_id, item_ids)
@@ -177,13 +181,15 @@ module Llmemory
           end
 
           def row_to_item(r)
-            {
+            h = {
               id: r.id,
               category: r.category,
               content: r.content,
               source_resource_id: r.source_resource_id,
               created_at: r.created_at
             }
+            h[:importance] = r.respond_to?(:importance) ? (r.importance || 0.7).to_f : 0.7
+            h
           end
 
           def row_to_resource(r)

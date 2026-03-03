@@ -5,6 +5,7 @@ require_relative "edge"
 require_relative "knowledge_graph"
 require_relative "conflict_resolver"
 require_relative "storage"
+require_relative "../../noise_filter"
 
 module Llmemory
   module LongTerm
@@ -21,7 +22,10 @@ module Llmemory
         end
 
         def memorize(conversation_text)
-          data = @extractor.extract(conversation_text) rescue { entities: [], relations: [] }
+          text = Llmemory.configuration.noise_filter_enabled ? NoiseFilter.filter?(conversation_text) : conversation_text.to_s
+          return true if text.strip.empty?
+
+          data = @extractor.extract(text) rescue { entities: [], relations: [] }
           data = { entities: [], relations: [] } unless data.is_a?(Hash)
           entities = Array(data[:entities] || data["entities"])
           relations = Array(data[:relations] || data["relations"])

@@ -16,6 +16,28 @@ RSpec.describe Llmemory::Extractors::FactExtractor do
       expect(items).to be_an(Array)
       expect(items.map { |i| i["content"] }).to include("User is vegan", "User prefers Python")
     end
+
+    it "parses and returns importance score from LLM response" do
+      llm_with_importance = double("LLM").tap do |d|
+        allow(d).to receive(:invoke).with(/Extract discrete facts/).and_return(
+          '[{"content": "User prefers dark mode", "importance": 0.9}, {"content": "User mentioned the weather", "importance": 0.4}]'
+        )
+      end
+      extractor_imp = described_class.new(llm: llm_with_importance)
+      items = extractor_imp.extract_items("User prefers dark mode. User mentioned the weather.")
+      expect(items.size).to eq(2)
+      expect(items.map { |i| i["importance"] }).to eq([0.9, 0.4])
+    end
+
+    it "defaults importance to 0.7 when missing from LLM response" do
+      llm_no_importance = double("LLM").tap do |d|
+        allow(d).to receive(:invoke).with(/Extract discrete facts/).and_return('[{"content": "User likes coffee"}]')
+      end
+      extractor_def = described_class.new(llm: llm_no_importance)
+      items = extractor_def.extract_items("User likes coffee.")
+      expect(items.size).to eq(1)
+      expect(items.first["importance"]).to eq(0.7)
+    end
   end
 
   describe "#evolve_summary" do

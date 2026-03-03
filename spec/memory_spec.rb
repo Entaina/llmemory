@@ -146,6 +146,67 @@ RSpec.describe Llmemory::Memory do
     end
   end
 
+  describe "#with_overflow_recovery" do
+    it "yields and returns result when overflow_recovery disabled" do
+      memory = described_class.new(user_id: user_id, session_id: session_id)
+      result = memory.with_overflow_recovery { 42 }
+      expect(result).to eq(42)
+    end
+
+    it "retries on LLMError with context/token overflow when enabled" do
+      allow(Llmemory.configuration).to receive(:overflow_recovery_enabled).and_return(true)
+      allow(Llmemory.configuration).to receive(:prune_tool_results_enabled).and_return(false)
+
+      llm_double = double("LLM")
+      call_count = 0
+      allow(llm_double).to receive(:invoke) do
+        call_count += 1
+        raise Llmemory::LLMError, "context length exceeded" if call_count == 1
+        "Summary"
+      end
+      allow(Llmemory::LLM).to receive(:client).and_return(llm_double)
+
+      memory = described_class.new(user_id: user_id, session_id: session_id)
+      15.times { |i| memory.add_message(role: :user, content: "Message #{i} with content") }
+
+      result = memory.with_overflow_recovery do
+        memory.send(:llm_client).invoke("Summarize this")
+      end
+      expect(result).to eq("Summary")
+      expect(call_count).to be >= 2
+    end
+
+    it "re-raises LLMError when message is not overflow-related" do
+      allow(Llmemory.configuration).to receive(:overflow_recovery_enabled).and_return(true)
+
+      llm_double = double("LLM")
+      allow(llm_double).to receive(:invoke).and_raise(Llmemory::LLMError, "Rate limit exceeded")
+
+      allow(Llmemory::LLM).to receive(:client).and_return(llm_double)
+      memory = described_class.new(user_id: user_id, session_id: session_id)
+
+      expect do
+        memory.with_overflow_recovery { memory.send(:llm_client).invoke("test") }
+      end.to raise_error(Llmemory::LLMError, /Rate limit/)
+    end
+
+    it "re-raises after max retries exceeded" do
+      allow(Llmemory.configuration).to receive(:overflow_recovery_enabled).and_return(true)
+      allow(Llmemory.configuration).to receive(:prune_tool_results_enabled).and_return(false)
+
+      llm_double = double("LLM")
+      allow(llm_double).to receive(:invoke).and_raise(Llmemory::LLMError, "context length exceeded")
+      allow(Llmemory::LLM).to receive(:client).and_return(llm_double)
+
+      memory = described_class.new(user_id: user_id, session_id: session_id)
+      5.times { |i| memory.add_message(role: :user, content: "Message #{i}") }
+
+      expect do
+        memory.with_overflow_recovery(max_retries: 2) { memory.send(:llm_client).invoke("test") }
+      end.to raise_error(Llmemory::LLMError, /context length/)
+    end
+  end
+
   describe "#check_context_window!" do
     it "triggers consolidate and compact when over threshold" do
       allow(Llmemory.configuration).to receive(:context_window_tokens).and_return(500)
@@ -358,6 +419,54 @@ RSpec.describe Llmemory::Memory do
       msgs = memory.messages
       expect(msgs.first[:role]).to eq(:system)
       expect(msgs.first[:content]).to include("user: Message 0")
+    end
+
+    it "skips flush when last_compact_at is within flush_once_per_cycle_seconds" do
+      allow(Llmemory.configuration).to receive(:memory_flush_enabled).and_return(true)
+      allow(Llmemory.configuration).to receive(:memory_flush_threshold_tokens).and_return(50)
+      allow(Llmemory.configuration).to receive(:flush_once_per_cycle_seconds).and_return(60)
+
+      long_term_double = double("LongTerm")
+      allow(long_term_double).to receive(:memorize)
+      expect(long_term_double).to receive(:memorize).exactly(1).time
+
+      llm_double = double("LLM")
+      allow(llm_double).to receive(:invoke).and_return("Summary")
+      allow(Llmemory::LLM).to receive(:client).and_return(llm_double)
+
+      memory = described_class.new(user_id: user_id, session_id: session_id, long_term: long_term_double)
+      10.times { |i| memory.add_message(role: :user, content: "Message #{i} with extra content to exceed threshold") }
+      memory.compact!(max_bytes: 200)
+
+      10.times { |i| memory.add_message(role: :user, content: "More message #{i} with extra content") }
+      memory.compact!(max_bytes: 200)
+    end
+  end
+
+  describe "#messages with message_sanitizer_enabled" do
+    it "sanitizes messages when message_sanitizer_enabled is true" do
+      allow(Llmemory.configuration).to receive(:message_sanitizer_enabled).and_return(true)
+      allow(Llmemory.configuration).to receive(:max_message_chars).and_return(50)
+
+      memory = described_class.new(user_id: user_id, session_id: session_id)
+      memory.add_message(role: :user, content: "Hi")
+      memory.add_message(role: :assistant, content: "   ")
+      memory.add_message(role: :user, content: "Bye")
+
+      msgs = memory.messages
+      expect(msgs.size).to eq(2)
+      expect(msgs.map { |m| m[:content] }).to eq(["Hi", "Bye"])
+    end
+
+    it "returns unsanitized messages when message_sanitizer_enabled is false" do
+      allow(Llmemory.configuration).to receive(:message_sanitizer_enabled).and_return(false)
+
+      memory = described_class.new(user_id: user_id, session_id: session_id)
+      memory.add_message(role: :user, content: "Hi")
+      memory.add_message(role: :assistant, content: "   ")
+
+      msgs = memory.messages
+      expect(msgs.size).to eq(2)
     end
   end
 

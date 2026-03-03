@@ -23,7 +23,7 @@ module Llmemory
     def add_message(role:, content:)
       msgs = messages
       msgs << { role: role.to_sym, content: content.to_s }
-      save_state(messages: msgs)
+      save_state(messages: msgs, **preserved_flush_state)
       true
     end
 
@@ -31,7 +31,8 @@ module Llmemory
       state = @checkpoint.restore_state
       return [] unless state.is_a?(Hash)
       list = state[STATE_KEY_MESSAGES] || state[STATE_KEY_MESSAGES.to_s]
-      list.is_a?(Array) ? list.dup : []
+      list = list.is_a?(Array) ? list.dup : []
+      sanitize_messages(list)
     end
 
     def retrieve(query, max_tokens: nil)
@@ -67,7 +68,7 @@ module Llmemory
         soft_trim_max_bytes: Llmemory.configuration.prune_tool_results_max_bytes
       )
       pruned = pruner.prune!(msgs, mode: mode)
-      save_state(messages: pruned)
+      save_state(messages: pruned, **preserved_flush_state)
       true
     end
 
@@ -90,14 +91,16 @@ module Llmemory
       current_bytes = messages_byte_size(msgs)
       return false if current_bytes <= max
 
-      flush_memory_before_compaction!(msgs)
+      flushed = flush_memory_before_compaction!(msgs)
 
       old_msgs, recent_msgs = split_messages_by_bytes(msgs, max)
       return false if old_msgs.empty?
 
       summary = summarize_messages(old_msgs)
       compacted = [{ role: :system, content: summary }] + recent_msgs
-      save_state(messages: compacted)
+      state = restore_state_for_save
+      flush_ts = flushed ? Time.now : (state[:last_flush_at] || state["last_flush_at"])
+      save_state(messages: compacted, last_compact_at: Time.now, last_flush_at: flush_ts)
       true
     end
 
@@ -124,6 +127,25 @@ module Llmemory
       ctx = context_tokens
       threshold = Llmemory.configuration.context_window_tokens - Llmemory.configuration.reserve_tokens
       ctx >= threshold
+    end
+
+    def with_overflow_recovery(max_retries: 2, &block)
+      return yield unless Llmemory.configuration.overflow_recovery_enabled
+      return yield unless block_given?
+
+      retries = 0
+      begin
+        yield
+      rescue Llmemory::LLMError => e
+        msg = e.message.to_s.downcase
+        overflow = msg.include?("context") || msg.include?("token") || msg.include?("overflow") || msg.include?("limit")
+        raise unless overflow && retries < max_retries
+
+        prune! if Llmemory.configuration.prune_tool_results_enabled
+        compact!
+        retries += 1
+        retry
+      end
     end
 
     def check_context_window!
@@ -169,11 +191,40 @@ module Llmemory
     end
 
     def flush_memory_before_compaction!(msgs)
-      return unless Llmemory.configuration.memory_flush_enabled
-      return if msgs.empty?
-      return if estimated_tokens(msgs) < Llmemory.configuration.memory_flush_threshold_tokens
+      return false unless Llmemory.configuration.memory_flush_enabled
+      return false if msgs.empty?
+      return false if estimated_tokens(msgs) < Llmemory.configuration.memory_flush_threshold_tokens
+
+      state = restore_state_for_save
+      last_compact = state[:last_compact_at] || state["last_compact_at"]
+      window = Llmemory.configuration.flush_once_per_cycle_seconds.to_i
+
+      if last_compact
+        t = last_compact.is_a?(Time) ? last_compact : Time.parse(last_compact.to_s)
+        return false if (Time.now - t).to_i < window
+      end
 
       consolidate!
+      true
+    end
+
+    def sanitize_messages(msgs)
+      return msgs unless Llmemory.configuration.message_sanitizer_enabled
+
+      sanitizer = ShortTerm::MessageSanitizer.new
+      sanitizer.sanitize!(msgs)
+    end
+
+    def restore_state_for_save
+      @checkpoint.restore_state || {}
+    end
+
+    def preserved_flush_state
+      state = restore_state_for_save
+      {}.tap do |h|
+        h[:last_flush_at] = state[:last_flush_at] || state["last_flush_at"] if state[:last_flush_at] || state["last_flush_at"]
+        h[:last_compact_at] = state[:last_compact_at] || state["last_compact_at"] if state[:last_compact_at] || state["last_compact_at"]
+      end
     end
 
     def estimated_tokens(msgs)
@@ -225,8 +276,10 @@ module Llmemory
       end
     end
 
-    def save_state(messages:)
+    def save_state(messages:, last_flush_at: nil, last_compact_at: nil)
       state = { STATE_KEY_MESSAGES => messages, last_activity_at: Time.now }
+      state[:last_flush_at] = last_flush_at if last_flush_at
+      state[:last_compact_at] = last_compact_at if last_compact_at
       @checkpoint.save_state(state)
     end
 

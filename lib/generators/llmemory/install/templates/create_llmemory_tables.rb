@@ -16,6 +16,7 @@ class CreateLlmemoryTables < ActiveRecord::Migration[7.0]
       t.string :category, null: false
       t.text :content, null: false
       t.string :source_resource_id
+      t.float :importance, default: 0.7
       t.timestamps
     end
     add_index :llmemory_items, :user_id

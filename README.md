@@ -2,6 +2,8 @@
 
 Persistent memory system for LLM agents. Implements short-term checkpointing, long-term memory (file-based or **graph-based**), retrieval with time decay, and maintenance jobs. You can inspect memory from the **CLI** or, in Rails apps, from an optional **dashboard**.
 
+Includes advanced memory management features inspired by [OpenClaw](https://github.com/openclaw/openclaw): pre-compaction memory flush, hybrid search (BM25 + vector), tool result pruning, context window tracking, session lifecycle management, daily memory logs, and auto-recall.
+
 ## Installation
 
 Add to your Gemfile:
@@ -40,11 +42,14 @@ memory.compact!(max_bytes: 8192)  # or use config default
 memory.clear_session!
 ```
 
-- **`add_message(role:, content:)`** — Persists messages in short-term.
+- **`add_message(role:, content:)`** — Persists messages in short-term. Supports `user`, `assistant`, `system`, `tool`, and `tool_result` roles.
 - **`messages`** — Returns the current conversation history.
 - **`retrieve(query, max_tokens: nil)`** — Returns combined context: recent conversation + relevant long-term memories.
+- **`recall_for(query: nil)`** — Auto-recall: returns context for the given query (or last user message if `query` is nil). Only active when `auto_recall_enabled` is true.
 - **`consolidate!`** — Extracts facts from the current conversation and stores them in long-term.
-- **`compact!(max_bytes: nil)`** — Compacts short-term memory by summarizing old messages when byte size exceeds limit. Uses LLM to create a summary, keeping recent messages intact.
+- **`compact!(max_bytes: nil)`** — Compacts short-term memory by summarizing old messages when byte size exceeds limit. Automatically flushes to long-term before compacting when over `memory_flush_threshold_tokens`.
+- **`prune!(mode: nil)`** — Prunes oversized tool results (soft-trim or hard-clear). Only when `prune_tool_results_enabled` is true.
+- **`check_context_window!`** — Triggers consolidate and compact when context exceeds configured thresholds.
 - **`clear_session!`** — Clears short-term only.
 
 ## Configuration
@@ -64,6 +69,37 @@ Llmemory.configure do |config|
   config.max_retrieval_tokens = 2000
   config.prune_after_days = 90
   config.compact_max_bytes = 8192  # max bytes before compact! triggers
+
+  # Pre-compaction memory flush (prevents knowledge loss when compacting)
+  config.memory_flush_enabled = true
+  config.memory_flush_threshold_tokens = 4000
+
+  # Hybrid search (BM25 + vector) and MMR re-ranking
+  config.hybrid_search_enabled = true
+  config.bm25_weight = 0.3
+  config.mmr_enabled = false
+  config.mmr_lambda = 0.7
+
+  # Tool result pruning (soft-trim or hard-clear for tool/tool_result messages)
+  config.prune_tool_results_enabled = false
+  config.prune_tool_results_mode = :soft_trim
+  config.prune_tool_results_max_bytes = 2048
+
+  # Context window tracking and auto-consolidation
+  config.context_window_tokens = 128_000
+  config.reserve_tokens = 16_384
+  config.keep_recent_tokens = 20_000
+
+  # Session lifecycle management
+  config.session_idle_minutes = 60
+  config.session_prune_after_days = 30
+  config.session_max_entries_per_user = 500
+
+  # Daily memory logs (file-based, FileStorage only)
+  config.daily_logs_enabled = false
+
+  # Auto-recall (inject relevant memories before each LLM turn)
+  config.auto_recall_enabled = false
 end
 ```
 
@@ -158,6 +194,71 @@ candidates = memory.search_candidates("job", top_k: 20)
 - **`search_candidates(query, user_id:, top_k:)`** — Used by `Retrieval::Engine`; returns `[{ text:, timestamp:, score: }]`.
 
 **Graph storage:** `:memory` (in-memory) or `:active_record` (Rails). For ActiveRecord, run `rails g llmemory:install` and migrate; the migration creates `llmemory_nodes`, `llmemory_edges`, and `llmemory_embeddings` (pgvector). Enable the `vector` extension in PostgreSQL for embeddings.
+
+## Advanced Memory Management
+
+These features improve robustness and efficiency, inspired by OpenClaw's memory system.
+
+### Pre-Compaction Memory Flush
+
+Before compacting short-term memory, llmemory can automatically consolidate the conversation into long-term storage. This prevents knowledge loss when the context is summarized.
+
+- **`memory_flush_enabled`** — When true, `compact!` calls `consolidate!` first when messages exceed `memory_flush_threshold_tokens`.
+- **`maybe_flush_memory!`** — Call explicitly to flush when approaching context limits.
+
+### Hybrid Search (BM25 + Vector)
+
+Retrieval combines keyword matching (BM25) with vector similarity for more robust search. Optional MMR (Maximal Marginal Relevance) re-ranking improves result diversity.
+
+- **`hybrid_search_enabled`** — Combines BM25 and vector scores.
+- **`bm25_weight`** — Weight for BM25 (0–1); remainder is vector score.
+- **`mmr_enabled`** — Re-ranks results for diversity.
+- **`mmr_lambda`** — Balance between relevance and diversity (0–1).
+
+### Tool Result Pruning
+
+Large tool outputs can consume most of the context window. Pruning selectively trims `tool` and `tool_result` messages while keeping user/assistant intact.
+
+- **`prune_tool_results_enabled`** — When true, `retrieve` uses pruned messages and `prune!` is available.
+- **`prune_tool_results_mode`** — `:soft_trim` (keep head+tail) or `:hard_clear` (replace with placeholder).
+- **`prune_tool_results_max_bytes`** — Max bytes before soft-trim applies.
+
+### Context Window Tracking
+
+Track estimated tokens and trigger consolidation/compaction automatically.
+
+- **`context_tokens`** — Returns estimated token count for current messages.
+- **`should_auto_consolidate?`** — True when over `context_window_tokens - reserve_tokens`.
+- **`check_context_window!`** — Runs consolidate and compact when thresholds are exceeded.
+
+### Session Lifecycle Management
+
+Clean up stale or idle sessions to control storage usage.
+
+```ruby
+lifecycle = Llmemory::ShortTerm::SessionLifecycle.new
+lifecycle.cleanup_idle_sessions!(user_id: "user_123", idle_minutes: 60)
+lifecycle.cleanup_stale_sessions!(user_id: "user_123", prune_after_days: 30)
+lifecycle.enforce_max_entries!(user_id: "user_123", max_entries: 500)
+```
+
+Sessions store `last_activity_at` automatically on each save.
+
+### Daily Memory Logs
+
+With `daily_logs_enabled` and FileStorage, file-based memory writes to `memory/YYYY-MM-DD.md` per user. Today's and yesterday's logs are included in retrieval. Useful for temporal organization and human-readable logs.
+
+### Auto-Recall
+
+When `auto_recall_enabled` is true, call `recall_for(query: nil)` before each LLM turn. If `query` is nil, the last user message is used as the search query. Returns combined context without explicit `retrieve` calls.
+
+```ruby
+Llmemory.configure { |c| c.auto_recall_enabled = true }
+# Before each LLM call:
+context = memory.recall_for(query: user_message)
+# Or use last user message automatically:
+context = memory.recall_for
+```
 
 ## Lower-Level APIs
 
@@ -333,7 +434,7 @@ MCP_TOKEN=your-secret-token llmemory mcp serve --http --port 443 \
 | `memory_retrieve` | Get context optimized for LLM inference (supports timeline context) |
 | `memory_timeline` | Get chronological timeline of recent memories |
 | `memory_timeline_context` | Get N items before/after a specific memory |
-| `memory_add_message` | Add message to short-term conversation |
+| `memory_add_message` | Add message to short-term conversation (roles: user, assistant, system, tool, tool_result) |
 | `memory_consolidate` | Extract facts from conversation to long-term |
 | `memory_stats` | Get memory statistics for a user |
 | `memory_info` | Documentation on how to use the tools |

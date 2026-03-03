@@ -28,6 +28,7 @@ Gem::Specification.new do |spec|
   # mcp is optional - only needed if you want to use the MCP server functionality
   # Install with: gem install mcp
   spec.add_development_dependency "mcp", "~> 0.6"
+  spec.add_development_dependency "simplecov", "~> 0.22"
   spec.add_development_dependency "rspec", "~> 3.12"
   spec.add_development_dependency "vcr", "~> 6.2"
   spec.add_development_dependency "webmock", "~> 3.18"
