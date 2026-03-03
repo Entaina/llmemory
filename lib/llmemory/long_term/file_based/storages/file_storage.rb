@@ -124,6 +124,29 @@ module Llmemory
             resource_ids.each { |id| File.delete(resource_path(user_id, id)) if File.file?(resource_path(user_id, id)) }
           end
 
+          def save_daily_log_entry(user_id, date, content)
+            ensure_user_dir(user_id, "memory")
+            path = daily_log_path(user_id, date)
+            existing = File.file?(path) ? File.read(path) : ""
+            entry = "#{Time.now.strftime('%H:%M')} #{content}\n"
+            File.write(path, existing + entry)
+            true
+          end
+
+          def load_daily_logs(user_id, from_date:, to_date:)
+            from_date = Date.parse(from_date.to_s) if from_date.is_a?(String)
+            to_date = Date.parse(to_date.to_s) if to_date.is_a?(String)
+            dir = user_path(user_id, "memory")
+            return [] unless Dir.exist?(dir)
+
+            (from_date..to_date).filter_map do |d|
+              path = daily_log_path(user_id, d)
+              next unless File.file?(path)
+
+              { date: d, content: File.read(path) }
+            end
+          end
+
           def list_users
             return [] unless Dir.exist?(@base_path)
             Dir.children(@base_path).select { |e| File.directory?(File.join(@base_path, e)) && !e.start_with?(".") }
@@ -160,6 +183,11 @@ module Llmemory
           def item_path(user_id, id)
             ensure_user_dir(user_id, "items")
             File.join(user_path(user_id, "items"), "#{id}.json")
+          end
+
+          def daily_log_path(user_id, date)
+            date_str = date.respond_to?(:strftime) ? date.strftime("%Y-%m-%d") : date.to_s
+            File.join(user_path(user_id, "memory"), "#{date_str}.md")
           end
 
           def category_path(user_id, category_name)

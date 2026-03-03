@@ -10,7 +10,7 @@ module Llmemory
           properties: {
             user_id: { type: "string", description: "User identifier" },
             session_id: { type: "string", description: "Session identifier (default: 'default')" },
-            role: { type: "string", enum: ["user", "assistant", "system"], description: "Message role" },
+            role: { type: "string", enum: ["user", "assistant", "system", "tool", "tool_result"], description: "Message role" },
             content: { type: "string", description: "Message content" }
           },
           required: ["user_id", "role", "content"]

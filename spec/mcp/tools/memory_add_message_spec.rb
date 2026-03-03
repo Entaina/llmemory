@@ -58,7 +58,7 @@ RSpec.describe Llmemory::MCP::Tools::MemoryAddMessage do
 
     it "has role enum" do
       schema = described_class.input_schema_value.to_h
-      expect(schema[:properties][:role][:enum]).to eq(["user", "assistant", "system"])
+      expect(schema[:properties][:role][:enum]).to eq(["user", "assistant", "system", "tool", "tool_result"])
     end
   end
 end

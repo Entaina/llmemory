@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "short_term/checkpoint"
+require_relative "short_term/pruner"
 require_relative "long_term/file_based"
 require_relative "retrieval/engine"
 
@@ -34,9 +35,40 @@ module Llmemory
     end
 
     def retrieve(query, max_tokens: nil)
-      short_context = format_short_term_context(messages)
+      msgs = pruned_messages
+      short_context = format_short_term_context(msgs)
       long_context = @retrieval_engine.retrieve_for_inference(query, user_id: @user_id, max_tokens: max_tokens)
       combine_contexts(short_context, long_context)
+    end
+
+    def recall_for(query: nil, max_tokens: nil)
+      return "" unless Llmemory.configuration.auto_recall_enabled
+
+      effective_query = query || last_user_message
+      return "" if effective_query.to_s.strip.empty?
+
+      retrieve(effective_query, max_tokens: max_tokens)
+    end
+
+    def last_user_message
+      msgs = messages
+      idx = msgs.rindex { |m| (m[:role] || m["role"]).to_s == "user" }
+      idx ? (msgs[idx][:content] || msgs[idx]["content"]).to_s : ""
+    end
+
+    def prune!(mode: nil)
+      return false unless Llmemory.configuration.prune_tool_results_enabled
+
+      msgs = messages
+      return false if msgs.empty?
+
+      mode ||= Llmemory.configuration.prune_tool_results_mode
+      pruner = ShortTerm::Pruner.new(
+        soft_trim_max_bytes: Llmemory.configuration.prune_tool_results_max_bytes
+      )
+      pruned = pruner.prune!(msgs, mode: mode)
+      save_state(messages: pruned)
+      true
     end
 
     def consolidate!
@@ -58,6 +90,8 @@ module Llmemory
       current_bytes = messages_byte_size(msgs)
       return false if current_bytes <= max
 
+      flush_memory_before_compaction!(msgs)
+
       old_msgs, recent_msgs = split_messages_by_bytes(msgs, max)
       return false if old_msgs.empty?
 
@@ -65,6 +99,48 @@ module Llmemory
       compacted = [{ role: :system, content: summary }] + recent_msgs
       save_state(messages: compacted)
       true
+    end
+
+    def maybe_flush_memory!
+      return false unless Llmemory.configuration.memory_flush_enabled
+      msgs = messages
+      return false if msgs.empty?
+      return false if estimated_tokens(msgs) < Llmemory.configuration.memory_flush_threshold_tokens
+
+      consolidate!
+    end
+
+    def context_tokens
+      estimated_tokens(messages)
+    end
+
+    def should_auto_consolidate?
+      ctx = context_tokens
+      threshold = Llmemory.configuration.context_window_tokens - Llmemory.configuration.reserve_tokens
+      ctx >= threshold
+    end
+
+    def should_compact?
+      ctx = context_tokens
+      threshold = Llmemory.configuration.context_window_tokens - Llmemory.configuration.reserve_tokens
+      ctx >= threshold
+    end
+
+    def check_context_window!
+      return false if messages.empty?
+
+      flushed = false
+      if should_auto_consolidate? && Llmemory.configuration.memory_flush_enabled
+        consolidate!
+        flushed = true
+      end
+
+      compacted = false
+      if should_compact?
+        compacted = compact!
+      end
+
+      flushed || compacted
     end
 
     def user_id
@@ -90,6 +166,18 @@ module Llmemory
 
     def llm_client
       @llm ||= Llmemory::LLM.client
+    end
+
+    def flush_memory_before_compaction!(msgs)
+      return unless Llmemory.configuration.memory_flush_enabled
+      return if msgs.empty?
+      return if estimated_tokens(msgs) < Llmemory.configuration.memory_flush_threshold_tokens
+
+      consolidate!
+    end
+
+    def estimated_tokens(msgs)
+      (messages_byte_size(msgs) / 4.0).ceil
     end
 
     def messages_byte_size(msgs)
@@ -138,7 +226,17 @@ module Llmemory
     end
 
     def save_state(messages:)
-      @checkpoint.save_state(STATE_KEY_MESSAGES => messages)
+      state = { STATE_KEY_MESSAGES => messages, last_activity_at: Time.now }
+      @checkpoint.save_state(state)
+    end
+
+    def pruned_messages
+      return messages unless Llmemory.configuration.prune_tool_results_enabled
+
+      pruner = ShortTerm::Pruner.new(
+        soft_trim_max_bytes: Llmemory.configuration.prune_tool_results_max_bytes
+      )
+      pruner.prune!(messages, mode: Llmemory.configuration.prune_tool_results_mode)
     end
 
     def format_short_term_context(msgs)

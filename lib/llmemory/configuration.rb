@@ -16,7 +16,24 @@ module Llmemory
                   :time_decay_half_life_days,
                   :max_retrieval_tokens,
                   :prune_after_days,
-                  :compact_max_bytes
+                  :compact_max_bytes,
+                  :memory_flush_enabled,
+                  :memory_flush_threshold_tokens,
+                  :hybrid_search_enabled,
+                  :bm25_weight,
+                  :mmr_enabled,
+                  :mmr_lambda,
+                  :prune_tool_results_enabled,
+                  :prune_tool_results_mode,
+                  :prune_tool_results_max_bytes,
+                  :context_window_tokens,
+                  :reserve_tokens,
+                  :keep_recent_tokens,
+                  :session_idle_minutes,
+                  :session_prune_after_days,
+                  :session_max_entries_per_user,
+                  :daily_logs_enabled,
+                  :auto_recall_enabled
 
     def initialize
       @llm_provider = :openai
@@ -34,6 +51,23 @@ module Llmemory
       @max_retrieval_tokens = 2000
       @prune_after_days = 90
       @compact_max_bytes = 8192
+      @memory_flush_enabled = true
+      @memory_flush_threshold_tokens = 4000
+      @hybrid_search_enabled = true
+      @bm25_weight = 0.3
+      @mmr_enabled = false
+      @mmr_lambda = 0.7
+      @prune_tool_results_enabled = false
+      @prune_tool_results_mode = :soft_trim
+      @prune_tool_results_max_bytes = 2048
+      @context_window_tokens = 128_000
+      @reserve_tokens = 16_384
+      @keep_recent_tokens = 20_000
+      @session_idle_minutes = 60
+      @session_prune_after_days = 30
+      @session_max_entries_per_user = 500
+      @daily_logs_enabled = false
+      @auto_recall_enabled = false
     end
   end
 

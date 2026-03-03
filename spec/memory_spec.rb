@@ -94,6 +94,131 @@ RSpec.describe Llmemory::Memory do
     end
   end
 
+  describe "#prune!" do
+    it "returns false when prune_tool_results_enabled is false" do
+      allow(Llmemory.configuration).to receive(:prune_tool_results_enabled).and_return(false)
+      memory = described_class.new(user_id: user_id, session_id: session_id)
+      memory.add_message(role: :tool_result, content: "x" * 5000)
+      expect(memory.prune!).to be false
+    end
+
+    it "persists pruned tool results when enabled" do
+      allow(Llmemory.configuration).to receive(:prune_tool_results_enabled).and_return(true)
+      allow(Llmemory.configuration).to receive(:prune_tool_results_mode).and_return(:hard_clear)
+      allow(Llmemory.configuration).to receive(:prune_tool_results_max_bytes).and_return(2048)
+
+      memory = described_class.new(user_id: user_id, session_id: session_id)
+      memory.add_message(role: :user, content: "Hi")
+      memory.add_message(role: :tool_result, content: "Long output " * 500)
+
+      expect(memory.prune!).to be true
+      msgs = memory.messages
+      expect(msgs.find { |m| m[:role] == :tool_result }[:content]).to eq("[Tool result pruned]")
+    end
+  end
+
+  describe "#context_tokens and #should_auto_consolidate?" do
+    it "returns estimated token count" do
+      memory = described_class.new(user_id: user_id, session_id: session_id)
+      memory.add_message(role: :user, content: "Hello")
+      memory.add_message(role: :assistant, content: "Hi")
+      expect(memory.context_tokens).to be >= 1
+    end
+
+    it "should_auto_consolidate? returns true when over threshold" do
+      allow(Llmemory.configuration).to receive(:context_window_tokens).and_return(1000)
+      allow(Llmemory.configuration).to receive(:reserve_tokens).and_return(900)
+
+      memory = described_class.new(user_id: user_id, session_id: session_id)
+      50.times { |i| memory.add_message(role: :user, content: "Message #{i} with enough content to exceed threshold") }
+
+      expect(memory.should_auto_consolidate?).to be true
+    end
+
+    it "should_auto_consolidate? returns false when under threshold" do
+      allow(Llmemory.configuration).to receive(:context_window_tokens).and_return(100_000)
+      allow(Llmemory.configuration).to receive(:reserve_tokens).and_return(90_000)
+
+      memory = described_class.new(user_id: user_id, session_id: session_id)
+      memory.add_message(role: :user, content: "Hi")
+
+      expect(memory.should_auto_consolidate?).to be false
+    end
+  end
+
+  describe "#check_context_window!" do
+    it "triggers consolidate and compact when over threshold" do
+      allow(Llmemory.configuration).to receive(:context_window_tokens).and_return(500)
+      allow(Llmemory.configuration).to receive(:reserve_tokens).and_return(400)
+      allow(Llmemory.configuration).to receive(:memory_flush_enabled).and_return(true)
+      allow(Llmemory.configuration).to receive(:memory_flush_threshold_tokens).and_return(10)
+      allow(Llmemory.configuration).to receive(:compact_max_bytes).and_return(100)
+
+      long_term_double = double("LongTerm")
+      allow(long_term_double).to receive(:memorize)
+
+      llm_double = double("LLM")
+      allow(llm_double).to receive(:invoke).and_return("Summary")
+      allow(Llmemory::LLM).to receive(:client).and_return(llm_double)
+
+      memory = described_class.new(user_id: user_id, session_id: session_id, long_term: long_term_double)
+      30.times { |i| memory.add_message(role: :user, content: "Message #{i} with content to exceed limits") }
+
+      result = memory.check_context_window!
+      expect(result).to be true
+    end
+  end
+
+  describe "#recall_for and #last_user_message" do
+    it "returns empty when auto_recall_enabled is false" do
+      allow(Llmemory.configuration).to receive(:auto_recall_enabled).and_return(false)
+      memory = described_class.new(user_id: user_id, session_id: session_id)
+      memory.add_message(role: :user, content: "Hello")
+      expect(memory.recall_for).to eq("")
+    end
+
+    it "returns context when auto_recall_enabled and query provided" do
+      allow(Llmemory.configuration).to receive(:auto_recall_enabled).and_return(true)
+      long_term_double = double("LongTerm").tap do |lt|
+        allow(lt).to receive(:search_candidates).with(anything, user_id: user_id, top_k: 20).and_return([
+          { text: "User prefers Python", timestamp: Time.now, score: 1.0 }
+        ])
+        allow(lt).to receive(:user_id).and_return(user_id)
+      end
+      retrieval_engine = Llmemory::Retrieval::Engine.new(long_term_double)
+      memory = described_class.new(user_id: user_id, session_id: session_id, long_term: long_term_double, retrieval_engine: retrieval_engine)
+      memory.add_message(role: :user, content: "Hi")
+
+      context = memory.recall_for(query: "preferences")
+      expect(context).to include("User prefers Python")
+    end
+
+    it "uses last user message as query when query is nil" do
+      allow(Llmemory.configuration).to receive(:auto_recall_enabled).and_return(true)
+      long_term_double = double("LongTerm").tap do |lt|
+        allow(lt).to receive(:search_candidates).with("my preferences", user_id: user_id, top_k: 20).and_return([
+          { text: "User likes coffee", timestamp: Time.now, score: 1.0 }
+        ])
+        allow(lt).to receive(:user_id).and_return(user_id)
+      end
+      retrieval_engine = Llmemory::Retrieval::Engine.new(long_term_double)
+      memory = described_class.new(user_id: user_id, session_id: session_id, long_term: long_term_double, retrieval_engine: retrieval_engine)
+      memory.add_message(role: :user, content: "my preferences")
+      memory.add_message(role: :assistant, content: "Let me check")
+
+      context = memory.recall_for
+      expect(context).to include("User likes coffee")
+    end
+
+    it "last_user_message returns the most recent user message" do
+      memory = described_class.new(user_id: user_id, session_id: session_id)
+      memory.add_message(role: :user, content: "First")
+      memory.add_message(role: :assistant, content: "Ok")
+      memory.add_message(role: :user, content: "Second")
+      expect(memory.last_user_message).to eq("Second")
+    end
+  end
+
   describe "#user_id" do
     it "returns the given user_id" do
       memory = described_class.new(user_id: user_id, session_id: session_id)
@@ -117,6 +242,48 @@ RSpec.describe Llmemory::Memory do
     end
   end
 
+  describe "#maybe_flush_memory!" do
+    it "returns false and does not consolidate when under threshold" do
+      allow(Llmemory.configuration).to receive(:memory_flush_enabled).and_return(true)
+      allow(Llmemory.configuration).to receive(:memory_flush_threshold_tokens).and_return(10_000)
+
+      long_term_double = double("LongTerm")
+      allow(long_term_double).to receive(:memorize)
+      memory = described_class.new(user_id: user_id, session_id: session_id, long_term: long_term_double)
+      memory.add_message(role: :user, content: "Hi")
+      memory.add_message(role: :assistant, content: "Hello")
+
+      expect(memory.maybe_flush_memory!).to be false
+      expect(long_term_double).not_to have_received(:memorize)
+    end
+
+    it "returns true and consolidates when over threshold" do
+      allow(Llmemory.configuration).to receive(:memory_flush_enabled).and_return(true)
+      allow(Llmemory.configuration).to receive(:memory_flush_threshold_tokens).and_return(10)
+
+      long_term_double = double("LongTerm")
+      expect(long_term_double).to receive(:memorize).with(/\Auser:.*assistant:/m)
+      memory = described_class.new(user_id: user_id, session_id: session_id, long_term: long_term_double)
+      memory.add_message(role: :user, content: "This is a long message that exceeds the token threshold for flush")
+      memory.add_message(role: :assistant, content: "Another long response to ensure we pass the threshold")
+
+      expect(memory.maybe_flush_memory!).to be true
+    end
+
+    it "returns false when memory_flush_enabled is false" do
+      allow(Llmemory.configuration).to receive(:memory_flush_enabled).and_return(false)
+      allow(Llmemory.configuration).to receive(:memory_flush_threshold_tokens).and_return(10)
+
+      long_term_double = double("LongTerm")
+      allow(long_term_double).to receive(:memorize)
+      memory = described_class.new(user_id: user_id, session_id: session_id, long_term: long_term_double)
+      memory.add_message(role: :user, content: "Long message " * 50)
+
+      expect(memory.maybe_flush_memory!).to be false
+      expect(long_term_double).not_to have_received(:memorize)
+    end
+  end
+
   describe "#compact!" do
     let(:memory) { described_class.new(user_id: user_id, session_id: session_id) }
 
@@ -128,6 +295,8 @@ RSpec.describe Llmemory::Memory do
     end
 
     it "compacts messages when byte size exceeds max" do
+      allow(Llmemory.configuration).to receive(:memory_flush_enabled).and_return(false)
+
       llm_double = double("LLM")
       allow(llm_double).to receive(:invoke).and_return("Summary of old conversation")
       allow(Llmemory::LLM).to receive(:client).and_return(llm_double)
@@ -145,8 +314,27 @@ RSpec.describe Llmemory::Memory do
       expect(msgs.first[:content]).to eq("Summary of old conversation")
     end
 
+    it "calls consolidate! before compacting when over memory_flush_threshold_tokens" do
+      allow(Llmemory.configuration).to receive(:memory_flush_enabled).and_return(true)
+      allow(Llmemory.configuration).to receive(:memory_flush_threshold_tokens).and_return(50)
+
+      long_term_double = double("LongTerm")
+      expect(long_term_double).to receive(:memorize).with(include("Message number 0"))
+
+      llm_double = double("LLM")
+      allow(llm_double).to receive(:invoke).and_return("Summary of old conversation")
+      allow(Llmemory::LLM).to receive(:client).and_return(llm_double)
+
+      memory = described_class.new(user_id: user_id, session_id: session_id, long_term: long_term_double)
+      10.times { |i| memory.add_message(role: :user, content: "Message number #{i} with extra content to exceed threshold") }
+
+      result = memory.compact!(max_bytes: 200)
+      expect(result).to be true
+    end
+
     it "uses configuration default when max_bytes not provided" do
       allow(Llmemory.configuration).to receive(:compact_max_bytes).and_return(100)
+      allow(Llmemory.configuration).to receive(:memory_flush_enabled).and_return(false)
 
       llm_double = double("LLM")
       allow(llm_double).to receive(:invoke).and_return("Summarized")
@@ -157,6 +345,8 @@ RSpec.describe Llmemory::Memory do
     end
 
     it "falls back to truncated text on LLM error" do
+      allow(Llmemory.configuration).to receive(:memory_flush_enabled).and_return(false)
+
       llm_double = double("LLM")
       allow(llm_double).to receive(:invoke).and_raise(Llmemory::LLMError.new("API error"))
       allow(Llmemory::LLM).to receive(:client).and_return(llm_double)

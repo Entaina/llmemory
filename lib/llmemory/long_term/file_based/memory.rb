@@ -18,6 +18,7 @@ module Llmemory
 
         def memorize(conversation_text)
           resource_id = save_resource(conversation_text)
+          append_to_daily_log(conversation_text) if Llmemory.configuration.daily_logs_enabled && @storage.respond_to?(:save_daily_log_entry)
           items = @extractor.extract_items(conversation_text)
           updates_by_category = {}
 
@@ -47,6 +48,7 @@ module Llmemory
           uid = user_id || @user_id
           items = @storage.search_items(uid, query)
           resources = @storage.search_resources(uid, query)
+          daily_logs = load_daily_logs_for_retrieval(uid) if Llmemory.configuration.daily_logs_enabled && @storage.respond_to?(:load_daily_logs)
           out = []
           items.first(top_k).each do |i|
             out << {
@@ -62,6 +64,11 @@ module Llmemory
               score: 0.9
             }
           end
+          if daily_logs
+            daily_logs.each do |log|
+              out << { text: log[:content], timestamp: log[:date].to_time, score: 0.85 }
+            end
+          end
           out
         end
 
@@ -76,6 +83,18 @@ module Llmemory
         def save_item(category:, item:, source_resource_id:)
           content = item.is_a?(Hash) ? item["content"] || item[:content] : item.to_s
           @storage.save_item(@user_id, category: category, content: content, source_resource_id: source_resource_id)
+        end
+
+        def append_to_daily_log(conversation_text)
+          summary = conversation_text.length > 500 ? "#{conversation_text[0..500]}..." : conversation_text
+          @storage.save_daily_log_entry(@user_id, Date.today, summary)
+        end
+
+        def load_daily_logs_for_retrieval(user_id)
+          today = Date.today
+          yesterday = today - 1
+          logs = @storage.load_daily_logs(user_id, from_date: yesterday, to_date: today)
+          logs.map { |l| { date: l[:date], content: "[#{l[:date]}] #{l[:content]}" } }
         end
       end
     end
