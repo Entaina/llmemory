@@ -9,8 +9,14 @@ namespace :release do
     current_branch = `git rev-parse --abbrev-ref HEAD`.strip
     abort "Current branch must be main (got: #{current_branch})" unless current_branch == "main"
 
-    status = `git status --porcelain`.strip
-    abort "Working tree has uncommitted changes. Commit or stash them first." unless status.empty?
+    # Allow only release-related files to be modified (we'll commit them)
+    release_files = %w[lib/llmemory/version.rb Gemfile.lock CHANGELOG.txt]
+    status_lines = `git status --porcelain`.strip.lines
+    other_changes = status_lines.reject do |line|
+      path = line.sub(/\A..\s+/, "").strip
+      release_files.include?(path)
+    end
+    abort "Working tree has uncommitted changes outside release files. Commit or stash them first." unless other_changes.empty?
 
     puts "Running tests..."
     sh "bundle exec rspec"
