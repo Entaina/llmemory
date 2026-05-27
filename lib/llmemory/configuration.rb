@@ -14,6 +14,7 @@ module Llmemory
                   :database_url,
                   :vector_store,
                   :time_decay_half_life_days,
+                  :importance_weight,
                   :max_retrieval_tokens,
                   :prune_after_days,
                   :compact_max_bytes,
@@ -56,6 +57,7 @@ module Llmemory
       @database_url = ENV["DATABASE_URL"]
       @vector_store = nil
       @time_decay_half_life_days = 30
+      @importance_weight = 1.0
       @max_retrieval_tokens = 2000
       @prune_after_days = 90
       @compact_max_bytes = 8192

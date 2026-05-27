@@ -24,7 +24,7 @@ module Llmemory
             id
           end
 
-          def save_item(user_id, category:, content:, source_resource_id:, importance: 0.7)
+          def save_item(user_id, category:, content:, source_resource_id:, importance: 0.7, provenance: nil)
             ensure_user_dir(user_id)
             seq = next_seq(user_id, "item_id_seq")
             id = "item_#{seq}"
@@ -35,6 +35,7 @@ module Llmemory
               content: content,
               source_resource_id: source_resource_id,
               importance: importance,
+              provenance: provenance,
               created_at: Time.now.iso8601
             }
             File.write(path, JSON.generate(data))

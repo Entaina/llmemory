@@ -54,6 +54,7 @@ RSpec.describe Llmemory::LongTerm::FileBased::Item do
         category: "preferences",
         content: "User prefers Ruby",
         source_resource_id: "res_1",
+        provenance: nil,
         created_at: "2024-01-15T12:00:00Z"
       )
     end

@@ -55,6 +55,20 @@ RSpec.describe Llmemory::LongTerm::GraphBased::Memory do
     it "returns true" do
       expect(memory.memorize("Hello")).to be true
     end
+
+    it "stamps nodes and edges with extraction provenance" do
+      memory.memorize("I work at Acme.")
+
+      node = storage.list_nodes(user_id).first
+      node_prov = node.provenance
+      expect(node_prov).not_to be_nil
+      expect(node_prov[:method]).to eq("entity_relation_extraction")
+
+      edge = storage.find_edges(user_id, predicate: "works_at", include_archived: false).first
+      edge_prov = edge.provenance
+      expect(edge_prov[:method]).to eq("entity_relation_extraction")
+      expect(edge_prov[:sources].first[:type]).to eq("text_sha256")
+    end
   end
 
   describe "#retrieve" do

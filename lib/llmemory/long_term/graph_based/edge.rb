@@ -31,6 +31,13 @@ module Llmemory
           !archived_at.nil?
         end
 
+        # Lineage of this edge, stored within properties so it round-trips
+        # through every backend without a schema change. See Llmemory::Provenance.
+        def provenance
+          props = properties || {}
+          props[:provenance] || props["provenance"]
+        end
+
         def to_h
           {
             id: id,

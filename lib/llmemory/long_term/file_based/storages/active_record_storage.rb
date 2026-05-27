@@ -30,7 +30,7 @@ module Llmemory
             id
           end
 
-          def save_item(user_id, category:, content:, source_resource_id:, importance: 0.7)
+          def save_item(user_id, category:, content:, source_resource_id:, importance: 0.7, provenance: nil)
             id = "item_#{SecureRandom.hex(8)}"
             attrs = {
               id: id,
@@ -41,6 +41,7 @@ module Llmemory
               created_at: Time.current
             }
             attrs[:importance] = importance if LlmemoryItem.column_names.include?("importance")
+            attrs[:provenance] = provenance if provenance && LlmemoryItem.column_names.include?("provenance")
             LlmemoryItem.create!(attrs)
             id
           end
@@ -189,6 +190,7 @@ module Llmemory
               created_at: r.created_at
             }
             h[:importance] = r.respond_to?(:importance) ? (r.importance || 0.7).to_f : 0.7
+            h[:provenance] = r.provenance if r.respond_to?(:provenance)
             h
           end
 

@@ -65,7 +65,8 @@ module Llmemory
             out << {
               text: i[:content] || i["content"],
               timestamp: i[:created_at] || i["created_at"],
-              score: (i[:importance] || i["importance"] || 1.0).to_f,
+              score: 1.0,
+              importance: (i[:importance] || i["importance"] || 1.0).to_f,
               evergreen: i[:evergreen] || i["evergreen"]
             }
           end
@@ -94,7 +95,10 @@ module Llmemory
 
         def save_item(category:, item:, source_resource_id:, importance: 0.7)
           content = item.is_a?(Hash) ? item["content"] || item[:content] : item.to_s
-          @storage.save_item(@user_id, category: category, content: content, source_resource_id: source_resource_id, importance: importance)
+          provenance = Llmemory::Provenance.from_resource(
+            source_resource_id, method: "fact_extraction", confidence: importance
+          )
+          @storage.save_item(@user_id, category: category, content: content, source_resource_id: source_resource_id, importance: importance, provenance: provenance)
         end
 
         def append_to_daily_log(conversation_text)

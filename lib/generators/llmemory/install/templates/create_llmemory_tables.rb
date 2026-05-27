@@ -17,6 +17,7 @@ class CreateLlmemoryTables < ActiveRecord::Migration[7.0]
       t.text :content, null: false
       t.string :source_resource_id
       t.float :importance, default: 0.7
+      t.jsonb :provenance
       t.timestamps
     end
     add_index :llmemory_items, :user_id

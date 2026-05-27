@@ -9,7 +9,7 @@ module Llmemory
             raise NotImplementedError, "#{self.class}#save_resource must be implemented"
           end
 
-          def save_item(user_id, category:, content:, source_resource_id:, importance: 0.7)
+          def save_item(user_id, category:, content:, source_resource_id:, importance: 0.7, provenance: nil)
             raise NotImplementedError, "#{self.class}#save_item must be implemented"
           end
 

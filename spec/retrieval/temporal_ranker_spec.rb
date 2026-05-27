@@ -48,4 +48,57 @@ RSpec.describe Llmemory::Retrieval::TemporalRanker do
     expect(ranked.first[:temporal_score]).to eq(1.0)
     expect(ranked.last[:temporal_score]).to be < 0.01
   end
+
+  describe "importance weighting" do
+    let(:linear) { described_class.new(half_life_days: 30, importance_weight: 1.0) }
+
+    it "favors higher importance when relevance and recency match" do
+      candidates = [
+        { text: "low", timestamp: new_time, score: 1.0, importance: 0.2 },
+        { text: "high", timestamp: new_time, score: 1.0, importance: 0.9 }
+      ]
+      ranked = linear.rank(candidates)
+      expect(ranked.first[:text]).to eq("high")
+    end
+
+    it "applies importance linearly at weight 1.0" do
+      candidates = [{ text: "a", timestamp: Time.now, score: 1.0, importance: 0.5 }]
+      ranked = linear.rank(candidates, now: Time.now)
+      expect(ranked.first[:temporal_score]).to be_within(0.001).of(0.5)
+    end
+
+    it "ignores importance when weight is 0 (backward compatible)" do
+      ranker0 = described_class.new(half_life_days: 30, importance_weight: 0.0)
+      candidates = [
+        { text: "low", timestamp: Time.now, score: 1.0, importance: 0.1 },
+        { text: "high", timestamp: Time.now, score: 1.0, importance: 0.9 }
+      ]
+      ranked = ranker0.rank(candidates, now: Time.now)
+      expect(ranked.map { |c| c[:temporal_score] }).to all(be_within(0.001).of(1.0))
+    end
+
+    it "treats missing importance as neutral (no penalty)" do
+      candidates = [{ text: "a", timestamp: Time.now, score: 0.8 }]
+      ranked = linear.rank(candidates, now: Time.now)
+      expect(ranked.first[:temporal_score]).to be_within(0.001).of(0.8)
+      expect(ranked.first[:importance]).to eq(1.0)
+    end
+
+    it "clamps importance into [0, 1]" do
+      candidates = [
+        { text: "over", timestamp: Time.now, score: 1.0, importance: 5.0 },
+        { text: "under", timestamp: Time.now, score: 1.0, importance: -2.0 }
+      ]
+      ranked = linear.rank(candidates, now: Time.now)
+      expect(ranked.find { |c| c[:text] == "over" }[:importance]).to eq(1.0)
+      expect(ranked.find { |c| c[:text] == "under" }[:importance]).to eq(0.0)
+    end
+
+    it "softens importance influence at fractional weight" do
+      ranker_half = described_class.new(half_life_days: 30, importance_weight: 0.5)
+      candidates = [{ text: "a", timestamp: Time.now, score: 1.0, importance: 0.25 }]
+      ranked = ranker_half.rank(candidates, now: Time.now)
+      expect(ranked.first[:temporal_score]).to be_within(0.001).of(0.5)
+    end
+  end
 end

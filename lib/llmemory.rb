@@ -2,6 +2,7 @@
 
 require_relative "llmemory/version"
 require_relative "llmemory/configuration"
+require_relative "llmemory/provenance"
 require_relative "llmemory/llm"
 require_relative "llmemory/short_term"
 require_relative "llmemory/long_term"

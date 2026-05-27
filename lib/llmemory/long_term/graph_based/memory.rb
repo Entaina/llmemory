@@ -32,6 +32,7 @@ module Llmemory
 
           return true if entities.empty? && relations.empty?
 
+          provenance = Llmemory::Provenance.from_text_fingerprint(text, method: "entity_relation_extraction")
           name_to_id = {}
 
           entities.each do |e|
@@ -39,7 +40,7 @@ module Llmemory
             entity_type = e[:type] || e["type"] || "concept"
             name = e[:name] || e["name"]
             next if name.nil? || name.to_s.strip.empty?
-            id = @kg.add_node(entity_type: entity_type, name: name.to_s.strip, properties: {})
+            id = @kg.add_node(entity_type: entity_type, name: name.to_s.strip, properties: { "provenance" => provenance })
             name_to_id[name.to_s.strip] ||= id
           end
 
@@ -50,8 +51,8 @@ module Llmemory
             object = (r[:object] || r["object"]).to_s.strip
             next if subject.empty? || predicate.empty? || object.empty?
 
-            subject_id = name_to_id[subject] || @kg.add_node(entity_type: "concept", name: subject, properties: {})
-            object_id = name_to_id[object] || @kg.add_node(entity_type: "concept", name: object, properties: {})
+            subject_id = name_to_id[subject] || @kg.add_node(entity_type: "concept", name: subject, properties: { "provenance" => provenance })
+            object_id = name_to_id[object] || @kg.add_node(entity_type: "concept", name: object, properties: { "provenance" => provenance })
 
             edge = Edge.new(
               id: nil,
@@ -59,12 +60,12 @@ module Llmemory
               subject_id: subject_id,
               predicate: predicate,
               target_id: object_id,
-              properties: {},
+              properties: { "provenance" => provenance },
               created_at: Time.now,
               archived_at: nil
             )
             @conflict_resolver.resolve(edge)
-            edge_id = @kg.add_edge(subject: subject_id, predicate: predicate, object: object_id, properties: {})
+            edge_id = @kg.add_edge(subject: subject_id, predicate: predicate, object: object_id, properties: { "provenance" => provenance })
 
             text = "#{subject} #{predicate} #{object}"
             embedding = @vector_store.respond_to?(:embed) ? @vector_store.embed(text) : nil
@@ -89,7 +90,8 @@ module Llmemory
             {
               text: r[:text],
               timestamp: r[:created_at] || r[:timestamp],
-              score: r[:score] || 1.0
+              score: r[:score] || 1.0,
+              importance: r[:importance]
             }
           end
         end

@@ -23,6 +23,15 @@ RSpec.describe Llmemory::LongTerm::FileBased::Memory do
     it "returns true" do
       expect(memory.memorize("Hello")).to be true
     end
+
+    it "records provenance linking each item to its source resource" do
+      memory.memorize("I love Ruby and use it every day.")
+      item = storage.get_all_items(user_id).first
+      prov = item[:provenance]
+      expect(prov).not_to be_nil
+      expect(prov[:method]).to eq("fact_extraction")
+      expect(prov[:sources].first).to eq({ type: "resource", id: item[:source_resource_id] })
+    end
   end
 
   describe "#retrieve" do

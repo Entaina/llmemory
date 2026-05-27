@@ -24,12 +24,12 @@ module Llmemory
             id
           end
 
-          def save_item(user_id, category:, content:, source_resource_id:, importance: 0.7)
+          def save_item(user_id, category:, content:, source_resource_id:, importance: 0.7, provenance: nil)
             ensure_tables!
             id = "item_#{SecureRandom.hex(8)}"
             conn.exec_params(
-              "INSERT INTO llmemory_items (id, user_id, category, content, source_resource_id, importance, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)",
-              [id, user_id, category, content, source_resource_id, importance.to_f, Time.now.utc.iso8601]
+              "INSERT INTO llmemory_items (id, user_id, category, content, source_resource_id, importance, provenance, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8)",
+              [id, user_id, category, content, source_resource_id, importance.to_f, provenance ? JSON.generate(provenance) : nil, Time.now.utc.iso8601]
             )
             id
           end
@@ -67,7 +67,7 @@ module Llmemory
             ensure_tables!
             pattern = "%#{conn.escape_string(query.to_s.downcase)}%"
             rows = conn.exec_params(
-              "SELECT id, category, content, source_resource_id, importance, created_at FROM llmemory_items WHERE user_id = $1 AND LOWER(content) LIKE $2",
+              "SELECT id, category, content, source_resource_id, importance, provenance, created_at FROM llmemory_items WHERE user_id = $1 AND LOWER(content) LIKE $2",
               [user_id, pattern]
             )
             rows_to_items(rows)
@@ -97,7 +97,7 @@ module Llmemory
             ensure_tables!
             cutoff = (Time.now - (days * 86400)).utc.iso8601
             rows = conn.exec_params(
-              "SELECT id, category, content, source_resource_id, importance, created_at FROM llmemory_items WHERE user_id = $1 AND created_at < $2 ORDER BY created_at",
+              "SELECT id, category, content, source_resource_id, importance, provenance, created_at FROM llmemory_items WHERE user_id = $1 AND created_at < $2 ORDER BY created_at",
               [user_id, cutoff]
             )
             rows_to_items(rows)
@@ -106,7 +106,7 @@ module Llmemory
           def get_all_items(user_id)
             ensure_tables!
             rows = conn.exec_params(
-              "SELECT id, category, content, source_resource_id, importance, created_at FROM llmemory_items WHERE user_id = $1 ORDER BY created_at",
+              "SELECT id, category, content, source_resource_id, importance, provenance, created_at FROM llmemory_items WHERE user_id = $1 ORDER BY created_at",
               [user_id]
             )
             rows_to_items(rows)
@@ -125,7 +125,7 @@ module Llmemory
             ensure_tables!
             cutoff = (Time.now - (hours * 3600)).utc.iso8601
             rows = conn.exec_params(
-              "SELECT id, category, content, source_resource_id, importance, created_at FROM llmemory_items WHERE user_id = $1 AND created_at >= $2 ORDER BY created_at",
+              "SELECT id, category, content, source_resource_id, importance, provenance, created_at FROM llmemory_items WHERE user_id = $1 AND created_at >= $2 ORDER BY created_at",
               [user_id, cutoff]
             )
             rows_to_items(rows)
@@ -179,7 +179,7 @@ module Llmemory
 
           def list_items(user_id:, category: nil, limit: nil)
             ensure_tables!
-            sql = "SELECT id, category, content, source_resource_id, importance, created_at FROM llmemory_items WHERE user_id = $1"
+            sql = "SELECT id, category, content, source_resource_id, importance, provenance, created_at FROM llmemory_items WHERE user_id = $1"
             params = [user_id]
             if category
               sql += " AND category = $2"
@@ -258,11 +258,13 @@ module Llmemory
                 content TEXT NOT NULL,
                 source_resource_id TEXT,
                 importance REAL DEFAULT 0.7,
+                provenance JSONB,
                 created_at TIMESTAMPTZ NOT NULL
               );
               CREATE INDEX IF NOT EXISTS idx_llmemory_items_user_id ON llmemory_items(user_id);
             SQL
             conn.exec("ALTER TABLE llmemory_items ADD COLUMN IF NOT EXISTS importance REAL DEFAULT 0.7") rescue nil
+            conn.exec("ALTER TABLE llmemory_items ADD COLUMN IF NOT EXISTS provenance JSONB") rescue nil
             conn.exec(<<~SQL)
               CREATE TABLE IF NOT EXISTS llmemory_categories (
                 user_id TEXT NOT NULL,
@@ -282,9 +284,17 @@ module Llmemory
                 content: r["content"],
                 source_resource_id: r["source_resource_id"],
                 importance: (r["importance"] || 0.7).to_f,
+                provenance: parse_provenance(r["provenance"]),
                 created_at: Time.parse(r["created_at"])
               }
             end
+          end
+
+          def parse_provenance(value)
+            return nil if value.nil? || value.to_s.strip.empty?
+            JSON.parse(value, symbolize_names: true)
+          rescue JSON::ParserError
+            nil
           end
 
           def rows_to_resources(rows)
