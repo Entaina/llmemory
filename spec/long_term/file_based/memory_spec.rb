@@ -34,6 +34,22 @@ RSpec.describe Llmemory::LongTerm::FileBased::Memory do
     end
   end
 
+  describe "#remember_fact" do
+    it "stores a fact with caller-supplied provenance, bypassing extraction" do
+      prov = Llmemory::Provenance.build(method: "reflection", sources: [{ type: "episode", id: "ep_1" }], confidence: 0.8)
+      id = memory.remember_fact(content: "Rollbacks restore service", category: "lessons", importance: 0.8, provenance: prov)
+      expect(id).to start_with("item_")
+      item = storage.get_all_items(user_id).find { |i| i[:id] == id }
+      expect(item[:content]).to eq("Rollbacks restore service")
+      expect(item[:category]).to eq("lessons")
+      expect(item[:provenance][:method]).to eq("reflection")
+    end
+
+    it "returns nil for blank content" do
+      expect(memory.remember_fact(content: "  ")).to be_nil
+    end
+  end
+
   describe "#retrieve" do
     before do
       allow(llm_double).to receive(:invoke).with(/Query:.*Available Categories/).and_return('["preferences"]')

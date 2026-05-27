@@ -85,6 +85,21 @@ module Llmemory
           out
         end
 
+        # Stores a single fact produced outside the extraction flow (e.g. by
+        # reflection over episodes), preserving caller-supplied provenance so the
+        # insight remains traceable to its source. Returns the item id.
+        def remember_fact(content:, category: "general", importance: 0.6, provenance: nil)
+          return nil if content.to_s.strip.empty?
+          @storage.save_item(
+            @user_id,
+            category: category.to_s,
+            content: content.to_s,
+            source_resource_id: nil,
+            importance: importance,
+            provenance: provenance
+          )
+        end
+
         attr_reader :storage, :user_id
 
         private

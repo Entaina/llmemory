@@ -10,6 +10,7 @@ require_relative "llmemory/retrieval"
 require_relative "llmemory/vector_store"
 require_relative "llmemory/maintenance"
 require_relative "llmemory/extractors"
+require_relative "llmemory/reflection"
 require_relative "llmemory/memory"
 
 module Llmemory
