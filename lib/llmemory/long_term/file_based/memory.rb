@@ -5,11 +5,14 @@ require_relative "item"
 require_relative "category"
 require_relative "storage"
 require_relative "../../noise_filter"
+require_relative "../../memory_module"
 
 module Llmemory
   module LongTerm
     module FileBased
       class Memory
+        include Llmemory::MemoryModule
+
         def initialize(user_id:, storage: nil, llm: nil, extractor: nil)
           @user_id = user_id
           @storage = storage || Storages.build
@@ -63,6 +66,7 @@ module Llmemory
 
           items.first(top_k).each do |i|
             out << {
+              id: i[:id] || i["id"],
               text: i[:content] || i["content"],
               timestamp: i[:created_at] || i["created_at"],
               score: 1.0,
@@ -72,6 +76,7 @@ module Llmemory
           end
           resources.first([top_k - out.size, 0].max).each do |r|
             out << {
+              id: r[:id] || r["id"],
               text: r[:text] || r["text"],
               timestamp: r[:created_at] || r["created_at"],
               score: 0.9
@@ -98,6 +103,32 @@ module Llmemory
             importance: importance,
             provenance: provenance
           )
+        end
+
+        # --- MemoryModule uniform interface ---
+
+        def write(payload, **_meta)
+          memorize(payload)
+        end
+
+        def list(user_id: nil, limit: nil)
+          @storage.list_items(user_id: user_id || @user_id, limit: limit)
+        end
+
+        def stats(user_id: nil)
+          { items: @storage.count_items(user_id: user_id || @user_id) }
+        end
+
+        # Removes items/resources by id and records the removal in the audit log.
+        def forget(ids:, reason: nil)
+          requested = Array(ids).map(&:to_s)
+          existing = (@storage.get_all_items(@user_id) + @storage.get_all_resources(@user_id))
+            .map { |r| (r[:id] || r["id"]).to_s }
+          removed = requested & existing
+          @storage.archive_items(@user_id, removed)
+          @storage.archive_resources(@user_id, removed)
+          forget_log.record(@user_id, memory_type: "file_based", ids: removed, reason: reason)
+          removed.size
         end
 
         attr_reader :storage, :user_id

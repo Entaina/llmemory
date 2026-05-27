@@ -50,6 +50,21 @@ RSpec.describe Llmemory::LongTerm::FileBased::Memory do
     end
   end
 
+  describe "#forget" do
+    it "removes items by id and audits the removal" do
+      memory.memorize("I love Ruby and use it every day.")
+      item = storage.get_all_items(user_id).first
+
+      removed = memory.forget(ids: [item[:id]], reason: "user requested deletion")
+
+      expect(removed).to eq(1)
+      expect(storage.get_all_items(user_id).map { |i| i[:id] }).not_to include(item[:id])
+      entry = memory.forget_log.entries(user_id).last
+      expect(entry[:memory_type]).to eq("file_based")
+      expect(entry[:ids]).to eq([item[:id]])
+    end
+  end
+
   describe "#retrieve" do
     before do
       allow(llm_double).to receive(:invoke).with(/Query:.*Available Categories/).and_return('["preferences"]')

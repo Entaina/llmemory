@@ -51,6 +51,22 @@ RSpec.describe Llmemory::LongTerm::Episodic::Memory do
     end
   end
 
+  describe "#forget" do
+    it "removes episodes by id and audits the removal" do
+      keep = memory.record_episode(steps: [{ action: "keep" }])
+      drop = memory.record_episode(steps: [{ action: "drop" }])
+
+      removed = memory.forget(ids: [drop, "ghost"], reason: "obsolete")
+
+      expect(removed).to eq(1)
+      expect(memory.recent_episodes.map(&:id)).to eq([keep])
+      entry = memory.forget_log.entries(user_id).last
+      expect(entry[:memory_type]).to eq("episodic")
+      expect(entry[:ids]).to eq([drop])
+      expect(entry[:reason]).to eq("obsolete")
+    end
+  end
+
   describe "#search_candidates" do
     before do
       memory.record_episode(

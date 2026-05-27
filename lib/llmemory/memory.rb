@@ -10,14 +10,22 @@ module Llmemory
     DEFAULT_SESSION_ID = "default"
     STATE_KEY_MESSAGES = :messages
 
-    def initialize(user_id:, session_id: DEFAULT_SESSION_ID, checkpoint: nil, long_term: nil, long_term_type: nil, retrieval_engine: nil, api_key: nil)
+    def initialize(user_id:, session_id: DEFAULT_SESSION_ID, checkpoint: nil, long_term: nil, long_term_type: nil, retrieval_engine: nil, working_memory: nil, api_key: nil)
       @user_id = user_id
       @session_id = session_id
       @checkpoint = checkpoint || ShortTerm::Checkpoint.new(user_id: user_id, session_id: session_id)
+      @working_memory = working_memory
       @llm = api_key.to_s.empty? ? nil : Llmemory::LLM.client(api_key: api_key)
       type = long_term_type || Llmemory.configuration.long_term_type || :file_based
       @long_term = long_term || build_long_term(type)
       @retrieval_engine = retrieval_engine || Retrieval::Engine.new(@long_term, llm: @llm)
+    end
+
+    # Structured working memory for this session (CoALA working memory),
+    # parallel to the message checkpoint. Lazily built so it costs nothing
+    # unless an agent uses it.
+    def working_memory
+      @working_memory ||= WorkingMemory.new(user_id: @user_id, session_id: @session_id)
     end
 
     def add_message(role:, content:)

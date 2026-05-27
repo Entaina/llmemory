@@ -27,9 +27,23 @@ rake spec                   # Run tests via Rakefile (default task)
 
 - **Long-term Graph-based** (`lib/llmemory/long_term/graph_based/`) - Knowledge graph with nodes (entities) and edges (subject-predicate-object relations). Uses `EntityRelationExtractor` and vector embeddings for hybrid retrieval.
 
+- **Long-term Episodic** (`lib/llmemory/long_term/episodic/`) - Experience trajectories (`Episode` = ordered observation→action→result steps). CoALA episodic memory; `:memory`/`:file` backends, keyword retrieval.
+
+- **Long-term Procedural** (`lib/llmemory/long_term/procedural/`) - Voyager-style `Skill` library (prompt/template/code) with auto-versioning and success/failure tracking; success rate surfaced as retrieval importance.
+
+- **Working memory** (`lib/llmemory/working_memory.rb`) - `WorkingMemory`: structured symbolic slots persisted across LLM calls via the short-term stores (namespaced session key). Exposed as `Memory#working_memory`.
+
+- **MemoryModule** (`lib/llmemory/memory_module.rb`) - Uniform contract (`read`/`write`/`list`/`stats`/`forget`) mixed into the four queryable long-term memories.
+
+- **Reflection** (`lib/llmemory/reflection/`) - `Reflector` distills recent episodes into semantic insights (Reflexion / Generative Agents pattern) with provenance to source episodes.
+
+- **Actions** (`lib/llmemory/actions/`) - `Reason`: render prompt from working memory → LLM → write result back (CoALA reasoning action).
+
+- **Provenance / ForgetLog** (`lib/llmemory/provenance.rb`, `lib/llmemory/forget_log.rb`) - Lineage on items/nodes/edges/insights (sources, method, confidence); `ForgetLog` audits removals.
+
 - **LLM Providers** (`lib/llmemory/llm/`) - OpenAI and Anthropic implementations with structured output support.
 
-- **Retrieval** (`lib/llmemory/retrieval/`) - `Engine` orchestrates retrieval, `TemporalRanker` applies time decay, `ContextAssembler` formats output for LLM consumption.
+- **Retrieval** (`lib/llmemory/retrieval/`) - `Engine` orchestrates retrieval, `TemporalRanker` applies time decay + importance, `ContextAssembler` formats output. `FeedbackStore` + `Engine#report_feedback` enable adaptive retrieval; `Engine#iterative_retrieve` does multi-hop retrieval.
 
 - **MCP Server** (`lib/llmemory/mcp/`) - Model Context Protocol server for agent integration. HTTP and stdio transports. Optional dependency on `mcp` gem.
 

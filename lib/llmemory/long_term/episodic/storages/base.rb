@@ -29,6 +29,11 @@ module Llmemory
             raise NotImplementedError, "#{self.class}#count_episodes must be implemented"
           end
 
+          # Deletes episodes by id. Returns the number actually removed.
+          def delete_episodes(user_id, ids)
+            raise NotImplementedError, "#{self.class}#delete_episodes must be implemented"
+          end
+
           def list_users
             raise NotImplementedError, "#{self.class}#list_users must be implemented"
           end

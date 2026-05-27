@@ -46,6 +46,15 @@ module Llmemory
             Dir.children(dir).count { |f| f.end_with?(".json") }
           end
 
+          def delete_episodes(user_id, ids)
+            Array(ids).map(&:to_s).count do |id|
+              path = episode_path(user_id, id)
+              next false unless File.file?(path)
+              File.delete(path)
+              true
+            end
+          end
+
           def list_users
             return [] unless Dir.exist?(@base_path)
             Dir.children(@base_path).select { |d| Dir.exist?(File.join(@base_path, d, "episodes")) }

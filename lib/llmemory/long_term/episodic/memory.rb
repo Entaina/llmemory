@@ -2,6 +2,7 @@
 
 require_relative "episode"
 require_relative "storage"
+require_relative "../../memory_module"
 
 module Llmemory
   module LongTerm
@@ -14,6 +15,8 @@ module Llmemory
       # Deliberately LLM-free: recording and retrieval are deterministic. Higher
       # order summarization belongs to reflection.
       class Memory
+        include Llmemory::MemoryModule
+
         attr_reader :user_id, :storage
 
         def initialize(user_id:, storage: nil)
@@ -66,6 +69,7 @@ module Llmemory
           @storage.search_episodes(uid, query).first(top_k).map do |e|
             episode = Episode.from_h(e)
             {
+              id: episode.id,
               text: episode.summary.to_s.empty? ? episode.searchable_text : episode.summary,
               timestamp: episode.created_at,
               score: 1.0,
@@ -74,6 +78,29 @@ module Llmemory
               provenance: e[:provenance] || e["provenance"]
             }
           end
+        end
+
+        # --- MemoryModule uniform interface ---
+
+        def write(steps:, summary: nil, outcome: nil, importance: 0.5, **_meta)
+          record_episode(steps: steps, summary: summary, outcome: outcome, importance: importance)
+        end
+
+        def list(user_id: nil, limit: nil)
+          episodes(limit: limit)
+        end
+
+        def stats(user_id: nil)
+          { episodes: count }
+        end
+
+        def forget(ids:, reason: nil)
+          requested = Array(ids).map(&:to_s)
+          existing = @storage.list_episodes(@user_id).map { |e| (e[:id] || e["id"]).to_s }
+          removed = requested & existing
+          @storage.delete_episodes(@user_id, removed)
+          forget_log.record(@user_id, memory_type: "episodic", ids: removed, reason: reason)
+          removed.size
         end
 
         private

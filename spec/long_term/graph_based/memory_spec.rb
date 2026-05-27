@@ -108,4 +108,10 @@ RSpec.describe Llmemory::LongTerm::GraphBased::Memory do
       expect(memory.user_id).to eq(user_id)
     end
   end
+
+  describe "#forget" do
+    it "is not supported yet and fails explicitly" do
+      expect { memory.forget(ids: ["edge_1"]) }.to raise_error(NotImplementedError, /Graph forget/)
+    end
+  end
 end

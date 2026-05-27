@@ -6,11 +6,14 @@ require_relative "knowledge_graph"
 require_relative "conflict_resolver"
 require_relative "storage"
 require_relative "../../noise_filter"
+require_relative "../../memory_module"
 
 module Llmemory
   module LongTerm
     module GraphBased
       class Memory
+        include Llmemory::MemoryModule
+
         def initialize(user_id:, storage: nil, vector_store: nil, llm: nil, extractor: nil)
           @user_id = user_id
           @graph_storage = storage || Storages.build
@@ -88,6 +91,7 @@ module Llmemory
           results = hybrid_search(query, top_k: top_k)
           results.map do |r|
             {
+              id: r[:id],
               text: r[:text],
               timestamp: r[:created_at] || r[:timestamp],
               score: r[:score] || 1.0,
@@ -100,6 +104,29 @@ module Llmemory
 
         def storage
           @graph_storage
+        end
+
+        # --- MemoryModule uniform interface ---
+
+        def write(payload, **_meta)
+          memorize(payload)
+        end
+
+        def list(user_id: nil, limit: nil)
+          @graph_storage.list_nodes(user_id || @user_id, limit: limit)
+        end
+
+        def stats(user_id: nil)
+          uid = user_id || @user_id
+          { nodes: @graph_storage.count_nodes(uid), edges: @graph_storage.count_edges(uid) }
+        end
+
+        # Forgetting a knowledge graph is not a simple delete-by-id: edges are
+        # soft-archived and nodes can be left orphaned. A dedicated graph
+        # edge/node lifecycle (with orphan handling) is a deliberate follow-up.
+        def forget(ids:, reason: nil)
+          raise NotImplementedError,
+            "Graph forget is not implemented yet; edge/node lifecycle (archival + orphan handling) is a follow-up."
         end
 
         private
@@ -127,7 +154,7 @@ module Llmemory
           out = vector_results.map do |v|
             id = v[:id] || v["id"]
             meta = v[:metadata] || v["metadata"] || {}
-            { text: meta["text"] || meta[:text] || id.to_s, score: v[:score] || v["score"] || 1.0, created_at: meta["created_at"] || meta[:created_at] }
+            { id: id, text: meta["text"] || meta[:text] || id.to_s, score: v[:score] || v["score"] || 1.0, created_at: meta["created_at"] || meta[:created_at] }
           end
 
           node_ids = out.flat_map { |r| extract_node_ids_from_text(r[:text]) }.compact.uniq
@@ -139,7 +166,7 @@ module Llmemory
               subj = @kg.find_node_by_id(e.subject_id)
               obj = @kg.find_node_by_id(e.target_id)
               edge_text = "#{subj&.name} #{e.predicate} #{obj&.name}"
-              out << { text: edge_text, score: 0.85, created_at: e.created_at } unless out.any? { |o| o[:text] == edge_text }
+              out << { id: (e.id ? "edge_#{e.id}" : nil), text: edge_text, score: 0.85, created_at: e.created_at } unless out.any? { |o| o[:text] == edge_text }
             end
           end
 
@@ -152,7 +179,7 @@ module Llmemory
               obj = @kg.find_node_by_id(e.target_id)
               next unless subj && obj
               edge_text = "#{subj.name} #{e.predicate} #{obj.name}"
-              out << { text: edge_text, score: 0.7, created_at: e.created_at }
+              out << { id: (e.id ? "edge_#{e.id}" : nil), text: edge_text, score: 0.7, created_at: e.created_at }
             end
           end
 

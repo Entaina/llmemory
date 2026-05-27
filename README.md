@@ -70,6 +70,10 @@ Llmemory.configure do |config|
   config.prune_after_days = 90
   config.compact_max_bytes = 8192  # max bytes before compact! triggers
 
+  # Retrieval ranking signals (see "Cognitive Memory (CoALA)")
+  config.importance_weight = 1.0          # how strongly importance multiplies the score (0 = ignore)
+  config.retrieval_feedback_weight = 0.5  # how strongly useful/harmful feedback shifts ranking (0 = ignore)
+
   # Pre-compaction memory flush (prevents knowledge loss when compacting)
   config.memory_flush_enabled = true
   config.memory_flush_threshold_tokens = 4000
@@ -194,6 +198,174 @@ candidates = memory.search_candidates("job", top_k: 20)
 - **`search_candidates(query, user_id:, top_k:)`** — Used by `Retrieval::Engine`; returns `[{ text:, timestamp:, score: }]`.
 
 **Graph storage:** `:memory` (in-memory) or `:active_record` (Rails). For ActiveRecord, run `rails g llmemory:install` and migrate; the migration creates `llmemory_nodes`, `llmemory_edges`, and `llmemory_embeddings` (pgvector). Enable the `vector` extension in PostgreSQL for embeddings.
+
+## Cognitive Memory (CoALA)
+
+llmemory implements the memory and internal-action concepts from [CoALA — Cognitive Architectures for Language Agents](https://arxiv.org/abs/2309.02427) (Sumers et al., 2024), so a framework can build agents with episodic/semantic/procedural memory, structured working memory, and reasoning/retrieval/learning actions.
+
+| CoALA concept | llmemory |
+|---|---|
+| Working memory | `Llmemory::WorkingMemory` |
+| Episodic memory | `Llmemory::LongTerm::Episodic::Memory` |
+| Semantic memory | `FileBased::Memory` / `GraphBased::Memory` |
+| Procedural memory | `Llmemory::LongTerm::Procedural::Memory` |
+| Reasoning action | `Llmemory::Actions::Reason` |
+| Retrieval action | `Retrieval::Engine` (+ feedback, iterative) |
+| Learning action | `memorize` / `record_episode` / `register_skill` / reflection |
+| Uniform interface | `Llmemory::MemoryModule` (`read`/`write`/`list`/`stats`/`forget`) |
+
+All three long-term memories below are **additive** — episodic and procedural coexist with semantic memory rather than replacing it. Episodic/procedural ship with `:memory` and `:file` backends (SQL/ActiveRecord and vector search are roadmap items); retrieval there is keyword-based.
+
+### Working memory (structured, persists across LLM calls)
+
+A symbolic scratch space for the current session, distinct from the raw message buffer. Backed by the same pluggable short-term stores, under a namespaced session key so it never collides with messages.
+
+```ruby
+wm = Llmemory::WorkingMemory.new(user_id: "u1", session_id: "s1")
+# or, from the unified API: memory.working_memory
+
+wm.goals = ["plan a trip to Lisbon"]
+wm.current_task = "find flights"
+wm.set(:budget, 1000)           # arbitrary custom slot
+
+wm.goals                        # => ["plan a trip to Lisbon"]
+wm.custom_slots                 # => { budget: 1000 }
+wm.update(last_observation: "no direct flights", scratchpad: "try connections")
+wm.to_h                         # full state; wm.clear! to reset
+```
+
+Predefined slots: `goals`, `current_task`, `retrieved_context`, `scratchpad`, `last_observation`, `intermediate_reasoning`.
+
+### Reasoning action
+
+Read working memory, call the LLM, write the result back — CoALA's reasoning action. Composable (reason → retrieve → reason); it does not touch long-term memory.
+
+```ruby
+Llmemory::Actions::Reason.call(
+  working_memory: wm,
+  template: "Goal: {{goals}}. Observation: {{last_observation}}. What is the next step?",
+  into: :intermediate_reasoning           # slot to write to (nil to not write)
+)
+wm.intermediate_reasoning                 # => the LLM's answer
+
+# A callable template gets the working memory; `parse` transforms the output before storing:
+Llmemory::Actions::Reason.call(
+  working_memory: wm,
+  template: ->(w) { "List 3 options for #{w.current_task}" },
+  parse: ->(out) { out.split("\n") },
+  into: :scratchpad
+)
+```
+
+### Episodic memory (trajectories of experience)
+
+Records what happened — ordered steps `(observation → action → result)` plus a summary, outcome and importance — so experiences can be retrieved as examples or distilled into knowledge by reflection.
+
+```ruby
+episodic = Llmemory::LongTerm::Episodic::Memory.new(user_id: "u1")
+
+id = episodic.record_episode(
+  steps: [{ observation: "deploy failed", action: "rolled back", result: "service restored" }],
+  outcome: "recovered",
+  importance: 0.8
+)
+
+episodic.recent_episodes(limit: 5)        # newest first
+episodic.search_candidates("rolled back") # retrieval-compatible candidates
+```
+
+### Reflection (episodic → semantic)
+
+Distills durable, higher-order insights from recent episodes and writes them to semantic memory with provenance back to the source episodes (the Reflexion / Generative Agents pattern).
+
+```ruby
+semantic = Llmemory::LongTerm::FileBased::Memory.new(user_id: "u1")
+reflector = Llmemory::Reflection::Reflector.new(episodic: episodic, semantic: semantic)
+
+reflector.reflect(window: 10)             # reads recent episodes -> LLM -> writes insights
+# Each insight is stored with provenance { method: "reflection", sources: [{ type: "episode", id: ... }] }
+```
+
+`semantic` must respond to `remember_fact(content:, category:, importance:, provenance:)` (file-based does; graph-based is a roadmap target).
+
+### Procedural memory (skill library)
+
+A Voyager-style library of reusable skills (prompts, templates, code). Skills track success/failure, and their success rate is surfaced as `importance` so proven skills rank higher in retrieval.
+
+```ruby
+skills = Llmemory::LongTerm::Procedural::Memory.new(user_id: "u1")
+
+id = skills.register_skill(
+  name: "rollback", description: "revert a bad deploy",
+  body: "kubectl rollout undo deployment/$1", kind: "code"   # kind: prompt | template | code
+)
+skills.register_skill(name: "rollback", body: "...newer...") # same name -> version auto-increments
+
+skills.find_skill("revert deploy")        # best match (a Skill)
+skills.report_outcome(id, success: true)  # feeds ranking + adaptive retrieval
+```
+
+### Uniform interface (MemoryModule)
+
+The queryable long-term memories (file, graph, episodic, procedural) share one agent-facing contract, so a framework can treat them polymorphically:
+
+```ruby
+memory.read(query, limit: 10)   # retrieve relevant entries (delegates to search_candidates)
+memory.write(...)               # ingest (memorize / record_episode / register_skill)
+memory.list(limit: 50)          # enumerate stored entries
+memory.stats                    # counts, e.g. { items: 12 } / { episodes: 4 } / { skills: 7 }
+memory.forget(ids:, reason:)    # see "Forgetting" below
+```
+
+### Provenance (lineage of every semantic datum)
+
+Facts (items), graph nodes/edges and reflection insights carry provenance — where they came from, how they were produced, with what confidence — so a conclusion can be traced back to its source.
+
+```ruby
+item = storage.get_all_items("u1").first
+item[:provenance]
+# => { sources: [{ type: "resource", id: "res_3" }], method: "fact_extraction", confidence: 0.9, created_at: "..." }
+```
+
+Graph nodes/edges record a SHA-256 fingerprint of the ingested text (lineage without persisting the raw document). Build provenance directly with `Llmemory::Provenance.build(method:, sources:, confidence:)`.
+
+### Adaptive retrieval (feedback loop)
+
+Tell the retrieval engine which retrieved items were useful or noisy; repeatedly-useful items rank higher in future retrievals, noise is dampened. Item ids come from the candidates returned by `read` / `search_candidates`.
+
+```ruby
+engine = Retrieval::Engine.new(memory)
+results = memory.read("deployment incidents")        # candidates carry :id
+
+engine.report_feedback(useful_ids: [results.first[:id]], harmful_ids: [])
+# Next retrievals reweight accordingly. Set config.retrieval_feedback_weight = 0 to disable.
+```
+
+### Iterative retrieval (multi-hop)
+
+Retrieve, reason about what is still missing, then retrieve again — for multi-hop questions a single pass would miss.
+
+```ruby
+engine.iterative_retrieve(
+  "What is the capital of France and its population?",
+  max_hops: 3
+)
+# After each hop an LLM proposes a follow-up query (or "DONE"). Pass a custom
+# `reasoner: ->(question, accumulated, hop) { ... }` to drive the loop yourself.
+```
+
+### Forgetting (unlearning with audit)
+
+Remove entries by id, with an audit trail of what was forgotten, when and why.
+
+```ruby
+removed = memory.forget(ids: [item_id], reason: "user requested deletion")  # => count removed
+
+Llmemory::ForgetLog.new.entries("u1")
+# => [{ memory_type: "file_based", ids: ["item_7"], count: 1, reason: "user requested deletion", at: "..." }]
+```
+
+Supported for file-based, episodic and procedural memory (hard delete by id). Graph forgetting (edge/node lifecycle with orphan handling) is a roadmap item.
 
 ## Advanced Memory Management
 

@@ -40,6 +40,13 @@ module Llmemory
             @episodes[user_id].size
           end
 
+          def delete_episodes(user_id, ids)
+            ids = Array(ids).map(&:to_s)
+            before = @episodes[user_id].size
+            @episodes[user_id].reject! { |e| ids.include?(e[:id].to_s) }
+            before - @episodes[user_id].size
+          end
+
           def list_users
             @episodes.keys
           end

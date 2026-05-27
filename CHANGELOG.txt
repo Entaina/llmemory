@@ -1,6 +1,45 @@
 # Changelog
 
 
+## [0.2.0] - 2026-05-27
+
+### Added — Cognitive Memory (CoALA)
+
+Implements the memory and internal-action model from CoALA (Cognitive
+Architectures for Language Agents, Sumers et al. 2024).
+
+- Episodic long-term memory (`LongTerm::Episodic::Memory`): records experience
+  trajectories (observation → action → result); `:memory` and `:file` backends.
+- Procedural long-term memory (`LongTerm::Procedural::Memory`): a Voyager-style
+  skill library with auto-versioning and success/failure tracking; skill success
+  rate is surfaced as importance during retrieval.
+- Structured working memory (`Llmemory::WorkingMemory`): symbolic slots that
+  persist across LLM calls, backed by the short-term stores under a namespaced
+  session key. Exposed on the unified API as `Memory#working_memory`.
+- Reflection (`Reflection::Reflector`): distills recent episodes into semantic
+  insights (Reflexion / Generative Agents pattern), traceable to source episodes.
+- Reasoning action (`Actions::Reason`): render a prompt from working memory,
+  call the LLM, write the result back — composable, long-term-free.
+- Uniform memory interface (`Llmemory::MemoryModule`): `read`/`write`/`list`/
+  `stats`/`forget` across file/graph/episodic/procedural memories.
+- Provenance (`Llmemory::Provenance`): lineage on items, graph nodes/edges and
+  reflection insights (sources, method, confidence). Graph records a SHA-256
+  fingerprint of the source text.
+- Adaptive retrieval feedback (`Retrieval::Engine#report_feedback`,
+  `Retrieval::FeedbackStore`): useful/harmful signals reweight future ranking.
+- Iterative (multi-hop) retrieval (`Retrieval::Engine#iterative_retrieve`):
+  reason about missing information between retrieval hops.
+- Forgetting with audit (`Memory#forget` / `MemoryModule#forget`,
+  `Llmemory::ForgetLog`): remove entries by id with a recorded audit trail.
+- Importance is now a tunable ranking signal (`config.importance_weight`);
+  feedback strength is tunable via `config.retrieval_feedback_weight`.
+
+### Notes
+
+- Episodic/procedural SQL & ActiveRecord backends, vector search for those two,
+  and graph forgetting are tracked as follow-ups.
+
+
 ## [0.1.15] - 2026-03-03
 
 ### Changes
