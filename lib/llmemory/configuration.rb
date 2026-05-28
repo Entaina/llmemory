@@ -11,6 +11,8 @@ module Llmemory
                   :long_term_type,
                   :long_term_store,
                   :long_term_storage_path,
+                  :episodic_vector_enabled,
+                  :procedural_vector_enabled,
                   :database_url,
                   :vector_store,
                   :time_decay_half_life_days,
@@ -55,6 +57,8 @@ module Llmemory
       @long_term_type = :file_based
       @long_term_store = :memory
       @long_term_storage_path = ENV["LLMEMORY_STORAGE_PATH"] || "./llmemory_data"
+      @episodic_vector_enabled = false
+      @procedural_vector_enabled = false
       @database_url = ENV["DATABASE_URL"]
       @vector_store = nil
       @time_decay_half_life_days = 30

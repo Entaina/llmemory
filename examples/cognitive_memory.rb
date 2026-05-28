@@ -86,7 +86,7 @@ skills.register_skill(name: "scale-up", description: "add replicas", body: "kube
 skills.report_outcome(rollback, success: true)
 skills.report_outcome(rollback, success: true)
 puts "skills:       #{skills.count}"
-puts "best match:   #{skills.find_skill('revert').name}"
+puts "best match:   #{skills.find_skill('revert deploy').name}"
 puts "ranked by utility (importance = success rate):"
 skills.search_candidates("kubectl").each { |c| puts "  - #{c[:importance].round(2)}  #{c[:text].lines.first.strip}" }
 

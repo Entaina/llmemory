@@ -88,5 +88,36 @@ RSpec.describe Llmemory::LongTerm::Episodic::Memory do
     it "isolates by user_id" do
       expect(memory.search_candidates("rolled back", user_id: "other")).to eq([])
     end
+
+    it "matches a multi-word query whose terms are non-contiguous in the text" do
+      # episode text contains "deploy failed" and "rolled back" separately
+      results = memory.search_candidates("deploy rolled")
+      expect(results).not_to be_empty
+    end
+  end
+
+  describe "hybrid retrieval with a vector store (SF2)" do
+    let(:vector_store) do
+      stored = []
+      double("VectorStore").tap do |d|
+        allow(d).to receive(:embed).and_return([0.1, 0.2, 0.3])
+        allow(d).to receive(:store) { |id:, **_| stored << id; id }
+        allow(d).to receive(:search_by_text) { |_q, **_| stored.map { |id| { id: id, score: 0.9 } } }
+      end
+    end
+    let(:memory) { described_class.new(user_id: user_id, vector_store: vector_store) }
+
+    it "embeds and stores the episode on record" do
+      id = memory.record_episode(steps: [{ observation: "deploy failed", action: "rolled back" }])
+      expect(vector_store).to have_received(:embed)
+      expect(vector_store).to have_received(:store)
+      expect(id).to start_with("ep_")
+    end
+
+    it "returns vector hits even when the keyword query does not match" do
+      id = memory.record_episode(steps: [{ observation: "deploy failed", action: "rolled back" }])
+      results = memory.search_candidates("totally unrelated phrasing")
+      expect(results.map { |c| c[:id] }).to include(id)
+    end
   end
 end

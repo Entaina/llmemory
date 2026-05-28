@@ -1,6 +1,59 @@
 # Changelog
 
 
+## [0.2.1] - 2026-05-27
+
+### Added — episodic/procedural parity & search quality (SF1–SF3)
+
+- Episodic and procedural memory now support `:postgres` and `:active_record`
+  backends (each record stored as a JSONB `data` document, like checkpoints).
+  Migration adds `llmemory_episodes` and `llmemory_skills`.
+- Opt-in semantic (embedding) retrieval for episodic and procedural memory
+  (`config.episodic_vector_enabled` / `config.procedural_vector_enabled`, default
+  off). When enabled, `search_candidates` is hybrid (vector + keyword).
+  `VectorStore::ActiveRecordStore` now namespaces embeddings by `source_type`.
+- Keyword search is tokenized (`Llmemory::Tokenizer`): multi-word queries match
+  across non-contiguous terms instead of requiring a contiguous substring.
+
+### Added — graph parity, orchestrator ergonomics & operability
+
+- **Graph forgetting (SF4).** `GraphBased::Memory#forget(ids:, reason:)` archives
+  the edges identified by the candidate ids returned from `read`/`search_candidates`,
+  with audit via `ForgetLog`. Edge ids are normalized (no double "edge_" prefix)
+  so candidate id == edge id.
+- **Graph as a reflection target (SF7).** `GraphBased::Memory#remember_fact(content:,
+  provenance:, ...)` extracts entities/relations from the insight content and adds
+  them with the supplied provenance. `Reflection::Reflector` now targets graph-based
+  semantic memory transparently.
+- **Orchestrator ergonomics (SF9).** `Memory#episodic`, `Memory#procedural`,
+  `Memory#reflect!(window:, category:)` and `Memory#reason(template:, into:, parse:)`
+  exposed on the unified API (lazy, injectable).
+- **MCP cognitive tools (SF10).** Six new tools: `MemoryEpisodeRecord`,
+  `MemoryEpisodes`, `MemorySkillRegister`, `MemorySkillReport`, `MemorySkills`,
+  `MemoryForget`.
+- **CLI cognitive inspection (SF10).** Four new commands: `episodes USER_ID`,
+  `skills USER_ID`, `working USER_ID SESSION_ID`, `forget-log USER_ID`.
+
+### Changed — pseudo-session safety (SF6 + SF12)
+
+- `SessionLifecycle` now identifies pseudo-sessions used by `ForgetLog`,
+  `FeedbackStore` and `WorkingMemory` and excludes them from
+  `cleanup_idle_sessions!`, `cleanup_stale_sessions!` and `enforce_max_entries!`.
+  Audit, retrieval feedback and working-memory slots are never evicted as if
+  they were user sessions.
+
+### Notes
+
+- Episodic/procedural SQL & vector backends are not exercised in CI (no database
+  or embedding API), consistent with the other SQL backends.
+- Deferred follow-ups (with explicit rationale): **SF5** (`forget(mode:)` + TTL —
+  low value without a "trash"/retention use case); **SF8** (graph provenance
+  linked to a persisted source — no demand for literal source reconstruction
+  beyond the SHA-256 fingerprint); **SF11** (refactor `consolidate!` onto
+  `Actions::Reason` — risk > immediate gain); and the **Rails Dashboard** surface
+  for cognitive memory (SF10 sub-scope).
+
+
 ## [0.2.0] - 2026-05-27
 
 ### Added — Cognitive Memory (CoALA)

@@ -70,6 +70,14 @@ module Llmemory
             Llmemory::LongTerm::GraphBased::Storages::MemoryStorage.new
           end
         end
+
+        def episodic_storage(store_type = nil)
+          Llmemory::LongTerm::Episodic::Storages.build(store: (store_type || Llmemory.configuration.long_term_store))
+        end
+
+        def procedural_storage(store_type = nil)
+          Llmemory::LongTerm::Procedural::Storages.build(store: (store_type || Llmemory.configuration.long_term_store))
+        end
       end
     end
   end

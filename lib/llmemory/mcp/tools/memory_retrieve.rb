@@ -59,8 +59,10 @@ module Llmemory
             items = storage.search_items(user_id, query)
             return "" if items.empty?
 
-            # Get timeline context around the first match
-            top_item = items.first
+            # Anchor on the most precise match: keyword search is recall-oriented
+            # (tokenized OR), so prefer the item whose content contains the full
+            # query verbatim, falling back to the first match.
+            top_item = best_match(items, query)
             item_id = top_item[:id] || top_item["id"]
             return "" unless item_id
 
@@ -68,6 +70,12 @@ module Llmemory
             format_timeline_context(result, item_id)
           rescue
             ""
+          end
+
+          def best_match(items, query)
+            q = query.to_s.downcase.strip
+            return items.first if q.empty?
+            items.find { |i| (i[:content] || i["content"]).to_s.downcase.include?(q) } || items.first
           end
 
           def build_storage

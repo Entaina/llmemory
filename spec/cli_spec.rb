@@ -55,5 +55,23 @@ RSpec.describe Llmemory::CLI do
         expect(e.status).to eq(1)
       end
     end
+
+    it "lists the new cognitive commands in help (SF10)" do
+      out = StringIO.new
+      allow($stdout).to receive(:puts) { |*args| out.puts(*args) }
+      described_class.run([])
+      expect(out.string).to include("episodes", "skills", "working", "forget-log")
+    end
+
+    it "runs the new episodes/skills/forget-log commands without crashing on empty state" do
+      out = StringIO.new
+      allow($stdout).to receive(:puts) { |*args| out.puts(*args) }
+      described_class.run(["episodes", "u1"])
+      described_class.run(["skills", "u1"])
+      described_class.run(["forget-log", "u1"])
+      expect(out.string).to include("No episodes for user u1")
+      expect(out.string).to include("No skills for user u1")
+      expect(out.string).to include("No forget audit entries for user u1")
+    end
   end
 end

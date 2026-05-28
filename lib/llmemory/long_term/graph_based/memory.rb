@@ -28,14 +28,95 @@ module Llmemory
           text = Llmemory.configuration.noise_filter_enabled ? NoiseFilter.filter?(conversation_text) : conversation_text.to_s
           return true if text.strip.empty?
 
-          data = @extractor.extract(text) rescue { entities: [], relations: [] }
-          data = { entities: [], relations: [] } unless data.is_a?(Hash)
-          entities = Array(data[:entities] || data["entities"])
-          relations = Array(data[:relations] || data["relations"])
-
+          entities, relations = extract_graph(text)
           return true if entities.empty? && relations.empty?
 
           provenance = Llmemory::Provenance.from_text_fingerprint(text, method: "entity_relation_extraction")
+          ingest(entities, relations, provenance)
+          true
+        end
+
+        def retrieve(query, top_k: 10)
+          results = hybrid_search(query, top_k: top_k)
+          format_as_context(results)
+        end
+
+        def search_candidates(query, user_id: nil, top_k: 20)
+          uid = user_id || @user_id
+          return [] unless uid == @user_id
+          results = hybrid_search(query, top_k: top_k)
+          results.map do |r|
+            {
+              id: r[:id],
+              text: r[:text],
+              timestamp: r[:created_at] || r[:timestamp],
+              score: r[:score] || 1.0,
+              importance: r[:importance]
+            }
+          end
+        end
+
+        attr_reader :user_id
+
+        def storage
+          @graph_storage
+        end
+
+        # Stores a fact produced outside the conversational flow (e.g. a
+        # reflection insight) by extracting entities/relations from `content` and
+        # adding them to the graph, preserving caller-supplied provenance. Lets
+        # the Reflector target graph-based semantic memory.
+        def remember_fact(content:, category: nil, importance: nil, provenance: nil)
+          return nil if content.to_s.strip.empty?
+          entities, relations = extract_graph(content)
+          return nil if entities.empty? && relations.empty?
+          prov = provenance || Llmemory::Provenance.from_text_fingerprint(content, method: "reflection")
+          ingest(entities, relations, prov)
+          true
+        end
+
+        # --- MemoryModule uniform interface ---
+
+        def write(payload, **_meta)
+          memorize(payload)
+        end
+
+        def list(user_id: nil, limit: nil)
+          @graph_storage.list_nodes(user_id || @user_id, limit: limit)
+        end
+
+        def stats(user_id: nil)
+          uid = user_id || @user_id
+          { nodes: @graph_storage.count_nodes(uid), edges: @graph_storage.count_edges(uid) }
+        end
+
+        # Forgets relations by archiving the edges identified by the candidate
+        # ids returned from #read/#search_candidates (edge ids), recording the
+        # removal in the audit log. Edges are soft-archived (archived_at) so they
+        # no longer appear in retrieval; nodes are left in place (a node may still
+        # be referenced by other active edges). Returns the number archived.
+        def forget(ids:, reason: nil)
+          archived = Array(ids).map(&:to_s).select { |edge_id| @kg.archive_edge(edge_id) }
+          forget_log.record(@user_id, memory_type: "graph_based", ids: archived, reason: reason)
+          archived.size
+        end
+
+        private
+
+        def build_vector_store
+          Llmemory::VectorStore.build(source_type: "edge")
+        end
+
+        def extract_graph(text)
+          data = @extractor.extract(text) rescue { entities: [], relations: [] }
+          data = { entities: [], relations: [] } unless data.is_a?(Hash)
+          [Array(data[:entities] || data["entities"]), Array(data[:relations] || data["relations"])]
+        end
+
+        # Adds entities and relations to the graph (nodes, edges, embeddings) with
+        # the given provenance. Shared by memorize (conversation) and
+        # remember_fact (reflection).
+        def ingest(entities, relations, provenance)
           name_to_id = {}
 
           entities.each do |e|
@@ -70,75 +151,11 @@ module Llmemory
             @conflict_resolver.resolve(edge)
             edge_id = @kg.add_edge(subject: subject_id, predicate: predicate, object: object_id, properties: { "provenance" => provenance })
 
-            text = "#{subject} #{predicate} #{object}"
-            embedding = @vector_store.respond_to?(:embed) ? @vector_store.embed(text) : nil
+            edge_text = "#{subject} #{predicate} #{object}"
+            embedding = @vector_store.respond_to?(:embed) ? @vector_store.embed(edge_text) : nil
             if embedding && @vector_store.respond_to?(:store)
-              @vector_store.store(id: "edge_#{edge_id}", embedding: embedding, metadata: { text: text, created_at: Time.now }, user_id: @user_id)
+              @vector_store.store(id: edge_id, embedding: embedding, metadata: { text: edge_text, created_at: Time.now }, user_id: @user_id)
             end
-          end
-
-          true
-        end
-
-        def retrieve(query, top_k: 10)
-          results = hybrid_search(query, top_k: top_k)
-          format_as_context(results)
-        end
-
-        def search_candidates(query, user_id: nil, top_k: 20)
-          uid = user_id || @user_id
-          return [] unless uid == @user_id
-          results = hybrid_search(query, top_k: top_k)
-          results.map do |r|
-            {
-              id: r[:id],
-              text: r[:text],
-              timestamp: r[:created_at] || r[:timestamp],
-              score: r[:score] || 1.0,
-              importance: r[:importance]
-            }
-          end
-        end
-
-        attr_reader :user_id
-
-        def storage
-          @graph_storage
-        end
-
-        # --- MemoryModule uniform interface ---
-
-        def write(payload, **_meta)
-          memorize(payload)
-        end
-
-        def list(user_id: nil, limit: nil)
-          @graph_storage.list_nodes(user_id || @user_id, limit: limit)
-        end
-
-        def stats(user_id: nil)
-          uid = user_id || @user_id
-          { nodes: @graph_storage.count_nodes(uid), edges: @graph_storage.count_edges(uid) }
-        end
-
-        # Forgetting a knowledge graph is not a simple delete-by-id: edges are
-        # soft-archived and nodes can be left orphaned. A dedicated graph
-        # edge/node lifecycle (with orphan handling) is a deliberate follow-up.
-        def forget(ids:, reason: nil)
-          raise NotImplementedError,
-            "Graph forget is not implemented yet; edge/node lifecycle (archival + orphan handling) is a follow-up."
-        end
-
-        private
-
-        def build_vector_store
-          emb = Llmemory::VectorStore::OpenAIEmbeddings.new
-          store_type = (Llmemory.configuration.long_term_store || :memory).to_s.to_sym
-          if store_type == :active_record || store_type == :activerecord
-            require_relative "../../vector_store/active_record_store"
-            Llmemory::VectorStore::ActiveRecordStore.new(embedding_provider: emb)
-          else
-            Llmemory::VectorStore::MemoryStore.new(embedding_provider: emb)
           end
         end
 
@@ -166,7 +183,7 @@ module Llmemory
               subj = @kg.find_node_by_id(e.subject_id)
               obj = @kg.find_node_by_id(e.target_id)
               edge_text = "#{subj&.name} #{e.predicate} #{obj&.name}"
-              out << { id: (e.id ? "edge_#{e.id}" : nil), text: edge_text, score: 0.85, created_at: e.created_at } unless out.any? { |o| o[:text] == edge_text }
+              out << { id: e.id, text: edge_text, score: 0.85, created_at: e.created_at } unless out.any? { |o| o[:text] == edge_text }
             end
           end
 
@@ -179,7 +196,7 @@ module Llmemory
               obj = @kg.find_node_by_id(e.target_id)
               next unless subj && obj
               edge_text = "#{subj.name} #{e.predicate} #{obj.name}"
-              out << { id: (e.id ? "edge_#{e.id}" : nil), text: edge_text, score: 0.7, created_at: e.created_at }
+              out << { id: e.id, text: edge_text, score: 0.7, created_at: e.created_at }
             end
           end
 

@@ -65,20 +65,20 @@ module Llmemory
 
           def search_items(user_id, query)
             ensure_tables!
-            pattern = "%#{conn.escape_string(query.to_s.downcase)}%"
+            suffix, params = token_filter("content", query, 2)
             rows = conn.exec_params(
-              "SELECT id, category, content, source_resource_id, importance, provenance, created_at FROM llmemory_items WHERE user_id = $1 AND LOWER(content) LIKE $2",
-              [user_id, pattern]
+              "SELECT id, category, content, source_resource_id, importance, provenance, created_at FROM llmemory_items WHERE user_id = $1#{suffix}",
+              [user_id, *params]
             )
             rows_to_items(rows)
           end
 
           def search_resources(user_id, query)
             ensure_tables!
-            pattern = "%#{conn.escape_string(query.to_s.downcase)}%"
+            suffix, params = token_filter("text", query, 2)
             rows = conn.exec_params(
-              "SELECT id, text, created_at FROM llmemory_resources WHERE user_id = $1 AND LOWER(text) LIKE $2",
-              [user_id, pattern]
+              "SELECT id, text, created_at FROM llmemory_resources WHERE user_id = $1#{suffix}",
+              [user_id, *params]
             )
             rows_to_resources(rows)
           end
@@ -288,6 +288,16 @@ module Llmemory
                 created_at: Time.parse(r["created_at"])
               }
             end
+          end
+
+          # Builds an OR-of-token LIKE filter for keyword search. Returns
+          # ["" , []] for an empty query (match all). Tokens are [a-z0-9]{2,} so
+          # they carry no LIKE wildcards.
+          def token_filter(column, query, start_index)
+            tokens = Llmemory::Tokenizer.tokenize(query)
+            return ["", []] if tokens.empty?
+            likes = tokens.each_index.map { |i| "LOWER(#{column}) LIKE $#{start_index + i}" }
+            [" AND (#{likes.join(' OR ')})", tokens.map { |t| "%#{t}%" }]
           end
 
           def parse_provenance(value)

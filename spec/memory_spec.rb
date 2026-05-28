@@ -490,4 +490,39 @@ RSpec.describe Llmemory::Memory do
       expect(context).to include("User works_at OpenAI")
     end
   end
+
+  describe "cognitive accessors on the orchestrator (SF9)" do
+    let(:user_id) { "user_sf9" }
+    let(:memory) { described_class.new(user_id: user_id, session_id: "s1") }
+
+    it "exposes lazy episodic and procedural memories (memoized)" do
+      expect(memory.episodic).to be_a(Llmemory::LongTerm::Episodic::Memory)
+      expect(memory.procedural).to be_a(Llmemory::LongTerm::Procedural::Memory)
+      expect(memory.episodic).to equal(memory.episodic)
+      expect(memory.procedural).to equal(memory.procedural)
+    end
+
+    it "routes #reason through Actions::Reason and updates working memory" do
+      fake_llm = double("LLM").tap { |d| allow(d).to receive(:invoke).and_return("a thought") }
+      allow(Llmemory::LLM).to receive(:client).and_return(fake_llm)
+
+      memory.working_memory.current_task = "deploy"
+      memory.reason(template: "Task: {{current_task}}. Next?", into: :scratchpad)
+      expect(memory.working_memory.scratchpad).to eq("a thought")
+    end
+
+    it "#reflect! distills recent episodes into the semantic store with reflection provenance" do
+      memory.episodic.record_episode(steps: [{ action: "rolled back" }], outcome: "recovered")
+
+      fake_llm = double("LLM").tap do |d|
+        allow(d).to receive(:invoke).and_return('[{"content": "Rolling back restores service", "confidence": 0.85}]')
+      end
+      allow(Llmemory::LLM).to receive(:client).and_return(fake_llm)
+
+      memory.reflect!(window: 5)
+      items = memory.instance_variable_get(:@long_term).storage.get_all_items(user_id)
+      expect(items.map { |i| i[:content] }).to include("Rolling back restores service")
+      expect(items.first[:provenance][:method]).to eq("reflection")
+    end
+  end
 end

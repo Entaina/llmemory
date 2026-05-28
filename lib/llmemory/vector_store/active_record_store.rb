@@ -7,9 +7,10 @@ module Llmemory
     # Persists embeddings in llmemory_embeddings (pgvector).
     # Use when long_term_store is :active_record so hybrid search finds persisted embeddings.
     class ActiveRecordStore < Base
-      def initialize(embedding_provider: nil)
+      def initialize(embedding_provider: nil, source_type: "edge")
         self.class.load_model!
         @embedding_provider = embedding_provider
+        @source_type = source_type.to_s
       end
 
       def self.load_model!
@@ -29,7 +30,7 @@ module Llmemory
         text_content = (metadata || {}).dig("text") || (metadata || {}).dig(:text)
         rec = Llmemory::VectorStore::ActiveRecordEmbedding.find_or_initialize_by(
           user_id: user_id.to_s,
-          source_type: "edge",
+          source_type: @source_type,
           source_id: id.to_s
         )
         rec.embedding = embedding.to_a.map(&:to_f)
@@ -46,7 +47,7 @@ module Llmemory
         sanitized_vec = vec.map { |v| v.finite? ? v : 0.0 }
         vector_literal = "[#{sanitized_vec.join(',')}]"
         # pgvector cosine distance <=> (0 = same, 2 = opposite); score = 1 - distance for similarity
-        scope = Llmemory::VectorStore::ActiveRecordEmbedding.where(user_id: user_id.to_s)
+        scope = Llmemory::VectorStore::ActiveRecordEmbedding.where(user_id: user_id.to_s, source_type: @source_type)
         rows = scope.select(
           Llmemory::VectorStore::ActiveRecordEmbedding.arel_table[Arel.star],
           Arel.sql("(embedding <=> '#{vector_literal}'::vector) AS distance")

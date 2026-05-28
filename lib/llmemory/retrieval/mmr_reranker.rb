@@ -49,7 +49,7 @@ module Llmemory
       end
 
       def tokenize(text)
-        text.downcase.scan(/\b[a-z0-9]{2,}\b/).uniq
+        Llmemory::Tokenizer.tokenize(text).uniq
       end
     end
   end

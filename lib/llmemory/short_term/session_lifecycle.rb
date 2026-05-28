@@ -5,6 +5,18 @@ require_relative "stores"
 module Llmemory
   module ShortTerm
     class SessionLifecycle
+      # Pseudo-sessions used by ForgetLog, FeedbackStore and WorkingMemory share
+      # the short-term K/V store but are not user sessions — they must not be
+      # idle-pruned, stale-pruned, or evicted by enforce_max_entries.
+      PSEUDO_SESSION_PATTERNS = [
+        /\A__[a-z_]+__\z/,    # e.g. "__forget_log__", "__retrieval_feedback__"
+        /:working_memory\z/    # WorkingMemory uses "<session>:working_memory"
+      ].freeze
+
+      def self.pseudo_session?(session_id)
+        PSEUDO_SESSION_PATTERNS.any? { |p| session_id.to_s.match?(p) }
+      end
+
       def initialize(store: nil)
         @store = store || build_store
       end
@@ -14,7 +26,7 @@ module Llmemory
         cutoff = Time.now - (idle_minutes * 60)
         deleted = 0
 
-        @store.list_sessions(user_id: user_id).each do |session_id|
+        user_sessions(user_id).each do |session_id|
           state = @store.load(user_id, session_id)
           next unless state.is_a?(Hash)
 
@@ -36,7 +48,7 @@ module Llmemory
         cutoff = Time.now - (prune_after_days * 86400)
         deleted = 0
 
-        @store.list_sessions(user_id: user_id).each do |session_id|
+        user_sessions(user_id).each do |session_id|
           state = @store.load(user_id, session_id)
           next unless state.is_a?(Hash)
 
@@ -55,7 +67,7 @@ module Llmemory
 
       def enforce_max_entries!(user_id:, max_entries: nil)
         max_entries ||= Llmemory.configuration.session_max_entries_per_user
-        sessions = @store.list_sessions(user_id: user_id)
+        sessions = user_sessions(user_id)
         return 0 if sessions.size <= max_entries
 
         session_ages = sessions.map do |session_id|
@@ -72,6 +84,10 @@ module Llmemory
       end
 
       private
+
+      def user_sessions(user_id)
+        @store.list_sessions(user_id: user_id).reject { |s| self.class.pseudo_session?(s) }
+      end
 
       def build_store
         Stores.build

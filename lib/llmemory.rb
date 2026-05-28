@@ -3,6 +3,7 @@
 require_relative "llmemory/version"
 require_relative "llmemory/configuration"
 require_relative "llmemory/provenance"
+require_relative "llmemory/tokenizer"
 require_relative "llmemory/memory_module"
 require_relative "llmemory/forget_log"
 require_relative "llmemory/llm"

@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    llmemory (0.2.0)
+    llmemory (0.2.1)
       faraday (~> 2.0)
 
 GEM

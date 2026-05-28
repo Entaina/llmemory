@@ -64,13 +64,11 @@ module Llmemory
           end
 
           def search_items(user_id, query)
-            q = "%#{sanitize_like(query)}%"
-            LlmemoryItem.where(user_id: user_id).where("LOWER(content) LIKE LOWER(?)", q).map { |r| row_to_item(r) }
+            token_scope(LlmemoryItem.where(user_id: user_id), "content", query).map { |r| row_to_item(r) }
           end
 
           def search_resources(user_id, query)
-            q = "%#{sanitize_like(query)}%"
-            LlmemoryResource.where(user_id: user_id).where("LOWER(text) LIKE LOWER(?)", q).map { |r| row_to_resource(r) }
+            token_scope(LlmemoryResource.where(user_id: user_id), "text", query).map { |r| row_to_resource(r) }
           end
 
           def get_resources_since(user_id, hours:)
@@ -179,6 +177,15 @@ module Llmemory
 
           def sanitize_like(str)
             (str || "").to_s.gsub(/[%_\\]/) { |c| "\\#{c}" }
+          end
+
+          # OR-of-token LIKE scope for keyword search; unchanged scope (match all)
+          # when the query has no tokens.
+          def token_scope(scope, column, query)
+            tokens = Llmemory::Tokenizer.tokenize(query)
+            return scope if tokens.empty?
+            clause = tokens.map { "LOWER(#{column}) LIKE LOWER(?)" }.join(" OR ")
+            scope.where(clause, *tokens.map { |t| "%#{sanitize_like(t)}%" })
           end
 
           def row_to_item(r)

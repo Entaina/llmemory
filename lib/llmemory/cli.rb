@@ -5,6 +5,10 @@ require_relative "cli/commands/base"
 require_relative "cli/commands/users"
 require_relative "cli/commands/short_term"
 require_relative "cli/commands/long_term"
+require_relative "cli/commands/episodic"
+require_relative "cli/commands/procedural"
+require_relative "cli/commands/working"
+require_relative "cli/commands/forget_log"
 require_relative "cli/commands/stats"
 require_relative "cli/commands/search"
 require_relative "cli/commands/mcp"
@@ -47,6 +51,10 @@ module Llmemory
         "nodes" => Cli::Commands::LongTerm::Nodes,
         "edges" => Cli::Commands::LongTerm::Edges,
         "graph" => Cli::Commands::LongTerm::Graph,
+        "episodes" => Cli::Commands::Episodic,
+        "skills" => Cli::Commands::Procedural,
+        "working" => Cli::Commands::Working,
+        "forget_log" => Cli::Commands::ForgetLog,
         "search" => Cli::Commands::Search,
         "stats" => Cli::Commands::Stats,
         "mcp" => Cli::Commands::Mcp
@@ -68,6 +76,10 @@ module Llmemory
           nodes USER_ID            List graph nodes (graph-based)
           edges USER_ID            List graph edges (graph-based)
           graph USER_ID            Export graph (--format dot|json)
+          episodes USER_ID         List recorded episodes (episodic memory)
+          skills USER_ID           List registered skills (procedural memory)
+          working USER_ID SESSION  Show working-memory slots for a session
+          forget-log USER_ID       Show audit of forgotten entries
           search USER_ID "query"   Search in memory
           stats [USER_ID]          Show statistics
           mcp [serve]              Start MCP server for LLM agents

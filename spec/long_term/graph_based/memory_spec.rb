@@ -110,8 +110,27 @@ RSpec.describe Llmemory::LongTerm::GraphBased::Memory do
   end
 
   describe "#forget" do
-    it "is not supported yet and fails explicitly" do
-      expect { memory.forget(ids: ["edge_1"]) }.to raise_error(NotImplementedError, /Graph forget/)
+    it "archives matching edges by id and records an audit entry" do
+      memory.memorize("I work at Acme.")
+      edge = storage.find_edges(user_id, predicate: "works_at", include_archived: false).first
+
+      removed = memory.forget(ids: [edge.id], reason: "obsolete")
+
+      expect(removed).to eq(1)
+      expect(storage.find_edges(user_id, predicate: "works_at", include_archived: false)).to be_empty
+      expect(memory.forget_log.entries(user_id).last).to include(memory_type: "graph_based", reason: "obsolete")
+    end
+  end
+
+  describe "#remember_fact" do
+    it "ingests a fact as entities/relations with caller-supplied provenance" do
+      prov = Llmemory::Provenance.build(method: "reflection", sources: [{ type: "episode", id: "ep_1" }])
+      memory.remember_fact(content: "I work at Acme.", provenance: prov)
+
+      edge = storage.find_edges(user_id, predicate: "works_at", include_archived: false).first
+      expect(edge).not_to be_nil
+      method = edge.provenance[:method] || edge.provenance["method"]
+      expect(method).to eq("reflection")
     end
   end
 end

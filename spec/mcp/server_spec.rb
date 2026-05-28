@@ -40,10 +40,20 @@ RSpec.describe Llmemory::MCP::Server do
       expect(tool_names).to include("memory_info")
     end
 
-    it "registers exactly 9 tools" do
+    it "registers exactly 15 tools (9 base + 6 cognitive: SF10)" do
       server = described_class.new
       tools = server.server.instance_variable_get(:@tools)
-      expect(tools.size).to eq(9)
+      expect(tools.size).to eq(15)
+    end
+
+    it "registers the new cognitive tools (SF10)" do
+      server = described_class.new
+      tool_names = server.server.instance_variable_get(:@tools).keys
+      expect(tool_names).to include(
+        "memory_episode_record", "memory_episodes",
+        "memory_skill_register", "memory_skill_report", "memory_skills",
+        "memory_forget"
+      )
     end
   end
 end

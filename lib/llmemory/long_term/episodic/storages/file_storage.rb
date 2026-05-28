@@ -35,9 +35,8 @@ module Llmemory
           end
 
           def search_episodes(user_id, query)
-            q = query.to_s.downcase
-            return list_episodes(user_id) if q.strip.empty?
-            all_episodes(user_id).select { |e| episode_text(e).downcase.include?(q) }
+            return list_episodes(user_id) if query.to_s.strip.empty?
+            all_episodes(user_id).select { |e| Llmemory::Tokenizer.matches?(episode_text(e), query) }
           end
 
           def count_episodes(user_id)

@@ -35,9 +35,8 @@ module Llmemory
           end
 
           def search_skills(user_id, query)
-            q = query.to_s.downcase
-            return list_skills(user_id) if q.strip.empty?
-            all_skills(user_id).select { |s| skill_text(s).downcase.include?(q) }
+            return list_skills(user_id) if query.to_s.strip.empty?
+            all_skills(user_id).select { |s| Llmemory::Tokenizer.matches?(skill_text(s), query) }
           end
 
           def find_skills_by_name(user_id, name)

@@ -51,13 +51,11 @@ module Llmemory
           end
 
           def search_items(user_id, query)
-            query_lower = query.downcase
-            @items[user_id].select { |i| i[:content].to_s.downcase.include?(query_lower) }
+            @items[user_id].select { |i| Llmemory::Tokenizer.matches?(i[:content], query) }
           end
 
           def search_resources(user_id, query)
-            query_lower = query.downcase
-            @resources[user_id].select { |r| r[:text].to_s.downcase.include?(query_lower) }
+            @resources[user_id].select { |r| Llmemory::Tokenizer.matches?(r[:text], query) }
           end
 
           def get_resources_since(user_id, hours:)

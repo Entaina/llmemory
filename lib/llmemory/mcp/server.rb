@@ -11,6 +11,12 @@ require_relative "tools/memory_consolidate"
 require_relative "tools/memory_stats"
 require_relative "tools/memory_info"
 require_relative "tools/memory_timeline_context"
+require_relative "tools/memory_episode_record"
+require_relative "tools/memory_episodes"
+require_relative "tools/memory_skill_register"
+require_relative "tools/memory_skill_report"
+require_relative "tools/memory_skills"
+require_relative "tools/memory_forget"
 
 module Llmemory
   module MCP
@@ -157,7 +163,13 @@ module Llmemory
           Tools::MemoryAddMessage,
           Tools::MemoryConsolidate,
           Tools::MemoryStats,
-          Tools::MemoryInfo
+          Tools::MemoryInfo,
+          Tools::MemoryEpisodeRecord,
+          Tools::MemoryEpisodes,
+          Tools::MemorySkillRegister,
+          Tools::MemorySkillReport,
+          Tools::MemorySkills,
+          Tools::MemoryForget
         ]
       end
 

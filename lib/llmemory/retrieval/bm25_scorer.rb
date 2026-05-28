@@ -53,7 +53,7 @@ module Llmemory
       private
 
       def tokenize(text)
-        text.to_s.downcase.scan(/\b[a-z0-9]{2,}\b/)
+        Llmemory::Tokenizer.tokenize(text)
       end
     end
   end

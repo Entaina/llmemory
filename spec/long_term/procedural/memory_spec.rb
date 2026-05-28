@@ -28,6 +28,11 @@ RSpec.describe Llmemory::LongTerm::Procedural::Memory do
       memory.register_skill(name: "rollback", description: "revert a bad deploy", body: "kubectl rollout undo")
       expect(memory.find_skill("revert").name).to eq("rollback")
     end
+
+    it "finds a skill by a multi-word query (tokenized, not whole-substring)" do
+      memory.register_skill(name: "rollback", description: "revert a bad deploy", body: "kubectl rollout undo")
+      expect(memory.find_skill("revert deploy").name).to eq("rollback")
+    end
   end
 
   describe "#report_outcome" do
@@ -82,6 +87,34 @@ RSpec.describe Llmemory::LongTerm::Procedural::Memory do
       expect(removed).to eq(1)
       expect(memory.skills.map(&:id)).to eq([keep])
       expect(memory.forget_log.entries(user_id).last[:memory_type]).to eq("procedural")
+    end
+  end
+
+  describe "hybrid retrieval with a vector store (SF2)" do
+    let(:vector_store) do
+      stored = []
+      double("VectorStore").tap do |d|
+        allow(d).to receive(:embed).and_return([0.1, 0.2, 0.3])
+        allow(d).to receive(:store) { |id:, **_| stored << id; id }
+        allow(d).to receive(:search_by_text) { |_q, **_| stored.map { |id| { id: id, score: 0.9 } } }
+      end
+    end
+    let(:memory) { described_class.new(user_id: user_id, vector_store: vector_store) }
+
+    it "embeds and stores the skill on register" do
+      id = memory.register_skill(name: "rollback", body: "kubectl rollout undo")
+      expect(vector_store).to have_received(:embed)
+      expect(vector_store).to have_received(:store)
+      expect(id).to start_with("skill_")
+    end
+
+    it "returns vector hits even when the keyword query does not match, keeping success-rate importance" do
+      id = memory.register_skill(name: "rollback", body: "kubectl rollout undo")
+      memory.report_outcome(id, success: true)
+      results = memory.search_candidates("totally unrelated phrasing")
+      hit = results.find { |c| c[:id] == id }
+      expect(hit).not_to be_nil
+      expect(hit[:importance]).to eq(1.0)
     end
   end
 end

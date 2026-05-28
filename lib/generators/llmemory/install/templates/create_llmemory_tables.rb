@@ -30,6 +30,26 @@ class CreateLlmemoryTables < ActiveRecord::Migration[7.0]
     end
     add_index :llmemory_categories, [:user_id, :category_name], unique: true
 
+    # Episodic long-term memory (trajectories) — JSONB document per episode
+    create_table :llmemory_episodes, id: false do |t|
+      t.string :id, null: false, primary_key: true
+      t.string :user_id, null: false
+      t.jsonb :data, null: false, default: {}
+      t.text :search_text
+      t.timestamps
+    end
+    add_index :llmemory_episodes, :user_id
+
+    # Procedural long-term memory (skill library) — JSONB document per skill
+    create_table :llmemory_skills, id: false do |t|
+      t.string :id, null: false, primary_key: true
+      t.string :user_id, null: false
+      t.jsonb :data, null: false, default: {}
+      t.text :search_text
+      t.timestamps
+    end
+    add_index :llmemory_skills, :user_id
+
     create_table :llmemory_checkpoints do |t|
       t.string :user_id, null: false
       t.string :session_id, null: false

@@ -3,6 +3,7 @@
 require_relative "storages/base"
 require_relative "storages/memory_storage"
 require_relative "storages/file_storage"
+require_relative "storages/database_storage"
 
 module Llmemory
   module LongTerm
@@ -11,16 +12,17 @@ module Llmemory
       Storage = Storages::MemoryStorage
 
       module Storages
-        def self.build(store: nil, base_path: nil)
+        def self.build(store: nil, base_path: nil, database_url: nil)
           case (store || Llmemory.configuration.long_term_store).to_s.to_sym
           when :memory
             MemoryStorage.new
           when :file
             FileStorage.new(base_path: base_path || Llmemory.configuration.long_term_storage_path)
-          when :postgres, :database, :active_record, :activerecord
-            raise NotImplementedError,
-              "Procedural SQL/ActiveRecord storage is not implemented yet; use :memory or :file " \
-              "(or pass an explicit storage instance)."
+          when :postgres, :database
+            DatabaseStorage.new(database_url: database_url || Llmemory.configuration.database_url)
+          when :active_record, :activerecord
+            require_relative "storages/active_record_storage"
+            ActiveRecordStorage.new
           else
             MemoryStorage.new
           end

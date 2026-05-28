@@ -10,11 +10,13 @@ module Llmemory
     DEFAULT_SESSION_ID = "default"
     STATE_KEY_MESSAGES = :messages
 
-    def initialize(user_id:, session_id: DEFAULT_SESSION_ID, checkpoint: nil, long_term: nil, long_term_type: nil, retrieval_engine: nil, working_memory: nil, api_key: nil)
+    def initialize(user_id:, session_id: DEFAULT_SESSION_ID, checkpoint: nil, long_term: nil, long_term_type: nil, retrieval_engine: nil, working_memory: nil, episodic: nil, procedural: nil, api_key: nil)
       @user_id = user_id
       @session_id = session_id
       @checkpoint = checkpoint || ShortTerm::Checkpoint.new(user_id: user_id, session_id: session_id)
       @working_memory = working_memory
+      @episodic = episodic
+      @procedural = procedural
       @llm = api_key.to_s.empty? ? nil : Llmemory::LLM.client(api_key: api_key)
       type = long_term_type || Llmemory.configuration.long_term_type || :file_based
       @long_term = long_term || build_long_term(type)
@@ -22,10 +24,33 @@ module Llmemory
     end
 
     # Structured working memory for this session (CoALA working memory),
-    # parallel to the message checkpoint. Lazily built so it costs nothing
-    # unless an agent uses it.
+    # parallel to the message checkpoint. Lazily built.
     def working_memory
       @working_memory ||= WorkingMemory.new(user_id: @user_id, session_id: @session_id)
+    end
+
+    # Episodic long-term memory (CoALA): records and retrieves agent trajectories.
+    # Additive — coexists with the semantic store (file/graph). Lazily built.
+    def episodic
+      @episodic ||= LongTerm::Episodic::Memory.new(user_id: @user_id)
+    end
+
+    # Procedural long-term memory (Voyager-style skill library). Lazily built.
+    def procedural
+      @procedural ||= LongTerm::Procedural::Memory.new(user_id: @user_id)
+    end
+
+    # Reflects over recent episodes and writes distilled insights to the
+    # semantic store (file/graph) with provenance back to source episodes.
+    def reflect!(window: 10, category: "insights")
+      Reflection::Reflector.new(episodic: episodic, semantic: @long_term, llm: @llm)
+        .reflect(window: window, category: category)
+    end
+
+    # Reasoning action: render a prompt from working memory, call the LLM, write
+    # the result back. Composable; does not touch long-term memory.
+    def reason(template:, into: Actions::Reason::DEFAULT_SLOT, parse: nil)
+      Actions::Reason.call(working_memory: working_memory, template: template, into: into, parse: parse, llm: @llm)
     end
 
     def add_message(role:, content:)

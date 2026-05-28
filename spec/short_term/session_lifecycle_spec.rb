@@ -45,4 +45,30 @@ RSpec.describe Llmemory::ShortTerm::SessionLifecycle do
       expect(store.list_sessions(user_id: "user1").size).to eq(3)
     end
   end
+
+  describe "pseudo-session exclusion (SF6 + SF12)" do
+    it "skips ForgetLog, FeedbackStore and WorkingMemory pseudo-sessions in lifecycle ops" do
+      # Real user session (counts).
+      store.save("user1", "s1", { messages: [], last_activity_at: Time.now })
+      # Pseudo-sessions sharing the K/V backend.
+      store.save("user1", "__forget_log__", { entries: [{ memory_type: "file_based", ids: ["x"] }] })
+      store.save("user1", "__retrieval_feedback__", { "item_a" => 3 })
+      store.save("user1", "default:working_memory", { goals: ["plan"] })
+
+      deleted = lifecycle.enforce_max_entries!(user_id: "user1", max_entries: 0)
+
+      # Only the real session is countable / deletable; pseudo-sessions remain.
+      expect(deleted).to eq(1)
+      expect(store.load("user1", "__forget_log__")).not_to be_nil
+      expect(store.load("user1", "__retrieval_feedback__")).not_to be_nil
+      expect(store.load("user1", "default:working_memory")).not_to be_nil
+    end
+
+    it "identifies the documented pseudo-session formats" do
+      expect(described_class.pseudo_session?("__forget_log__")).to be true
+      expect(described_class.pseudo_session?("__retrieval_feedback__")).to be true
+      expect(described_class.pseudo_session?("default:working_memory")).to be true
+      expect(described_class.pseudo_session?("regular_session")).to be false
+    end
+  end
 end

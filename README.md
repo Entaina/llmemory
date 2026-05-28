@@ -74,6 +74,11 @@ Llmemory.configure do |config|
   config.importance_weight = 1.0          # how strongly importance multiplies the score (0 = ignore)
   config.retrieval_feedback_weight = 0.5  # how strongly useful/harmful feedback shifts ranking (0 = ignore)
 
+  # Semantic (embedding) retrieval for episodic/procedural memory (opt-in;
+  # default off keeps them deterministic and network-free)
+  config.episodic_vector_enabled = false
+  config.procedural_vector_enabled = false
+
   # Pre-compaction memory flush (prevents knowledge loss when compacting)
   config.memory_flush_enabled = true
   config.memory_flush_threshold_tokens = 4000
@@ -129,7 +134,7 @@ rails g llmemory:install
 rails db:migrate
 ```
 
-La migración crea las tablas de long-term file-based (resources, items, categories), short-term (checkpoints) y, para graph-based, nodos, aristas y embeddings (`llmemory_nodes`, `llmemory_edges`, `llmemory_embeddings`). Para embeddings se usa pgvector; asegúrate de tener la extensión `vector` en PostgreSQL. Para usar ambas con ActiveRecord:
+La migración crea las tablas de long-term file-based (resources, items, categories), short-term (checkpoints), episódica y procedural (`llmemory_episodes`, `llmemory_skills`; columna `data` JSONB) y, para graph-based, nodos, aristas y embeddings (`llmemory_nodes`, `llmemory_edges`, `llmemory_embeddings`). Para embeddings se usa pgvector; asegúrate de tener la extensión `vector` en PostgreSQL. Para usar ambas con ActiveRecord:
 
 ```ruby
 # config/application.rb o config/initializers/llmemory.rb
@@ -214,7 +219,7 @@ llmemory implements the memory and internal-action concepts from [CoALA — Cogn
 | Learning action | `memorize` / `record_episode` / `register_skill` / reflection |
 | Uniform interface | `Llmemory::MemoryModule` (`read`/`write`/`list`/`stats`/`forget`) |
 
-All three long-term memories below are **additive** — episodic and procedural coexist with semantic memory rather than replacing it. Episodic/procedural ship with `:memory` and `:file` backends (SQL/ActiveRecord and vector search are roadmap items); retrieval there is keyword-based.
+All three long-term memories below are **additive** — episodic and procedural coexist with semantic memory rather than replacing it. They support `:memory`, `:file`, `:postgres` and `:active_record` backends. Retrieval is keyword-based by default (tokenized, so multi-word queries work); semantic (embedding) retrieval is **opt-in** via `config.episodic_vector_enabled` / `config.procedural_vector_enabled` (or by injecting a `vector_store:`), which makes `search_candidates` hybrid (vector + keyword).
 
 ### Working memory (structured, persists across LLM calls)
 

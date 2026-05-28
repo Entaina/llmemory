@@ -3,6 +3,7 @@
 require_relative "episode"
 require_relative "storage"
 require_relative "../../memory_module"
+require_relative "../../vector_store"
 
 module Llmemory
   module LongTerm
@@ -12,16 +13,19 @@ module Llmemory
       # memory (file/graph), not replace it, and to feed reflection (P2), which
       # distills episodes into semantic knowledge.
       #
-      # Deliberately LLM-free: recording and retrieval are deterministic. Higher
-      # order summarization belongs to reflection.
+      # Recording/retrieval are deterministic and LLM-free by default. Semantic
+      # (embedding) retrieval is opt-in via `config.episodic_vector_enabled` or by
+      # injecting a `vector_store:`; when off, search is keyword-only (unchanged).
       class Memory
         include Llmemory::MemoryModule
 
         attr_reader :user_id, :storage
 
-        def initialize(user_id:, storage: nil)
+        def initialize(user_id:, storage: nil, vector_store: nil)
           @user_id = user_id
           @storage = storage || Storages.build
+          @vector_store = vector_store
+          @vector_explicit = !vector_store.nil?
         end
 
         # Records a trajectory. `steps` is an array of hashes with any of
@@ -39,7 +43,9 @@ module Llmemory
             episode.searchable_text, method: "episode_recording", confidence: episode.importance
           )
           record = episode.to_h.merge(provenance: provenance)
-          @storage.save_episode(@user_id, record)
+          id = @storage.save_episode(@user_id, record)
+          index_vector(id, episode.searchable_text)
+          id
         end
 
         def recent_episodes(limit: 10)
@@ -62,22 +68,17 @@ module Llmemory
         # Retrieval Engine integration. Returns candidates shaped like the other
         # long-term memories so the Engine can rank episodes by relevance,
         # recency (temporal decay) and importance (P3), with provenance (P10).
+        # Hybrid (vector + keyword) when a vector store is active; otherwise
+        # keyword-only.
         def search_candidates(query, user_id: nil, top_k: 20)
           uid = user_id || @user_id
           return [] unless uid == @user_id
 
-          @storage.search_episodes(uid, query).first(top_k).map do |e|
-            episode = Episode.from_h(e)
-            {
-              id: episode.id,
-              text: episode.summary.to_s.empty? ? episode.searchable_text : episode.summary,
-              timestamp: episode.created_at,
-              score: 1.0,
-              importance: episode.importance,
-              evergreen: false,
-              provenance: e[:provenance] || e["provenance"]
-            }
-          end
+          keyword = @storage.search_episodes(uid, query).first(top_k).map { |e| candidate_for(e, 1.0) }
+          vs = vector_store
+          return keyword unless vs
+
+          merge_candidates(vector_candidates(query, top_k, vs), keyword, top_k)
         end
 
         # --- MemoryModule uniform interface ---
@@ -104,6 +105,60 @@ module Llmemory
         end
 
         private
+
+        # Active vector store: the injected one, or a config-gated lazy build.
+        # Returns nil when semantic search is disabled (default).
+        def vector_store
+          if @vector_explicit
+            @vector_store
+          elsif Llmemory.configuration.episodic_vector_enabled
+            @vector_store ||= Llmemory::VectorStore.build(source_type: "episode")
+          end
+        end
+
+        # Best-effort embedding indexing; a failure must never break recording.
+        def index_vector(id, text)
+          vs = vector_store
+          return if vs.nil? || text.to_s.strip.empty?
+          embedding = vs.embed(text)
+          return unless embedding
+          vs.store(id: id, embedding: embedding, metadata: { text: text, created_at: Time.now }, user_id: @user_id)
+        rescue StandardError
+          nil
+        end
+
+        def vector_candidates(query, top_k, vs)
+          vs.search_by_text(query.to_s, top_k: top_k, user_id: @user_id).filter_map do |r|
+            raw = @storage.get_episode(@user_id, r[:id] || r["id"])
+            raw && candidate_for(raw, (r[:score] || r["score"] || 1.0).to_f)
+          end
+        rescue StandardError
+          []
+        end
+
+        def candidate_for(raw, score)
+          episode = Episode.from_h(raw)
+          {
+            id: episode.id,
+            text: episode.summary.to_s.empty? ? episode.searchable_text : episode.summary,
+            timestamp: episode.created_at,
+            score: score,
+            importance: episode.importance,
+            evergreen: false,
+            provenance: raw[:provenance] || raw["provenance"]
+          }
+        end
+
+        # Dedup by id keeping the higher score; highest score first, capped.
+        def merge_candidates(primary, secondary, top_k)
+          by_id = {}
+          (primary + secondary).each do |c|
+            key = c[:id] || c[:text]
+            existing = by_id[key]
+            by_id[key] = c if existing.nil? || c[:score].to_f > existing[:score].to_f
+          end
+          by_id.values.sort_by { |c| -c[:score].to_f }.first(top_k)
+        end
 
         # Cheap, deterministic summary when the caller does not provide one.
         # LLM-based summarization is reflection's job (P2).
