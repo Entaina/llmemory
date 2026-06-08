@@ -54,14 +54,18 @@ module Llmemory
       end
 
       def fetch_embedding(text)
-        response = connection.post("embeddings") do |req|
-          req.headers["Authorization"] = "Bearer #{@api_key}"
-          req.headers["Content-Type"] = "application/json"
-          req.body = { input: text.to_s.strip, model: @model }.to_json
+        result = nil
+        Llmemory::Instrumentation.instrument(:llm_embed, provider: :openai, model: @model, text_chars: text.to_s.length) do
+          response = connection.post("embeddings") do |req|
+            req.headers["Authorization"] = "Bearer #{@api_key}"
+            req.headers["Content-Type"] = "application/json"
+            req.body = { input: text.to_s.strip, model: @model }.to_json
+          end
+          raise Llmemory::LLMError, "OpenAI Embeddings API error: #{response.body}" unless response.success?
+          body = response.body.is_a?(Hash) ? response.body : JSON.parse(response.body.to_s)
+          result = body.dig("data", 0, "embedding")&.map(&:to_f) || Array.new(DEFAULT_DIMS, 0.0)
         end
-        raise Llmemory::LLMError, "OpenAI Embeddings API error: #{response.body}" unless response.success?
-        body = response.body.is_a?(Hash) ? response.body : JSON.parse(response.body.to_s)
-        body.dig("data", 0, "embedding")&.map(&:to_f) || Array.new(DEFAULT_DIMS, 0.0)
+        result
       end
 
       def connection

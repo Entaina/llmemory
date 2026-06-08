@@ -16,22 +16,26 @@ module Llmemory
       end
 
       def invoke(prompt)
-        response = connection.post("v1/messages") do |req|
-          req.body = {
-            model: @model,
-            max_tokens: 1024,
-            messages: [{ role: "user", content: prompt }]
-          }.to_json
-          req.headers["Content-Type"] = "application/json"
-          req.headers["x-api-key"] = @api_key
-          req.headers["anthropic-version"] = "2023-06-01"
+        result = nil
+        Llmemory::Instrumentation.instrument(:llm_invoke, provider: :anthropic, model: @model, prompt_chars: prompt.to_s.length) do
+          response = connection.post("v1/messages") do |req|
+            req.body = {
+              model: @model,
+              max_tokens: 1024,
+              messages: [{ role: "user", content: prompt }]
+            }.to_json
+            req.headers["Content-Type"] = "application/json"
+            req.headers["x-api-key"] = @api_key
+            req.headers["anthropic-version"] = "2023-06-01"
+          end
+
+          raise Llmemory::LLMError, "Anthropic API error: #{response.body}" unless response.success?
+
+          body = response.body.is_a?(Hash) ? response.body : JSON.parse(response.body.to_s)
+          content = body.dig("content", 0, "text")
+          result = content&.strip || ""
         end
-
-        raise Llmemory::LLMError, "Anthropic API error: #{response.body}" unless response.success?
-
-        body = response.body.is_a?(Hash) ? response.body : JSON.parse(response.body.to_s)
-        content = body.dig("content", 0, "text")
-        content&.strip || ""
+        result
       end
 
       private

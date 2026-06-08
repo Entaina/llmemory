@@ -73,5 +73,21 @@ RSpec.describe Llmemory::CLI do
       expect(out.string).to include("No skills for user u1")
       expect(out.string).to include("No forget audit entries for user u1")
     end
+
+    it "lists the maintenance commands in help (SF20)" do
+      out = StringIO.new
+      allow($stdout).to receive(:puts) { |*args| out.puts(*args) }
+      described_class.run([])
+      expect(out.string).to include("mine-skills", "maintain")
+    end
+
+    it "runs mine-skills and maintain on empty state without crashing" do
+      out = StringIO.new
+      allow($stdout).to receive(:puts) { |*args| out.puts(*args) }
+      described_class.run(["mine-skills", "u1"])
+      described_class.run(["maintain", "u1"])
+      expect(out.string).to include("No skills could be mined for user u1")
+      expect(out.string).to include("Cognitive pass for u1")
+    end
   end
 end

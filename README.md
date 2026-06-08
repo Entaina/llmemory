@@ -216,7 +216,7 @@ llmemory implements the memory and internal-action concepts from [CoALA — Cogn
 | Procedural memory | `Llmemory::LongTerm::Procedural::Memory` |
 | Reasoning action | `Llmemory::Actions::Reason` |
 | Retrieval action | `Retrieval::Engine` (+ feedback, iterative) |
-| Learning action | `memorize` / `record_episode` / `register_skill` / reflection |
+| Learning action | `memorize` / `record_episode` / `register_skill` / reflection / skill mining |
 | Uniform interface | `Llmemory::MemoryModule` (`read`/`write`/`list`/`stats`/`forget`) |
 
 All three long-term memories below are **additive** — episodic and procedural coexist with semantic memory rather than replacing it. They support `:memory`, `:file`, `:postgres` and `:active_record` backends. Retrieval is keyword-based by default (tokenized, so multi-word queries work); semantic (embedding) retrieval is **opt-in** via `config.episodic_vector_enabled` / `config.procedural_vector_enabled` (or by injecting a `vector_store:`), which makes `search_candidates` hybrid (vector + keyword).
@@ -309,6 +309,39 @@ skills.register_skill(name: "rollback", body: "...newer...") # same name -> vers
 skills.find_skill("revert deploy")        # best match (a Skill)
 skills.report_outcome(id, success: true)  # feeds ranking + adaptive retrieval
 ```
+
+### Skill mining (episodic → procedural)
+
+Rather than writing every skill by hand, mine them from successful episode trajectories (Voyager's contribution: procedural memory grows from lived experience). Mining is **human-in-the-loop by default** — it returns proposals and writes nothing until you opt in.
+
+```ruby
+miner = Llmemory::SkillMining::Miner.new(episodic: episodic, procedural: skills)
+
+proposals = miner.mine(window: 20)                 # => [{ name:, kind:, body:, description:, confidence: }, ...]
+miner.mine(window: 20, outcomes: ["success"])      # deterministic pre-filter by outcome label
+ids = miner.mine(window: 20, auto_register: true)  # register proposals straight away
+
+# Registered skills carry provenance { method: "skill_mining", sources: [{ type: "episode", id: ... }] }.
+# From the unified API: memory.mine_skills!(auto_register: true)
+```
+
+### Cognitive maintenance pass (closing the loop)
+
+One scheduled step that runs the whole learning loop — consolidate → reflect → mine skills → TTL expiry — for a user. Each step is isolated: a failure is captured in the report and never aborts the others.
+
+```ruby
+report = Llmemory::Maintenance::CognitivePass.run!(
+  "u1",
+  reflect: true, mine_skills: true, expire: true,   # toggle steps
+  reflection_window: 10, mining_window: 20
+)
+# => { consolidated:, insights: [...], mined: [...], expired: { episodic:, procedural: }, errors: {} }
+
+# From the unified API (wires in the live session, so consolidate! runs too):
+memory.maintain!(mine_skills: true)
+```
+
+`mine_skills` defaults to `config.skill_mining_enabled` (default `false`). Run it from cron or a Rails job. Components (`episodic:`, `procedural:`, `semantic:`, `llm:`) are injectable; built per-config when omitted.
 
 ### Uniform interface (MemoryModule)
 
@@ -489,6 +522,14 @@ llmemory edges USER_ID [--subject NODE_ID] [--limit N]
 llmemory graph USER_ID [--format dot|json]
 llmemory search USER_ID "query" [--type short|long|all]
 llmemory stats [USER_ID]
+
+# Cognitive memory (CoALA)
+llmemory episodes USER_ID [--limit N]
+llmemory skills USER_ID [--limit N]
+llmemory working USER_ID SESSION_ID
+llmemory forget-log USER_ID
+llmemory mine-skills USER_ID [--window N] [--outcomes success,recovered] [--register]
+llmemory maintain USER_ID [--[no-]reflect] [--mine-skills] [--[no-]expire] [--window N]
 ```
 
 Use `--store TYPE` where applicable to override the configured store (e.g. `memory`, `redis`, `postgres`, `active_record` for short-term; same or `file` for long-term file-based).
@@ -615,6 +656,11 @@ MCP_TOKEN=your-secret-token llmemory mcp serve --http --port 443 \
 | `memory_consolidate` | Extract facts from conversation to long-term |
 | `memory_stats` | Get memory statistics for a user |
 | `memory_info` | Documentation on how to use the tools |
+| `memory_episode_record` / `memory_episodes` | Record / list episodic trajectories |
+| `memory_skill_register` / `memory_skill_report` / `memory_skills` | Register / outcome-track / list procedural skills |
+| `memory_forget` | Forget entries by id (audited) across any memory type |
+| `memory_mine_skills` | Mine reusable skills from episodes (proposals by default; `auto_register` to save) |
+| `memory_maintain` | Run the cognitive maintenance pass (reflect → mine → expire) and return a report |
 
 ### Configuration for Claude Code
 

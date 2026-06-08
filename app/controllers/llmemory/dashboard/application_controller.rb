@@ -3,7 +3,9 @@
 module Llmemory
   module Dashboard
     class ApplicationController < ActionController::Base
-      helper_method :short_term_store, :file_based_storage, :graph_based_storage, :file_based?, :graph_based?
+      helper_method :short_term_store, :file_based_storage, :graph_based_storage,
+                    :episodic_storage, :procedural_storage, :forget_log,
+                    :file_based?, :graph_based?
 
       protected
 
@@ -17,6 +19,18 @@ module Llmemory
 
       def graph_based_storage
         @graph_based_storage ||= build_graph_based_storage
+      end
+
+      def episodic_storage
+        @episodic_storage ||= Llmemory::LongTerm::Episodic::Storages.build
+      end
+
+      def procedural_storage
+        @procedural_storage ||= Llmemory::LongTerm::Procedural::Storages.build
+      end
+
+      def forget_log
+        @forget_log ||= Llmemory::ForgetLog.new
       end
 
       def long_term_type

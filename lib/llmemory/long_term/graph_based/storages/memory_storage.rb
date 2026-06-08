@@ -43,9 +43,10 @@ module Llmemory
             @nodes[user_id].values.find { |n| n.entity_type == entity_type.to_s && n.name.to_s == name.to_s }
           end
 
-          def list_nodes(user_id, entity_type: nil, limit: nil)
+          def list_nodes(user_id, entity_type: nil, limit: nil, offset: nil)
             list = @nodes[user_id].values
             list = list.select { |n| n.entity_type.to_s == entity_type.to_s } if entity_type
+            list = list.drop(offset.to_i) if offset && offset.to_i.positive?
             limit ? list.take(limit) : list
           end
 
@@ -106,8 +107,9 @@ module Llmemory
             (@nodes.keys + @edges.keys).uniq
           end
 
-          def list_edges(user_id, subject_id: nil, predicate: nil, limit: nil)
+          def list_edges(user_id, subject_id: nil, predicate: nil, limit: nil, offset: nil)
             list = find_edges(user_id, subject_id: subject_id, predicate: predicate, object_id: nil, include_archived: false)
+            list = list.drop(offset.to_i) if offset && offset.to_i.positive?
             limit ? list.take(limit) : list
           end
 

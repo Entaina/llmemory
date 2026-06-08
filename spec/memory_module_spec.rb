@@ -29,6 +29,28 @@ RSpec.shared_examples "a memory module" do
     expect(memory.stats).to be_a(Hash)
     expect(memory.stats.values.sum).to be > 0
   end
+
+  it "paginates #list via limit + offset (non-overlapping windows)" do
+    5.times { |i| perform_distinct_write(i) }
+    expect(memory.list.size).to be >= 4
+
+    first_page = memory.list(limit: 2, offset: 0)
+    second_page = memory.list(limit: 2, offset: 2)
+
+    expect(first_page.size).to eq(2)
+    expect(second_page.size).to eq(2)
+
+    first_ids = first_page.map { |e| extract_id(e) }
+    second_ids = second_page.map { |e| extract_id(e) }
+    expect(first_ids & second_ids).to be_empty
+  end
+end
+
+def extract_id(entry)
+  case entry
+  when Hash then (entry[:id] || entry["id"]).to_s
+  else entry.respond_to?(:id) ? entry.id.to_s : entry.to_s
+  end
 end
 
 RSpec.describe "MemoryModule contract" do
@@ -39,6 +61,9 @@ RSpec.describe "MemoryModule contract" do
     let(:query) { "rolled back" }
     def perform_write
       memory.write(steps: [{ observation: "deploy failed", action: "rolled back" }], outcome: "recovered")
+    end
+    def perform_distinct_write(i)
+      memory.write(steps: [{ observation: "deploy #{i} failed", action: "rolled back" }], outcome: "recovered #{i}")
     end
 
     include_examples "a memory module"
@@ -60,6 +85,10 @@ RSpec.describe "MemoryModule contract" do
     def perform_write
       memory.write("I prefer Ruby")
     end
+    def perform_distinct_write(i)
+      # Each write creates a fresh resource + item via the LLM mock (idempotent enough for paging).
+      memory.write("fact #{i}: I prefer language number #{i}")
+    end
 
     include_examples "a memory module"
   end
@@ -67,10 +96,13 @@ RSpec.describe "MemoryModule contract" do
   describe Llmemory::LongTerm::GraphBased::Memory do
     let(:extractor) do
       double("EntityRelationExtractor").tap do |d|
-        allow(d).to receive(:extract).and_return(
-          entities: [{ type: "person", name: "User" }, { type: "company", name: "Acme" }],
-          relations: [{ subject: "User", predicate: "works_at", object: "Acme" }]
-        )
+        allow(d).to receive(:extract) do |text|
+          n = text.to_s[/\d+/]&.to_i || 0
+          {
+            entities: [{ type: "person", name: "User#{n}" }, { type: "company", name: "Acme#{n}" }],
+            relations: [{ subject: "User#{n}", predicate: "works_at", object: "Acme#{n}" }]
+          }
+        end
       end
     end
     let(:vector_store) do
@@ -94,6 +126,9 @@ RSpec.describe "MemoryModule contract" do
     def perform_write
       memory.write("I work at Acme.")
     end
+    def perform_distinct_write(i)
+      memory.write("Person #{i} works at company #{i}")
+    end
 
     include_examples "a memory module"
   end
@@ -103,6 +138,9 @@ RSpec.describe "MemoryModule contract" do
     let(:query) { "rollback" }
     def perform_write
       memory.write(name: "rollback", description: "revert a bad deploy", body: "kubectl rollout undo")
+    end
+    def perform_distinct_write(i)
+      memory.write(name: "skill_#{i}", description: "task #{i}", body: "run command #{i}")
     end
 
     include_examples "a memory module"

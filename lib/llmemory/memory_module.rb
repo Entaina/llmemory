@@ -6,10 +6,10 @@ module Llmemory
   # abstractions; this mixin gives any memory store the same agent-facing
   # surface so frameworks can treat them polymorphically:
   #
-  #   read(query, user_id:, limit:)  -> relevant entries (retrieval)
-  #   write(payload, ...)            -> ingest into the store (learning)
-  #   list(user_id:, limit:)         -> enumerate stored entries
-  #   stats(user_id:)                -> counts and metadata
+  #   read(query, user_id:, limit:)          -> relevant entries (retrieval)
+  #   write(payload, ...)                    -> ingest into the store (learning)
+  #   list(user_id:, limit:, offset:)        -> enumerate stored entries (paginated)
+  #   stats(user_id:)                        -> counts and metadata
   #
   # `read` defaults to the de-facto `search_candidates` interface the retrieval
   # Engine already relies on. `write`, `list` and `stats` are implemented by each
@@ -30,7 +30,7 @@ module Llmemory
       raise NotImplementedError, "#{self.class} must implement #write"
     end
 
-    def list(user_id: nil, limit: nil)
+    def list(user_id: nil, limit: nil, offset: nil)
       raise NotImplementedError, "#{self.class} must implement #list"
     end
 
@@ -40,9 +40,16 @@ module Llmemory
 
     # Removes entries by id (the same ids returned by #read) and records the
     # removal in a ForgetLog audit. Returns the number of entries removed.
+    #
+    # mode:
+    #   :soft (default) — soft-archive: entries are excluded from list/search/
+    #     retrieval but remain accessible by id (think "trash"). Reversible if
+    #     the store supports it.
+    #   :hard           — physical deletion. Irreversible.
+    #
     # Implemented by stores with a clear deletion model; others may not support
     # it (CoALA-style "unlearning" is understudied; deletion semantics differ).
-    def forget(ids:, reason: nil)
+    def forget(ids:, reason: nil, mode: :soft)
       raise NotImplementedError, "#{self.class} does not support #forget"
     end
 

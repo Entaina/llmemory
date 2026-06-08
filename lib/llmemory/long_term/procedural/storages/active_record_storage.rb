@@ -41,19 +41,20 @@ module Llmemory
             LlmemorySkill.find_by(user_id: user_id, id: id)&.data
           end
 
-          def list_skills(user_id, limit: nil)
-            scope = LlmemorySkill.where(user_id: user_id).order(created_at: :desc)
+          def list_skills(user_id, limit: nil, offset: nil)
+            scope = LlmemorySkill.where(user_id: user_id, archived_at: nil).order(created_at: :desc)
             scope = scope.limit(limit) if limit && limit.to_i.positive?
+            scope = scope.offset(offset) if offset && offset.to_i.positive?
             scope.map(&:data)
           end
 
           def search_skills(user_id, query)
-            token_scope(LlmemorySkill.where(user_id: user_id), "search_text", query)
+            token_scope(LlmemorySkill.where(user_id: user_id, archived_at: nil), "search_text", query)
               .order(created_at: :desc).map(&:data)
           end
 
           def find_skills_by_name(user_id, name)
-            LlmemorySkill.where(user_id: user_id).where("data->>'name' = ?", name.to_s).map(&:data)
+            LlmemorySkill.where(user_id: user_id, archived_at: nil).where("data->>'name' = ?", name.to_s).map(&:data)
           end
 
           def record_outcome(user_id, skill_id, success:)
@@ -70,11 +71,20 @@ module Llmemory
           end
 
           def count_skills(user_id)
-            LlmemorySkill.where(user_id: user_id).count
+            LlmemorySkill.where(user_id: user_id, archived_at: nil).count
           end
 
           def delete_skills(user_id, ids)
             LlmemorySkill.where(user_id: user_id, id: Array(ids).map(&:to_s)).delete_all
+          end
+
+          def archive_skills(user_id, ids)
+            LlmemorySkill.where(user_id: user_id, id: Array(ids).map(&:to_s), archived_at: nil)
+              .update_all(archived_at: Time.current)
+          end
+
+          def expired_skill_ids(user_id, cutoff:)
+            LlmemorySkill.where(user_id: user_id, archived_at: nil).where("created_at < ?", cutoff).pluck(:id)
           end
 
           def list_users

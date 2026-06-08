@@ -52,8 +52,8 @@ module Llmemory
           @storage.list_episodes(@user_id, limit: limit).map { |e| Episode.from_h(e) }
         end
 
-        def episodes(limit: nil)
-          @storage.list_episodes(@user_id, limit: limit).map { |e| Episode.from_h(e) }
+        def episodes(limit: nil, offset: nil)
+          @storage.list_episodes(@user_id, limit: limit, offset: offset).map { |e| Episode.from_h(e) }
         end
 
         def find_episode(id)
@@ -84,24 +84,37 @@ module Llmemory
         # --- MemoryModule uniform interface ---
 
         def write(steps:, summary: nil, outcome: nil, importance: 0.5, **_meta)
-          record_episode(steps: steps, summary: summary, outcome: outcome, importance: importance)
+          result = nil
+          Llmemory::Instrumentation.instrument(:memory_write, memory_type: "episodic", user_id: @user_id) do
+            result = record_episode(steps: steps, summary: summary, outcome: outcome, importance: importance)
+          end
+          result
         end
 
-        def list(user_id: nil, limit: nil)
-          episodes(limit: limit)
+        def list(user_id: nil, limit: nil, offset: nil)
+          episodes(limit: limit, offset: offset)
         end
 
         def stats(user_id: nil)
           { episodes: count }
         end
 
-        def forget(ids:, reason: nil)
+        def forget(ids:, reason: nil, mode: :soft)
           requested = Array(ids).map(&:to_s)
           existing = @storage.list_episodes(@user_id).map { |e| (e[:id] || e["id"]).to_s }
-          removed = requested & existing
-          @storage.delete_episodes(@user_id, removed)
-          forget_log.record(@user_id, memory_type: "episodic", ids: removed, reason: reason)
-          removed.size
+          targeted = requested & existing
+          count = case mode
+          when :hard then @storage.delete_episodes(@user_id, targeted).to_i
+          else @storage.archive_episodes(@user_id, targeted).to_i
+          end
+          forget_log.record(@user_id, memory_type: "episodic", ids: targeted, reason: reason)
+          Llmemory::Instrumentation.instrument(:memory_forget, memory_type: "episodic", user_id: @user_id, count: count, mode: mode)
+          count
+        end
+
+        # Storage accessor for the TTL maintenance job.
+        def expired_ids(cutoff:)
+          @storage.expired_episode_ids(@user_id, cutoff: cutoff)
         end
 
         private

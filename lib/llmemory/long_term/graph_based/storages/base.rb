@@ -17,7 +17,7 @@ module Llmemory
             raise NotImplementedError, "#{self.class}#find_node_by_name must be implemented"
           end
 
-          def list_nodes(user_id, entity_type: nil, limit: nil)
+          def list_nodes(user_id, entity_type: nil, limit: nil, offset: nil)
             raise NotImplementedError, "#{self.class}#list_nodes must be implemented"
           end
 
@@ -37,7 +37,7 @@ module Llmemory
             raise NotImplementedError, "#{self.class}#list_users must be implemented"
           end
 
-          def list_edges(user_id, subject_id: nil, predicate: nil, limit: nil)
+          def list_edges(user_id, subject_id: nil, predicate: nil, limit: nil, offset: nil)
             raise NotImplementedError, "#{self.class}#list_edges must be implemented"
           end
 

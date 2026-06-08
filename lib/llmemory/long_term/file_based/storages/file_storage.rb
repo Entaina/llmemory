@@ -152,14 +152,16 @@ module Llmemory
             Dir.children(@base_path).select { |e| File.directory?(File.join(@base_path, e)) && !e.start_with?(".") }
           end
 
-          def list_resources(user_id:, limit: nil)
+          def list_resources(user_id:, limit: nil, offset: nil)
             list = get_all_resources(user_id)
+            list = list.drop(offset.to_i) if offset && offset.to_i.positive?
             limit ? list.take(limit) : list
           end
 
-          def list_items(user_id:, category: nil, limit: nil)
+          def list_items(user_id:, category: nil, limit: nil, offset: nil)
             list = get_all_items(user_id)
             list = list.select { |i| (i[:category] || i["category"]).to_s == category.to_s } if category
+            list = list.drop(offset.to_i) if offset && offset.to_i.positive?
             list = list.take(limit) if limit
             list
           end

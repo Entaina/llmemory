@@ -108,11 +108,15 @@ module Llmemory
         # --- MemoryModule uniform interface ---
 
         def write(payload, **_meta)
-          memorize(payload)
+          result = nil
+          Llmemory::Instrumentation.instrument(:memory_write, memory_type: "file_based", user_id: @user_id) do
+            result = memorize(payload)
+          end
+          result
         end
 
-        def list(user_id: nil, limit: nil)
-          @storage.list_items(user_id: user_id || @user_id, limit: limit)
+        def list(user_id: nil, limit: nil, offset: nil)
+          @storage.list_items(user_id: user_id || @user_id, limit: limit, offset: offset)
         end
 
         def stats(user_id: nil)
@@ -120,7 +124,10 @@ module Llmemory
         end
 
         # Removes items/resources by id and records the removal in the audit log.
-        def forget(ids:, reason: nil)
+        # Note: file-based storages currently implement `archive_*` as physical
+        # removal — `mode: :soft` and `mode: :hard` are functionally equivalent
+        # here. Kept for API uniformity.
+        def forget(ids:, reason: nil, mode: :soft)
           requested = Array(ids).map(&:to_s)
           existing = (@storage.get_all_items(@user_id) + @storage.get_all_resources(@user_id))
             .map { |r| (r[:id] || r["id"]).to_s }
@@ -128,6 +135,7 @@ module Llmemory
           @storage.archive_items(@user_id, removed)
           @storage.archive_resources(@user_id, removed)
           forget_log.record(@user_id, memory_type: "file_based", ids: removed, reason: reason)
+          Llmemory::Instrumentation.instrument(:memory_forget, memory_type: "file_based", user_id: @user_id, count: removed.size, mode: mode)
           removed.size
         end
 

@@ -30,27 +30,31 @@ module Llmemory
       # Reflects over the most recent `window` episodes and writes the resulting
       # insights to semantic memory. Returns the ids of the stored insights.
       def reflect(window: 10, category: DEFAULT_CATEGORY)
-        episodes = @episodic.recent_episodes(limit: window)
-        return [] if episodes.empty?
+        result = []
+        Llmemory::Instrumentation.instrument(:reflect, window: window, category: category) do
+          episodes = @episodic.recent_episodes(limit: window)
+          next if episodes.empty?
 
-        insights = distill(episodes)
-        return [] if insights.empty?
+          insights = distill(episodes)
+          next if insights.empty?
 
-        sources = episodes.map(&:id).compact.map { |id| { type: "episode", id: id } }
+          sources = episodes.map(&:id).compact.map { |id| { type: "episode", id: id } }
 
-        insights.filter_map do |insight|
-          provenance = Llmemory::Provenance.build(
-            method: "reflection",
-            sources: sources,
-            confidence: insight[:confidence]
-          )
-          @semantic.remember_fact(
-            content: insight[:content],
-            category: category,
-            importance: insight[:confidence] || DEFAULT_IMPORTANCE,
-            provenance: provenance
-          )
+          result = insights.filter_map do |insight|
+            provenance = Llmemory::Provenance.build(
+              method: "reflection",
+              sources: sources,
+              confidence: insight[:confidence]
+            )
+            @semantic.remember_fact(
+              content: insight[:content],
+              category: category,
+              importance: insight[:confidence] || DEFAULT_IMPORTANCE,
+              provenance: provenance
+            )
+          end
         end
+        result
       end
 
       private

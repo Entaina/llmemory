@@ -52,10 +52,11 @@ module Llmemory
             record_to_node(rec) if rec
           end
 
-          def list_nodes(user_id, entity_type: nil, limit: nil)
+          def list_nodes(user_id, entity_type: nil, limit: nil, offset: nil)
             scope = LlmemoryGraphNode.where(user_id: user_id)
             scope = scope.where(entity_type: entity_type) if entity_type
             scope = scope.limit(limit) if limit && limit.to_i.positive?
+            scope = scope.offset(offset) if offset && offset.to_i.positive?
             scope.map { |r| record_to_node(r) }
           end
 
@@ -106,12 +107,13 @@ module Llmemory
             (LlmemoryGraphNode.distinct.pluck(:user_id) + LlmemoryGraphEdge.distinct.pluck(:user_id)).uniq
           end
 
-          def list_edges(user_id, subject_id: nil, predicate: nil, limit: nil)
+          def list_edges(user_id, subject_id: nil, predicate: nil, limit: nil, offset: nil)
             scope = LlmemoryGraphEdge.where(user_id: user_id, archived_at: nil)
             scope = scope.where(subject_id: subject_id) if subject_id
             scope = scope.where(predicate: predicate) if predicate
             scope = scope.order(created_at: :desc) if limit && limit.to_i.positive?
             scope = scope.limit(limit) if limit && limit.to_i.positive?
+            scope = scope.offset(offset) if offset && offset.to_i.positive?
             scope.map { |r| record_to_edge(r) }
           end
 

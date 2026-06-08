@@ -42,23 +42,33 @@ module Llmemory
             rec&.data
           end
 
-          def list_episodes(user_id, limit: nil)
-            scope = LlmemoryEpisode.where(user_id: user_id).order(created_at: :desc)
+          def list_episodes(user_id, limit: nil, offset: nil)
+            scope = LlmemoryEpisode.where(user_id: user_id, archived_at: nil).order(created_at: :desc)
             scope = scope.limit(limit) if limit && limit.to_i.positive?
+            scope = scope.offset(offset) if offset && offset.to_i.positive?
             scope.map(&:data)
           end
 
           def search_episodes(user_id, query)
-            token_scope(LlmemoryEpisode.where(user_id: user_id), "search_text", query)
+            token_scope(LlmemoryEpisode.where(user_id: user_id, archived_at: nil), "search_text", query)
               .order(created_at: :desc).map(&:data)
           end
 
           def count_episodes(user_id)
-            LlmemoryEpisode.where(user_id: user_id).count
+            LlmemoryEpisode.where(user_id: user_id, archived_at: nil).count
           end
 
           def delete_episodes(user_id, ids)
             LlmemoryEpisode.where(user_id: user_id, id: Array(ids).map(&:to_s)).delete_all
+          end
+
+          def archive_episodes(user_id, ids)
+            LlmemoryEpisode.where(user_id: user_id, id: Array(ids).map(&:to_s), archived_at: nil)
+              .update_all(archived_at: Time.current)
+          end
+
+          def expired_episode_ids(user_id, cutoff:)
+            LlmemoryEpisode.where(user_id: user_id, archived_at: nil).where("created_at < ?", cutoff).pluck(:id)
           end
 
           def list_users

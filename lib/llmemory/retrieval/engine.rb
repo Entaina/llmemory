@@ -24,9 +24,13 @@ module Llmemory
 
       def retrieve_for_inference(user_message, user_id: nil, max_tokens: nil)
         user_id ||= @memory.respond_to?(:user_id) ? @memory.user_id : nil
-        search_query = generate_query(user_message)
-        ranked = ranked_candidates(search_query, user_id, user_message)
-        @assembler.assemble(ranked, max_tokens: max_tokens)
+        result = nil
+        Llmemory::Instrumentation.instrument(:retrieve, user_id: user_id, query_chars: user_message.to_s.length) do
+          search_query = generate_query(user_message)
+          ranked = ranked_candidates(search_query, user_id, user_message)
+          result = @assembler.assemble(ranked, max_tokens: max_tokens)
+        end
+        result
       end
 
       # Multi-hop retrieval (CoALA: integrating retrieval and reasoning). After
@@ -42,21 +46,26 @@ module Llmemory
         user_id ||= @memory.respond_to?(:user_id) ? @memory.user_id : nil
         reasoner ||= method(:default_followup_query)
 
-        query = generate_query(user_message)
-        seen = []
-        accumulated = []
-        hop = 0
+        final = nil
+        hops_done = 0
+        Llmemory::Instrumentation.instrument(:iterative_retrieve, user_id: user_id, query_chars: user_message.to_s.length, max_hops: max_hops) do
+          query = generate_query(user_message)
+          seen = []
+          accumulated = []
+          hop = 0
 
-        while hop < max_hops && live_query?(query) && !seen.include?(query)
-          seen << query
-          accumulated = merge_candidates(accumulated, ranked_candidates(query, user_id, query))
-          hop += 1
-          break if hop >= max_hops
+          while hop < max_hops && live_query?(query) && !seen.include?(query)
+            seen << query
+            accumulated = merge_candidates(accumulated, ranked_candidates(query, user_id, query))
+            hop += 1
+            break if hop >= max_hops
 
-          query = reasoner.call(user_message, accumulated, hop).to_s.strip
+            query = reasoner.call(user_message, accumulated, hop).to_s.strip
+          end
+          hops_done = hop
+
+          final = accumulated.sort_by { |c| -(c[:temporal_score] || c[:score] || 0) }
         end
-
-        final = accumulated.sort_by { |c| -(c[:temporal_score] || c[:score] || 0) }
         @assembler.assemble(final, max_tokens: max_tokens)
       end
 

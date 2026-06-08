@@ -9,6 +9,8 @@ require_relative "cli/commands/episodic"
 require_relative "cli/commands/procedural"
 require_relative "cli/commands/working"
 require_relative "cli/commands/forget_log"
+require_relative "cli/commands/mine_skills"
+require_relative "cli/commands/maintain"
 require_relative "cli/commands/stats"
 require_relative "cli/commands/search"
 require_relative "cli/commands/mcp"
@@ -55,6 +57,8 @@ module Llmemory
         "skills" => Cli::Commands::Procedural,
         "working" => Cli::Commands::Working,
         "forget_log" => Cli::Commands::ForgetLog,
+        "mine_skills" => Cli::Commands::MineSkills,
+        "maintain" => Cli::Commands::Maintain,
         "search" => Cli::Commands::Search,
         "stats" => Cli::Commands::Stats,
         "mcp" => Cli::Commands::Mcp
@@ -80,6 +84,8 @@ module Llmemory
           skills USER_ID           List registered skills (procedural memory)
           working USER_ID SESSION  Show working-memory slots for a session
           forget-log USER_ID       Show audit of forgotten entries
+          mine-skills USER_ID      Mine reusable skills from episodes (--register to save)
+          maintain USER_ID         Run the cognitive maintenance pass (reflect/mine/expire)
           search USER_ID "query"   Search in memory
           stats [USER_ID]          Show statistics
           mcp [serve]              Start MCP server for LLM agents

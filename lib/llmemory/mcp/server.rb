@@ -17,6 +17,8 @@ require_relative "tools/memory_skill_register"
 require_relative "tools/memory_skill_report"
 require_relative "tools/memory_skills"
 require_relative "tools/memory_forget"
+require_relative "tools/memory_mine_skills"
+require_relative "tools/memory_maintain"
 
 module Llmemory
   module MCP
@@ -169,7 +171,9 @@ module Llmemory
           Tools::MemorySkillRegister,
           Tools::MemorySkillReport,
           Tools::MemorySkills,
-          Tools::MemoryForget
+          Tools::MemoryForget,
+          Tools::MemoryMineSkills,
+          Tools::MemoryMaintain
         ]
       end
 

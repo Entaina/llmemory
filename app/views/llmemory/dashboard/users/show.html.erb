@@ -10,5 +10,21 @@
     <% end %>
     | <a href="<%= user_stats_path(@user_id) %>">Stats</a>
   </p>
+  <p>
+    <strong>Cognitive memory:</strong>
+    <a href="<%= user_episodic_path(@user_id) %>">Episodes</a>
+    | <a href="<%= user_procedural_path(@user_id) %>">Skills</a>
+    | <a href="<%= user_reflection_path(@user_id) %>">Reflection</a>
+    | <a href="<%= user_maintenance_path(@user_id) %>">Maintenance</a>
+    | <a href="<%= user_forget_log_path(@user_id) %>">Forget log</a>
+  </p>
   <p>Sessions: <%= @sessions.join(", ") %></p>
+  <% if @sessions.any? %>
+    <p>
+      <strong>Working memory:</strong>
+      <% @sessions.each do |s| %>
+        <a href="<%= user_working_path(@user_id, s) %>"><%= s %></a>
+      <% end %>
+    </p>
+  <% end %>
 </div>

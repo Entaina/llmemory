@@ -78,11 +78,15 @@ module Llmemory
         # --- MemoryModule uniform interface ---
 
         def write(payload, **_meta)
-          memorize(payload)
+          result = nil
+          Llmemory::Instrumentation.instrument(:memory_write, memory_type: "graph_based", user_id: @user_id) do
+            result = memorize(payload)
+          end
+          result
         end
 
-        def list(user_id: nil, limit: nil)
-          @graph_storage.list_nodes(user_id || @user_id, limit: limit)
+        def list(user_id: nil, limit: nil, offset: nil)
+          @graph_storage.list_nodes(user_id || @user_id, limit: limit, offset: offset)
         end
 
         def stats(user_id: nil)
@@ -95,9 +99,13 @@ module Llmemory
         # removal in the audit log. Edges are soft-archived (archived_at) so they
         # no longer appear in retrieval; nodes are left in place (a node may still
         # be referenced by other active edges). Returns the number archived.
-        def forget(ids:, reason: nil)
+        def forget(ids:, reason: nil, mode: :soft)
+          # `:hard` would physically delete edge rows; not yet wired (the graph
+          # store only exposes soft archive_edge). Both modes route to archive
+          # for now; behavior is the same — kept for API uniformity.
           archived = Array(ids).map(&:to_s).select { |edge_id| @kg.archive_edge(edge_id) }
           forget_log.record(@user_id, memory_type: "graph_based", ids: archived, reason: reason)
+          Llmemory::Instrumentation.instrument(:memory_forget, memory_type: "graph_based", user_id: @user_id, count: archived.size, mode: mode)
           archived.size
         end
 

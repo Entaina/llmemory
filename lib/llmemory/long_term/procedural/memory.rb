@@ -31,11 +31,11 @@ module Llmemory
 
         # Registers a skill. If `version` is omitted and a skill with the same
         # name exists, the version auto-increments (skill evolution).
-        def register_skill(name:, body:, description: nil, kind: Skill::DEFAULT_KIND, version: nil)
+        def register_skill(name:, body:, description: nil, kind: Skill::DEFAULT_KIND, version: nil, provenance: nil)
           version ||= next_version_for(name)
           skill = Skill.new(
             id: nil, user_id: @user_id, name: name, body: body,
-            description: description, kind: kind, version: version
+            description: description, kind: kind, version: version, provenance: provenance
           )
           id = @storage.save_skill(@user_id, skill.to_h)
           index_vector(id, skill.searchable_text)
@@ -52,8 +52,8 @@ module Llmemory
           raw && Skill.from_h(raw)
         end
 
-        def skills(limit: nil)
-          @storage.list_skills(@user_id, limit: limit).map { |s| Skill.from_h(s) }
+        def skills(limit: nil, offset: nil)
+          @storage.list_skills(@user_id, limit: limit, offset: offset).map { |s| Skill.from_h(s) }
         end
 
         def count
@@ -83,25 +83,38 @@ module Llmemory
 
         # --- MemoryModule uniform interface ---
 
-        def write(name:, body:, description: nil, kind: Skill::DEFAULT_KIND, version: nil, **_meta)
-          register_skill(name: name, body: body, description: description, kind: kind, version: version)
+        def write(name:, body:, description: nil, kind: Skill::DEFAULT_KIND, version: nil, provenance: nil, **_meta)
+          result = nil
+          Llmemory::Instrumentation.instrument(:memory_write, memory_type: "procedural", user_id: @user_id) do
+            result = register_skill(name: name, body: body, description: description, kind: kind, version: version, provenance: provenance)
+          end
+          result
         end
 
-        def list(user_id: nil, limit: nil)
-          skills(limit: limit)
+        def list(user_id: nil, limit: nil, offset: nil)
+          skills(limit: limit, offset: offset)
         end
 
         def stats(user_id: nil)
           { skills: count }
         end
 
-        def forget(ids:, reason: nil)
+        def forget(ids:, reason: nil, mode: :soft)
           requested = Array(ids).map(&:to_s)
           existing = @storage.list_skills(@user_id).map { |s| (s[:id] || s["id"]).to_s }
-          removed = requested & existing
-          @storage.delete_skills(@user_id, removed)
-          forget_log.record(@user_id, memory_type: "procedural", ids: removed, reason: reason)
-          removed.size
+          targeted = requested & existing
+          count = case mode
+          when :hard then @storage.delete_skills(@user_id, targeted).to_i
+          else @storage.archive_skills(@user_id, targeted).to_i
+          end
+          forget_log.record(@user_id, memory_type: "procedural", ids: targeted, reason: reason)
+          Llmemory::Instrumentation.instrument(:memory_forget, memory_type: "procedural", user_id: @user_id, count: count, mode: mode)
+          count
+        end
+
+        # Storage accessor for the TTL maintenance job.
+        def expired_ids(cutoff:)
+          @storage.expired_skill_ids(@user_id, cutoff: cutoff)
         end
 
         private

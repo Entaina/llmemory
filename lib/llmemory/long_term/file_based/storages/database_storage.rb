@@ -169,15 +169,16 @@ module Llmemory
              conn.exec("SELECT DISTINCT user_id FROM llmemory_categories").map { |r| r["user_id"] }).uniq
           end
 
-          def list_resources(user_id:, limit: nil)
+          def list_resources(user_id:, limit: nil, offset: nil)
             ensure_tables!
             sql = "SELECT id, text, created_at FROM llmemory_resources WHERE user_id = $1 ORDER BY created_at"
             sql += " LIMIT #{limit.to_i}" if limit && limit.to_i.positive?
+            sql += " OFFSET #{offset.to_i}" if offset && offset.to_i.positive?
             rows = conn.exec_params(sql, [user_id])
             rows_to_resources(rows)
           end
 
-          def list_items(user_id:, category: nil, limit: nil)
+          def list_items(user_id:, category: nil, limit: nil, offset: nil)
             ensure_tables!
             sql = "SELECT id, category, content, source_resource_id, importance, provenance, created_at FROM llmemory_items WHERE user_id = $1"
             params = [user_id]
@@ -187,6 +188,7 @@ module Llmemory
             end
             sql += " ORDER BY created_at"
             sql += " LIMIT #{limit.to_i}" if limit && limit.to_i.positive?
+            sql += " OFFSET #{offset.to_i}" if offset && offset.to_i.positive?
             rows = params.size == 1 ? conn.exec_params(sql, params) : conn.exec_params(sql, params)
             rows_to_items(rows)
           end

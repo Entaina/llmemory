@@ -45,7 +45,10 @@ module Llmemory
                   :embedding_cache_enabled,
                   :embedding_cache_max_entries,
                   :max_message_chars,
-                  :message_sanitizer_enabled
+                  :message_sanitizer_enabled,
+                  :ttl_episodic_days,
+                  :ttl_procedural_days,
+                  :skill_mining_enabled
 
     def initialize
       @llm_provider = :openai
@@ -59,6 +62,9 @@ module Llmemory
       @long_term_storage_path = ENV["LLMEMORY_STORAGE_PATH"] || "./llmemory_data"
       @episodic_vector_enabled = false
       @procedural_vector_enabled = false
+      @ttl_episodic_days = nil
+      @ttl_procedural_days = nil
+      @skill_mining_enabled = false
       @database_url = ENV["DATABASE_URL"]
       @vector_store = nil
       @time_decay_half_life_days = 30

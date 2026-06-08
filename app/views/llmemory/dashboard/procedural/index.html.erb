@@ -1,0 +1,38 @@
+<div class="card">
+  <h2>Procedural memory (skills): <%= @user_id %></h2>
+  <p>Total active skills: <strong><%= @total %></strong></p>
+  <% if @skills.blank? %>
+    <p class="empty">No skills.</p>
+  <% else %>
+    <table>
+      <thead>
+        <tr><th>ID</th><th>Name</th><th>Description</th><th>Success</th><th>Failure</th><th>Version</th><th>Forget</th></tr>
+      </thead>
+      <tbody>
+        <% @skills.each do |s| %>
+          <% id = s[:id] || s["id"] %>
+          <tr>
+            <td><%= id %></td>
+            <td><%= s[:name] || s["name"] %></td>
+            <td><%= truncate((s[:description] || s["description"]).to_s, length: 100) %></td>
+            <td><%= (s[:success_count] || s["success_count"]).to_i %></td>
+            <td><%= (s[:failure_count] || s["failure_count"]).to_i %></td>
+            <td><%= s[:version] || s["version"] %></td>
+            <td>
+              <%= button_to "Soft", forget_user_procedural_path(@user_id), params: { id: id, mode: "soft" }, method: :post %>
+              <%= button_to "Hard", forget_user_procedural_path(@user_id), params: { id: id, mode: "hard" }, method: :post, data: { confirm: "Hard-delete is irreversible." } %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+    <p>
+      <% if @offset.positive? %>
+        <a href="?offset=<%= [@offset - @limit, 0].max %>&limit=<%= @limit %>">&laquo; Newer</a>
+      <% end %>
+      <% if (@offset + @limit) < @total %>
+        <a href="?offset=<%= @offset + @limit %>&limit=<%= @limit %>">Older &raquo;</a>
+      <% end %>
+    </p>
+  <% end %>
+</div>

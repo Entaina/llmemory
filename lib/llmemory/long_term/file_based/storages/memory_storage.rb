@@ -98,17 +98,19 @@ module Llmemory
             (@resources.keys + @items.keys + @categories.keys).uniq
           end
 
-          def list_resources(user_id:, limit: nil)
+          def list_resources(user_id:, limit: nil, offset: nil)
             list = @resources[user_id].dup
+            list = list.drop(offset.to_i) if offset && offset.to_i.positive?
             limit ? list.take(limit) : list
           end
 
-          def list_items(user_id:, category: nil, limit: nil)
+          def list_items(user_id:, category: nil, limit: nil, offset: nil)
             list = if category
               @items[user_id].select { |i| i[:category].to_s == category.to_s }
             else
               @items[user_id].dup
             end
+            list = list.drop(offset.to_i) if offset && offset.to_i.positive?
             list = list.take(limit) if limit
             list
           end

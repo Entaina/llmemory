@@ -1,0 +1,37 @@
+<div class="card">
+  <h2>Episodic memory: <%= @user_id %></h2>
+  <p>Total active episodes: <strong><%= @total %></strong></p>
+  <% if @episodes.blank? %>
+    <p class="empty">No episodes.</p>
+  <% else %>
+    <table>
+      <thead>
+        <tr><th>ID</th><th>Summary</th><th>Outcome</th><th>Steps</th><th>Created</th><th>Forget</th></tr>
+      </thead>
+      <tbody>
+        <% @episodes.each do |e| %>
+          <% id = e[:id] || e["id"] %>
+          <tr>
+            <td><%= id %></td>
+            <td><%= truncate((e[:summary] || e["summary"]).to_s, length: 80) %></td>
+            <td><%= e[:outcome] || e["outcome"] %></td>
+            <td><%= Array(e[:steps] || e["steps"]).size %></td>
+            <td><%= e[:created_at] || e["created_at"] %></td>
+            <td>
+              <%= button_to "Soft", forget_user_episodic_path(@user_id), params: { id: id, mode: "soft" }, method: :post %>
+              <%= button_to "Hard", forget_user_episodic_path(@user_id), params: { id: id, mode: "hard" }, method: :post, data: { confirm: "Hard-delete is irreversible." } %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+    <p>
+      <% if @offset.positive? %>
+        <a href="?offset=<%= [@offset - @limit, 0].max %>&limit=<%= @limit %>">&laquo; Newer</a>
+      <% end %>
+      <% if (@offset + @limit) < @total %>
+        <a href="?offset=<%= @offset + @limit %>&limit=<%= @limit %>">Older &raquo;</a>
+      <% end %>
+    </p>
+  <% end %>
+</div>

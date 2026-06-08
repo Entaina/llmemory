@@ -53,6 +53,26 @@ module Llmemory
       Actions::Reason.call(working_memory: working_memory, template: template, into: into, parse: parse, llm: @llm)
     end
 
+    # Mines recent episodes for reusable skills (Voyager-style). Human-in-the-loop
+    # by default: returns skill proposals and writes nothing. With
+    # `auto_register: true`, registers them in procedural memory (with provenance
+    # back to the source episodes) and returns the new skill ids.
+    def mine_skills!(window: SkillMining::Miner::DEFAULT_WINDOW, outcomes: nil, auto_register: false)
+      SkillMining::Miner.new(episodic: episodic, procedural: procedural, llm: @llm)
+        .mine(window: window, outcomes: outcomes, auto_register: auto_register)
+    end
+
+    # Cognitive maintenance pass: consolidate -> reflect -> mine skills -> expire,
+    # in one step, closing the CoALA learning loop. Each step is isolated; a
+    # failure in one is captured in the report and never aborts the others.
+    def maintain!(**opts)
+      Maintenance::CognitivePass.run!(
+        @user_id,
+        memory: self, episodic: episodic, procedural: procedural, semantic: @long_term, llm: @llm,
+        **opts
+      )
+    end
+
     def add_message(role:, content:)
       msgs = messages
       msgs << { role: role.to_sym, content: content.to_s }

@@ -1,0 +1,23 @@
+<div class="card">
+  <h2>Forget log: <%= @user_id %></h2>
+  <p>Audit trail of removals (soft-archive + hard-delete). Recorded by <code>MemoryModule#forget</code>.</p>
+  <% if @entries.blank? %>
+    <p class="empty">No forget events.</p>
+  <% else %>
+    <table>
+      <thead>
+        <tr><th>Time</th><th>Memory type</th><th>Ids</th><th>Reason</th></tr>
+      </thead>
+      <tbody>
+        <% @entries.each do |entry| %>
+          <tr>
+            <td><%= entry[:archived_at] || entry["archived_at"] %></td>
+            <td><%= entry[:memory_type] || entry["memory_type"] %></td>
+            <td><code><%= Array(entry[:ids] || entry["ids"]).join(", ") %></code></td>
+            <td><%= entry[:reason] || entry["reason"] %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% end %>
+</div>

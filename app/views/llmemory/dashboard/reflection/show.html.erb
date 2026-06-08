@@ -1,0 +1,29 @@
+<div class="card">
+  <h2>Reflection: <%= @user_id %></h2>
+  <p>The reflector distills the last N episodes into semantic insights (Reflexion / Generative Agents pattern), with provenance to the source episodes.</p>
+
+  <%= form_with url: run_user_reflection_path(@user_id), method: :post, local: true do %>
+    <label>Window (episodes): <%= number_field_tag :window, @recent_window, min: 1, max: 100 %></label>
+    <%= submit_tag "Run reflection" %>
+  <% end %>
+
+  <h3>Last <%= @recent_window %> episodes</h3>
+  <% if @recent_episodes.blank? %>
+    <p class="empty">No episodes to reflect over.</p>
+  <% else %>
+    <table>
+      <thead>
+        <tr><th>ID</th><th>Summary</th><th>Outcome</th></tr>
+      </thead>
+      <tbody>
+        <% @recent_episodes.each do |e| %>
+          <tr>
+            <td><%= e[:id] || e["id"] %></td>
+            <td><%= truncate((e[:summary] || e["summary"]).to_s, length: 100) %></td>
+            <td><%= e[:outcome] || e["outcome"] %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% end %>
+</div>

@@ -1,0 +1,65 @@
+<div class="card">
+  <h2>Cognitive maintenance: <%= @user_id %></h2>
+  <p>The maintenance pass closes the CoALA learning loop: reflect (episodes &rarr; insights), mine skills (episodes &rarr; procedural), and expire entries past their TTL. Each step is isolated &mdash; a failure in one does not abort the others.</p>
+
+  <%= form_with url: run_user_maintenance_path(@user_id), method: :post, local: true do %>
+    <label>Reflection window (episodes): <%= number_field_tag :window, @window, min: 1, max: 100 %></label>
+    <label><%= check_box_tag :mine_skills, "1", true %> Mine &amp; register skills</label>
+    <%= submit_tag "Run maintenance pass" %>
+  <% end %>
+</div>
+
+<div class="card">
+  <h3>Review mined skills (human-in-the-loop)</h3>
+  <p>Mine proposals without registering them, then register the ones you want.</p>
+
+  <%= form_with url: mine_user_maintenance_path(@user_id), method: :post, local: true do %>
+    <label>Mining window (episodes): <%= number_field_tag :window, 20, min: 1, max: 100 %></label>
+    <%= submit_tag "Mine proposals" %>
+  <% end %>
+
+  <% if @proposals.present? %>
+    <table>
+      <thead>
+        <tr><th>Name</th><th>Kind</th><th>Confidence</th><th>Body</th><th>Register</th></tr>
+      </thead>
+      <tbody>
+        <% @proposals.each do |p| %>
+          <tr>
+            <td><%= p[:name] %></td>
+            <td><%= p[:kind] %></td>
+            <td><%= p[:confidence] %></td>
+            <td><%= truncate(p[:body].to_s, length: 120) %></td>
+            <td>
+              <%= button_to "Register", register_user_maintenance_path(@user_id), method: :post, params: {
+                name: p[:name], body: p[:body], kind: p[:kind], description: p[:description]
+              } %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% end %>
+</div>
+
+<div class="card">
+  <h3>Last <%= @window %> episodes</h3>
+  <% if @recent_episodes.blank? %>
+    <p class="empty">No episodes to learn from.</p>
+  <% else %>
+    <table>
+      <thead>
+        <tr><th>ID</th><th>Summary</th><th>Outcome</th></tr>
+      </thead>
+      <tbody>
+        <% @recent_episodes.each do |e| %>
+          <tr>
+            <td><%= e[:id] || e["id"] %></td>
+            <td><%= truncate((e[:summary] || e["summary"]).to_s, length: 100) %></td>
+            <td><%= e[:outcome] || e["outcome"] %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% end %>
+</div>

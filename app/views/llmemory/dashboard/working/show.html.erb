@@ -1,0 +1,20 @@
+<div class="card">
+  <h2>Working memory: <%= @user_id %> / <%= @session_id %></h2>
+  <% if @slots.blank? %>
+    <p class="empty">No slots set.</p>
+  <% else %>
+    <table>
+      <thead>
+        <tr><th>Slot</th><th>Value</th></tr>
+      </thead>
+      <tbody>
+        <% @slots.each do |slot, value| %>
+          <tr>
+            <td><code><%= slot %></code></td>
+            <td><pre><%= value.is_a?(String) ? value : value.inspect %></pre></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% end %>
+</div>

@@ -16,7 +16,7 @@ module Llmemory
             raise NotImplementedError, "#{self.class}#get_skill must be implemented"
           end
 
-          def list_skills(user_id, limit: nil)
+          def list_skills(user_id, limit: nil, offset: nil)
             raise NotImplementedError, "#{self.class}#list_skills must be implemented"
           end
 
@@ -41,6 +41,19 @@ module Llmemory
           # Deletes skills by id. Returns the number actually removed.
           def delete_skills(user_id, ids)
             raise NotImplementedError, "#{self.class}#delete_skills must be implemented"
+          end
+
+          # Soft-archives skills by id. Archived skills are excluded from
+          # list_skills / search_skills / count_skills but remain accessible via
+          # get_skill. Returns the number archived.
+          def archive_skills(user_id, ids)
+            raise NotImplementedError, "#{self.class}#archive_skills must be implemented"
+          end
+
+          # Returns skills whose created_at is older than the cutoff and that are
+          # not already archived. Used by the TTL maintenance job.
+          def expired_skill_ids(user_id, cutoff:)
+            raise NotImplementedError, "#{self.class}#expired_skill_ids must be implemented"
           end
 
           def list_users

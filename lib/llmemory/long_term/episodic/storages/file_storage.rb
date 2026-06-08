@@ -29,20 +29,19 @@ module Llmemory
             load_episode(path)
           end
 
-          def list_episodes(user_id, limit: nil)
-            sorted = all_episodes(user_id).sort_by { |e| e[:created_at] }.reverse
+          def list_episodes(user_id, limit: nil, offset: nil)
+            sorted = active_episodes(user_id).sort_by { |e| e[:created_at] }.reverse
+            sorted = sorted.drop(offset.to_i) if offset && offset.to_i.positive?
             limit && limit.to_i.positive? ? sorted.first(limit.to_i) : sorted
           end
 
           def search_episodes(user_id, query)
             return list_episodes(user_id) if query.to_s.strip.empty?
-            all_episodes(user_id).select { |e| Llmemory::Tokenizer.matches?(episode_text(e), query) }
+            active_episodes(user_id).select { |e| Llmemory::Tokenizer.matches?(episode_text(e), query) }
           end
 
           def count_episodes(user_id)
-            dir = user_path(user_id, "episodes")
-            return 0 unless Dir.exist?(dir)
-            Dir.children(dir).count { |f| f.end_with?(".json") }
+            active_episodes(user_id).size
           end
 
           def delete_episodes(user_id, ids)
@@ -54,12 +53,34 @@ module Llmemory
             end
           end
 
+          def archive_episodes(user_id, ids)
+            Array(ids).map(&:to_s).count do |id|
+              path = episode_path(user_id, id)
+              next false unless File.file?(path)
+              data = JSON.parse(File.read(path))
+              next false if data["archived_at"]
+              data["archived_at"] = Time.now.iso8601
+              File.write(path, JSON.generate(data))
+              true
+            end
+          end
+
+          def expired_episode_ids(user_id, cutoff:)
+            active_episodes(user_id)
+              .select { |e| (e[:created_at] || Time.now) < cutoff }
+              .map { |e| e[:id].to_s }
+          end
+
           def list_users
             return [] unless Dir.exist?(@base_path)
             Dir.children(@base_path).select { |d| Dir.exist?(File.join(@base_path, d, "episodes")) }
           end
 
           private
+
+          def active_episodes(user_id)
+            all_episodes(user_id).reject { |e| e[:archived_at] }
+          end
 
           def all_episodes(user_id)
             dir = user_path(user_id, "episodes")

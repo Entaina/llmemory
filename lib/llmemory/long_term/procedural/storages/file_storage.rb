@@ -29,18 +29,19 @@ module Llmemory
             load_skill(path)
           end
 
-          def list_skills(user_id, limit: nil)
-            sorted = all_skills(user_id).sort_by { |s| s[:created_at] }.reverse
+          def list_skills(user_id, limit: nil, offset: nil)
+            sorted = active_skills(user_id).sort_by { |s| s[:created_at] }.reverse
+            sorted = sorted.drop(offset.to_i) if offset && offset.to_i.positive?
             limit && limit.to_i.positive? ? sorted.first(limit.to_i) : sorted
           end
 
           def search_skills(user_id, query)
             return list_skills(user_id) if query.to_s.strip.empty?
-            all_skills(user_id).select { |s| Llmemory::Tokenizer.matches?(skill_text(s), query) }
+            active_skills(user_id).select { |s| Llmemory::Tokenizer.matches?(skill_text(s), query) }
           end
 
           def find_skills_by_name(user_id, name)
-            all_skills(user_id).select { |s| s[:name].to_s == name.to_s }
+            active_skills(user_id).select { |s| s[:name].to_s == name.to_s }
           end
 
           def record_outcome(user_id, skill_id, success:)
@@ -54,9 +55,7 @@ module Llmemory
           end
 
           def count_skills(user_id)
-            dir = user_path(user_id, "skills")
-            return 0 unless Dir.exist?(dir)
-            Dir.children(dir).count { |f| f.end_with?(".json") }
+            active_skills(user_id).size
           end
 
           def delete_skills(user_id, ids)
@@ -68,12 +67,34 @@ module Llmemory
             end
           end
 
+          def archive_skills(user_id, ids)
+            Array(ids).map(&:to_s).count do |id|
+              path = skill_path(user_id, id)
+              next false unless File.file?(path)
+              data = JSON.parse(File.read(path))
+              next false if data["archived_at"]
+              data["archived_at"] = Time.now.iso8601
+              File.write(path, JSON.generate(data))
+              true
+            end
+          end
+
+          def expired_skill_ids(user_id, cutoff:)
+            active_skills(user_id)
+              .select { |s| (s[:created_at] || Time.now) < cutoff }
+              .map { |s| s[:id].to_s }
+          end
+
           def list_users
             return [] unless Dir.exist?(@base_path)
             Dir.children(@base_path).select { |d| Dir.exist?(File.join(@base_path, d, "skills")) }
           end
 
           private
+
+          def active_skills(user_id)
+            all_skills(user_id).reject { |s| s[:archived_at] }
+          end
 
           def all_skills(user_id)
             dir = user_path(user_id, "skills")

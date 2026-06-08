@@ -17,10 +17,11 @@ module Llmemory
         DEFAULT_KIND = "prompt"
 
         attr_reader :id, :user_id, :name, :description, :body, :kind, :version,
-                    :success_count, :failure_count, :created_at, :updated_at
+                    :success_count, :failure_count, :provenance, :created_at, :updated_at
 
         def initialize(id:, user_id:, name:, body:, description: nil, kind: DEFAULT_KIND,
-                       version: 1, success_count: 0, failure_count: 0, created_at: nil, updated_at: nil)
+                       version: 1, success_count: 0, failure_count: 0, provenance: nil,
+                       created_at: nil, updated_at: nil)
           @id = id
           @user_id = user_id
           @name = name.to_s
@@ -30,6 +31,7 @@ module Llmemory
           @version = version.to_i
           @success_count = success_count.to_i
           @failure_count = failure_count.to_i
+          @provenance = provenance
           @created_at = created_at || Time.now
           @updated_at = updated_at || @created_at
         end
@@ -60,6 +62,7 @@ module Llmemory
             version: hash[:version] || hash["version"] || 1,
             success_count: hash[:success_count] || hash["success_count"] || 0,
             failure_count: hash[:failure_count] || hash["failure_count"] || 0,
+            provenance: hash[:provenance] || hash["provenance"],
             created_at: parse_time(hash[:created_at] || hash["created_at"]),
             updated_at: parse_time(hash[:updated_at] || hash["updated_at"])
           )
@@ -83,6 +86,7 @@ module Llmemory
             version: version,
             success_count: success_count,
             failure_count: failure_count,
+            provenance: provenance,
             created_at: created_at.respond_to?(:iso8601) ? created_at.iso8601(6) : created_at,
             updated_at: updated_at.respond_to?(:iso8601) ? updated_at.iso8601(6) : updated_at
           }

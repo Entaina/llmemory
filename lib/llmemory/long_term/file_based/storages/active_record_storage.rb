@@ -123,17 +123,19 @@ module Llmemory
              LlmemoryCategory.distinct.pluck(:user_id)).uniq
           end
 
-          def list_resources(user_id:, limit: nil)
+          def list_resources(user_id:, limit: nil, offset: nil)
             scope = LlmemoryResource.where(user_id: user_id).order(:created_at)
             scope = scope.limit(limit) if limit && limit.to_i.positive?
+            scope = scope.offset(offset) if offset && offset.to_i.positive?
             scope.map { |r| row_to_resource(r) }
           end
 
-          def list_items(user_id:, category: nil, limit: nil)
+          def list_items(user_id:, category: nil, limit: nil, offset: nil)
             scope = LlmemoryItem.where(user_id: user_id)
             scope = scope.where(category: category) if category
             scope = scope.order(:created_at)
             scope = scope.limit(limit) if limit && limit.to_i.positive?
+            scope = scope.offset(offset) if offset && offset.to_i.positive?
             scope.map { |r| row_to_item(r) }
           end
 

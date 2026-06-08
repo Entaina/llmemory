@@ -38,10 +38,11 @@ module Llmemory
             rows.any? ? parse_data(rows.first["data"]) : nil
           end
 
-          def list_skills(user_id, limit: nil)
+          def list_skills(user_id, limit: nil, offset: nil)
             ensure_tables!
-            sql = "SELECT data FROM llmemory_skills WHERE user_id = $1 ORDER BY created_at DESC"
+            sql = "SELECT data FROM llmemory_skills WHERE user_id = $1 AND archived_at IS NULL ORDER BY created_at DESC"
             sql += " LIMIT #{limit.to_i}" if limit && limit.to_i.positive?
+            sql += " OFFSET #{offset.to_i}" if offset && offset.to_i.positive?
             conn.exec_params(sql, [user_id]).map { |r| parse_data(r["data"]) }
           end
 
@@ -49,7 +50,7 @@ module Llmemory
             ensure_tables!
             suffix, params = token_filter("search_text", query, 2)
             conn.exec_params(
-              "SELECT data FROM llmemory_skills WHERE user_id = $1#{suffix} ORDER BY created_at DESC",
+              "SELECT data FROM llmemory_skills WHERE user_id = $1 AND archived_at IS NULL#{suffix} ORDER BY created_at DESC",
               [user_id, *params]
             ).map { |r| parse_data(r["data"]) }
           end
@@ -57,7 +58,7 @@ module Llmemory
           def find_skills_by_name(user_id, name)
             ensure_tables!
             conn.exec_params(
-              "SELECT data FROM llmemory_skills WHERE user_id = $1 AND data->>'name' = $2",
+              "SELECT data FROM llmemory_skills WHERE user_id = $1 AND archived_at IS NULL AND data->>'name' = $2",
               [user_id, name.to_s]
             ).map { |r| parse_data(r["data"]) }
           end
@@ -78,7 +79,7 @@ module Llmemory
 
           def count_skills(user_id)
             ensure_tables!
-            conn.exec_params("SELECT COUNT(*) AS c FROM llmemory_skills WHERE user_id = $1", [user_id]).first["c"].to_i
+            conn.exec_params("SELECT COUNT(*) AS c FROM llmemory_skills WHERE user_id = $1 AND archived_at IS NULL", [user_id]).first["c"].to_i
           end
 
           def delete_skills(user_id, ids)
@@ -86,6 +87,24 @@ module Llmemory
             Array(ids).sum do |id|
               conn.exec_params("DELETE FROM llmemory_skills WHERE user_id = $1 AND id = $2", [user_id, id]).cmd_tuples
             end
+          end
+
+          def archive_skills(user_id, ids)
+            ensure_tables!
+            Array(ids).sum do |id|
+              conn.exec_params(
+                "UPDATE llmemory_skills SET archived_at = NOW() WHERE user_id = $1 AND id = $2 AND archived_at IS NULL",
+                [user_id, id]
+              ).cmd_tuples
+            end
+          end
+
+          def expired_skill_ids(user_id, cutoff:)
+            ensure_tables!
+            conn.exec_params(
+              "SELECT id FROM llmemory_skills WHERE user_id = $1 AND archived_at IS NULL AND created_at < $2",
+              [user_id, cutoff.iso8601]
+            ).map { |r| r["id"] }
           end
 
           def list_users
@@ -109,9 +128,11 @@ module Llmemory
                 user_id TEXT NOT NULL,
                 data JSONB NOT NULL DEFAULT '{}'::jsonb,
                 search_text TEXT,
-                created_at TIMESTAMPTZ NOT NULL
+                created_at TIMESTAMPTZ NOT NULL,
+                archived_at TIMESTAMPTZ
               );
               CREATE INDEX IF NOT EXISTS idx_llmemory_skills_user_id ON llmemory_skills(user_id);
+              ALTER TABLE llmemory_skills ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ;
             SQL
           end
 

@@ -16,20 +16,24 @@ module Llmemory
       end
 
       def invoke(prompt)
-        response = connection.post("chat/completions") do |req|
-          req.body = {
-            model: @model,
-            messages: [{ role: "user", content: prompt }],
-            temperature: 0.3
-          }.to_json
-          req.headers["Content-Type"] = "application/json"
-          req.headers["Authorization"] = "Bearer #{@api_key}"
+        result = nil
+        Llmemory::Instrumentation.instrument(:llm_invoke, provider: :openai, model: @model, prompt_chars: prompt.to_s.length) do
+          response = connection.post("chat/completions") do |req|
+            req.body = {
+              model: @model,
+              messages: [{ role: "user", content: prompt }],
+              temperature: 0.3
+            }.to_json
+            req.headers["Content-Type"] = "application/json"
+            req.headers["Authorization"] = "Bearer #{@api_key}"
+          end
+
+          raise Llmemory::LLMError, "OpenAI API error: #{response.body}" unless response.success?
+
+          body = response.body.is_a?(Hash) ? response.body : JSON.parse(response.body.to_s)
+          result = body.dig("choices", 0, "message", "content")&.strip || ""
         end
-
-        raise Llmemory::LLMError, "OpenAI API error: #{response.body}" unless response.success?
-
-        body = response.body.is_a?(Hash) ? response.body : JSON.parse(response.body.to_s)
-        body.dig("choices", 0, "message", "content")&.strip || ""
+        result
       end
 
       # Calls the model with response_format json_schema (Structured Outputs).

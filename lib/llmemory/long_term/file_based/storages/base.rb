@@ -69,11 +69,11 @@ module Llmemory
             raise NotImplementedError, "#{self.class}#list_users must be implemented"
           end
 
-          def list_resources(user_id:, limit: nil)
+          def list_resources(user_id:, limit: nil, offset: nil)
             raise NotImplementedError, "#{self.class}#list_resources must be implemented"
           end
 
-          def list_items(user_id:, category: nil, limit: nil)
+          def list_items(user_id:, category: nil, limit: nil, offset: nil)
             raise NotImplementedError, "#{self.class}#list_items must be implemented"
           end
 

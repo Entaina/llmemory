@@ -36,6 +36,7 @@ class CreateLlmemoryTables < ActiveRecord::Migration[7.0]
       t.string :user_id, null: false
       t.jsonb :data, null: false, default: {}
       t.text :search_text
+      t.datetime :archived_at
       t.timestamps
     end
     add_index :llmemory_episodes, :user_id
@@ -46,6 +47,7 @@ class CreateLlmemoryTables < ActiveRecord::Migration[7.0]
       t.string :user_id, null: false
       t.jsonb :data, null: false, default: {}
       t.text :search_text
+      t.datetime :archived_at
       t.timestamps
     end
     add_index :llmemory_skills, :user_id

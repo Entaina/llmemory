@@ -1,6 +1,45 @@
 # Changelog
 
 
+## [0.2.2] - 2026-06-08
+
+### Added — closing the cognitive loop (SF18 + SF19)
+
+- **Skill mining (SF18).** New `Llmemory::SkillMining::Miner` distills reusable
+  skills from successful episode trajectories (Voyager's contribution: procedural
+  memory grows from lived experience instead of being a hand-written library).
+  Human-in-the-loop by default — `mine(window:, outcomes:, auto_register:)`
+  returns skill proposals and writes nothing; `auto_register: true` registers
+  them in procedural memory with provenance `{ method: "skill_mining", sources:
+  [{ type: "episode", id: ... }] }` back to the source episodes. An optional
+  `outcomes:` allowlist deterministically pre-filters episodes by outcome label.
+  Exposed on the unified API as `Memory#mine_skills!`. Emits a new
+  `mine_skills.llmemory` instrumentation event.
+- **Skill provenance.** `Skill` gains an optional `provenance` field (document
+  storages need no schema change); `register_skill`/`write` accept `provenance:`.
+- **Cognitive maintenance pass (SF19).** New
+  `Llmemory::Maintenance::CognitivePass.run!(user_id, ...)` orchestrates the
+  learning loop in one scheduled step: consolidate → reflect → mine skills →
+  TTL expiry. Each step is isolated — a failure is captured in the report
+  (`:errors`) and never aborts the others. Returns an aggregated report
+  `{ consolidated:, insights:, mined:, expired:, errors: }`. Components are
+  injectable (like `TTLExpiry`) and built per-config when omitted. Exposed on the
+  unified API as `Memory#maintain!`, which wires in the live session so
+  `consolidate!` runs too. New `config.skill_mining_enabled` (default `false`)
+  gates whether the pass auto-registers mined skills.
+
+### Added — maintenance surface (SF20)
+
+- **MCP tools.** `MemoryMaintain` (run the pass, return a summary report) and
+  `MemoryMineSkills` (mine proposals; human-in-the-loop, or `auto_register`).
+- **CLI commands.** `maintain USER_ID` (`--[no-]reflect` / `--mine-skills` /
+  `--[no-]expire` / `--window` / `--store`) and `mine-skills USER_ID`
+  (`--window` / `--outcomes` / `--register` / `--store`).
+- **Rails Dashboard.** A maintenance page per user: trigger a pass, and mine
+  skill proposals to review and register one-by-one before they hit procedural
+  memory. Linked from the user show page.
+
+
 ## [0.2.1] - 2026-05-27
 
 ### Added — episodic/procedural parity & search quality (SF1–SF3)
@@ -42,16 +81,40 @@
   Audit, retrieval feedback and working-memory slots are never evicted as if
   they were user sessions.
 
+### Added — medium-tier operability (SF5, SF10 sub, SF13, SF14)
+
+- **Pagination (SF14).** `MemoryModule#list(user_id:, limit:, offset:)` now
+  takes a uniform `offset:` across all four long-term memories and all storage
+  backends (memory, file, postgres, active_record). SQL backends use
+  `LIMIT/OFFSET`; in-memory storages slice the sorted array.
+- **Observability hooks (SF13).** New `Llmemory::Instrumentation.instrument`
+  publishes `ActiveSupport::Notifications` events when AS is loaded (no-op
+  fallback otherwise): `llm_invoke.llmemory`, `llm_embed.llmemory`,
+  `memory_write.llmemory`, `memory_forget.llmemory`, `retrieve.llmemory`,
+  `iterative_retrieve.llmemory`, `reflect.llmemory`. Wired into LLM providers,
+  the OpenAI embedder, the retrieval engine, the reflector and every memory's
+  write/forget path.
+- **Forget modes + TTL (SF5).** `forget(ids:, reason:, mode: :soft | :hard)`
+  on all memories. `:soft` (default) archives the entries (excluded from
+  list/search/retrieval, still accessible by id); `:hard` physically deletes.
+  Episodic and procedural gain a true `archived_at`-flagged soft archive
+  (memory, file, postgres, active_record); file-based and graph-based document
+  their existing semantics. New `Llmemory::Maintenance::TTLExpiry.run!(user_id)`
+  job soft-archives entries older than `ttl_episodic_days` / `ttl_procedural_days`.
+- **Rails Dashboard cognitive surface (SF10 sub).** Engine ships
+  episodic / procedural / working-memory / reflection / forget-log pages with
+  forget actions (soft + hard) and a reflection trigger. Links surfaced on the
+  user show page.
+
 ### Notes
 
 - Episodic/procedural SQL & vector backends are not exercised in CI (no database
   or embedding API), consistent with the other SQL backends.
-- Deferred follow-ups (with explicit rationale): **SF5** (`forget(mode:)` + TTL —
-  low value without a "trash"/retention use case); **SF8** (graph provenance
+- Deferred follow-ups (with explicit rationale): **SF8** (graph provenance
   linked to a persisted source — no demand for literal source reconstruction
   beyond the SHA-256 fingerprint); **SF11** (refactor `consolidate!` onto
-  `Actions::Reason` — risk > immediate gain); and the **Rails Dashboard** surface
-  for cognitive memory (SF10 sub-scope).
+  `Actions::Reason` — risk > immediate gain); plus the speculative cognitive
+  extensions (SF18–SF19) and the lower-tier operability items (SF15–SF17).
 
 
 ## [0.2.0] - 2026-05-27

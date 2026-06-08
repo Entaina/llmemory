@@ -25,18 +25,19 @@ module Llmemory
             @skills[user_id].find { |s| s[:id] == id }
           end
 
-          def list_skills(user_id, limit: nil)
-            sorted = @skills[user_id].sort_by { |s| s[:created_at] }.reverse
+          def list_skills(user_id, limit: nil, offset: nil)
+            sorted = active_skills(user_id).sort_by { |s| as_time(s[:created_at]) }.reverse
+            sorted = sorted.drop(offset.to_i) if offset && offset.to_i.positive?
             limit && limit.to_i.positive? ? sorted.first(limit.to_i) : sorted
           end
 
           def search_skills(user_id, query)
             return list_skills(user_id) if query.to_s.strip.empty?
-            @skills[user_id].select { |s| Llmemory::Tokenizer.matches?(skill_text(s), query) }
+            active_skills(user_id).select { |s| Llmemory::Tokenizer.matches?(skill_text(s), query) }
           end
 
           def find_skills_by_name(user_id, name)
-            @skills[user_id].select { |s| s[:name].to_s == name.to_s }
+            active_skills(user_id).select { |s| s[:name].to_s == name.to_s }
           end
 
           def record_outcome(user_id, skill_id, success:)
@@ -49,7 +50,7 @@ module Llmemory
           end
 
           def count_skills(user_id)
-            @skills[user_id].size
+            active_skills(user_id).size
           end
 
           def delete_skills(user_id, ids)
@@ -59,11 +60,41 @@ module Llmemory
             before - @skills[user_id].size
           end
 
+          def archive_skills(user_id, ids)
+            ids = Array(ids).map(&:to_s)
+            count = 0
+            @skills[user_id].each do |s|
+              next unless ids.include?(s[:id].to_s)
+              next if s[:archived_at]
+              s[:archived_at] = Time.now
+              count += 1
+            end
+            count
+          end
+
+          def expired_skill_ids(user_id, cutoff:)
+            active_skills(user_id)
+              .select { |s| as_time(s[:created_at]) < cutoff }
+              .map { |s| s[:id].to_s }
+          end
+
           def list_users
             @skills.keys
           end
 
           private
+
+          def active_skills(user_id)
+            @skills[user_id].reject { |s| s[:archived_at] }
+          end
+
+          def as_time(value)
+            return Time.now if value.nil?
+            return value if value.is_a?(Time)
+            Time.parse(value.to_s)
+          rescue ArgumentError
+            Time.now
+          end
 
           def symbolize(hash)
             hash.each_with_object({}) { |(k, v), acc| acc[k.to_sym] = v }
