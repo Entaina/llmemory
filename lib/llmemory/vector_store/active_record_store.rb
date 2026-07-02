@@ -26,6 +26,12 @@ module Llmemory
         @embedding_provider.embed(text)
       end
 
+      def last_usage
+        return @embedding_provider.last_usage if @embedding_provider&.respond_to?(:last_usage)
+
+        Llmemory::LLM::Usage.zero
+      end
+
       def store(id:, embedding:, metadata: {}, user_id: nil)
         return id if user_id.nil? || user_id.to_s.empty?
         text_content = (metadata || {}).dig("text") || (metadata || {}).dig(:text)

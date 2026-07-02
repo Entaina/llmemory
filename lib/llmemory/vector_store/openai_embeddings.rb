@@ -4,6 +4,7 @@ require "faraday"
 require "json"
 require "digest"
 require_relative "base"
+require_relative "../llm/usage"
 
 module Llmemory
   module VectorStore
@@ -11,11 +12,14 @@ module Llmemory
       DEFAULT_MODEL = "text-embedding-3-small"
       DEFAULT_DIMS = 1536
 
+      attr_reader :last_usage
+
       def initialize(api_key: nil, model: nil)
         @api_key = api_key || Llmemory.configuration.llm_api_key
         @model = model || DEFAULT_MODEL
         @cache = {}
         @cache_order = []
+        @last_usage = Llmemory::LLM::Usage.zero
       end
 
       def embed(text)
@@ -23,7 +27,10 @@ module Llmemory
 
         if Llmemory.configuration.embedding_cache_enabled
           key = cache_key(text)
-          return @cache[key].dup if @cache.key?(key)
+          if @cache.key?(key)
+            @last_usage = Llmemory::LLM::Usage.zero
+            return @cache[key].dup
+          end
         end
 
         result = fetch_embedding(text)
@@ -55,7 +62,8 @@ module Llmemory
 
       def fetch_embedding(text)
         result = nil
-        Llmemory::Instrumentation.instrument(:llm_embed, provider: :openai, model: @model, text_chars: text.to_s.length) do
+        payload = { provider: :openai, model: @model, text_chars: text.to_s.length }
+        Llmemory::Instrumentation.instrument(:llm_embed, payload) do
           response = connection.post("embeddings") do |req|
             req.headers["Authorization"] = "Bearer #{@api_key}"
             req.headers["Content-Type"] = "application/json"
@@ -63,9 +71,22 @@ module Llmemory
           end
           raise Llmemory::LLMError, "OpenAI Embeddings API error: #{response.body}" unless response.success?
           body = response.body.is_a?(Hash) ? response.body : JSON.parse(response.body.to_s)
+          @last_usage = parse_embed_usage(body["usage"])
+          payload.merge!(
+            input_tokens: @last_usage.input_tokens,
+            output_tokens: @last_usage.output_tokens,
+            total_tokens: @last_usage.total_tokens
+          )
           result = body.dig("data", 0, "embedding")&.map(&:to_f) || Array.new(DEFAULT_DIMS, 0.0)
         end
         result
+      end
+
+      def parse_embed_usage(raw)
+        return Llmemory::LLM::Usage.zero unless raw.is_a?(Hash)
+
+        total = raw["total_tokens"] || raw[:total_tokens] || 0
+        Llmemory::LLM::Usage.new(input_tokens: 0, output_tokens: 0, total_tokens: total)
       end
 
       def connection

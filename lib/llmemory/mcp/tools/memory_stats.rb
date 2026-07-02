@@ -52,6 +52,8 @@ module Llmemory
               stats[:long_term] = { error: e.message }
             end
 
+            stats[:llm_usage] = Llmemory::LLM::UsageLedger.new(store: store).totals(user_id)
+
             ::MCP::Tool::Response.new([{
               type: "text",
               text: format_stats(stats)
@@ -102,7 +104,18 @@ module Llmemory
               output << "  Resources: #{stats[:long_term][:resources]}"
             end
 
+            output << ""
+            output << Llmemory::LLM::UsageLedger.format_text(stats[:llm_usage] || default_llm_usage)
+
             output.join("\n")
+          end
+
+          def default_llm_usage
+            {
+              invoke: { input_tokens: 0, output_tokens: 0, total_tokens: 0, calls: 0 },
+              embed: { total_tokens: 0, calls: 0 },
+              updated_at: nil
+            }
           end
         end
       end

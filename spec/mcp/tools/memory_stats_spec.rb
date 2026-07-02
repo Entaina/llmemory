@@ -22,6 +22,7 @@ RSpec.describe Llmemory::MCP::Tools::MemoryStats do
       expect(text).to include("LONG-TERM MEMORY")
       expect(text).to include("Sessions: 0")
       expect(text).to include("Total messages: 0")
+      expect(text).to include("LLM TOKEN USAGE")
     end
 
     it "handles errors gracefully" do

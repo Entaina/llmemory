@@ -41,6 +41,11 @@ module Llmemory
             puts "Long-term (file) categories: #{storage.list_categories(user_id).size}"
             puts "Long-term (file) resources: #{storage.list_resources(user_id: user_id).size}"
           end
+
+          puts "---"
+          puts Llmemory::LLM::UsageLedger.format_text(
+            Llmemory::LLM::UsageLedger.new(store: short_store).totals(user_id)
+          )
         end
 
         def print_global_stats(short_store, long_type)

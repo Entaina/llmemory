@@ -10,8 +10,10 @@ module Llmemory
   # Events (payload keys are best-effort; subscribers should treat them as
   # optional):
   #
-  #   llm_invoke.llmemory       provider:, model:, prompt_chars:, response_chars:
-  #   llm_embed.llmemory        provider:, model:, text_chars:, dimensions:
+  #   llm_invoke.llmemory       provider:, model:, prompt_chars:, response_chars:,
+  #                             input_tokens:, output_tokens:, total_tokens:
+  #   llm_embed.llmemory        provider:, model:, text_chars:, input_tokens:,
+  #                             output_tokens:, total_tokens:
   #   memory_write.llmemory     memory_type:, user_id:
   #   memory_forget.llmemory    memory_type:, user_id:, count:
   #   retrieve.llmemory         query_chars:, candidates:, results:

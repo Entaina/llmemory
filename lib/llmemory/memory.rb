@@ -15,22 +15,28 @@ module Llmemory
       @session_id = session_id
       resolved_key = encryption_key == :inherit ? nil : encryption_key
       @cipher = Llmemory.build_cipher(resolved_key)
-      @checkpoint = checkpoint || ShortTerm::Checkpoint.new(
-        user_id: user_id,
-        session_id: session_id,
-        cipher: @cipher
-      )
+      if checkpoint
+        @checkpoint = checkpoint
+        @short_term_store = checkpoint.store
+      else
+        @short_term_store = build_short_term_store(@cipher)
+        @checkpoint = ShortTerm::Checkpoint.new(
+          user_id: user_id,
+          session_id: session_id,
+          store: @short_term_store,
+          cipher: @cipher
+        )
+      end
       @working_memory = working_memory
       @episodic = episodic
       @procedural = procedural
-      @llm = api_key.to_s.empty? ? nil : Llmemory::LLM.client(api_key: api_key)
+      @api_key = api_key unless api_key.to_s.empty?
       type = long_term_type || Llmemory.configuration.long_term_type || :file_based
       @long_term = long_term || build_long_term(type)
-      short_term_store = build_short_term_store(@cipher)
       @retrieval_engine = retrieval_engine || Retrieval::Engine.new(
         @long_term,
-        llm: @llm,
-        feedback: Retrieval::FeedbackStore.new(store: short_term_store)
+        llm: tracked_llm_client,
+        feedback: Retrieval::FeedbackStore.new(store: @short_term_store)
       )
     end
 
@@ -66,14 +72,14 @@ module Llmemory
     # Reflects over recent episodes and writes distilled insights to the
     # semantic store (file/graph) with provenance back to source episodes.
     def reflect!(window: 10, category: "insights")
-      Reflection::Reflector.new(episodic: episodic, semantic: @long_term, llm: @llm)
+      Reflection::Reflector.new(episodic: episodic, semantic: @long_term, llm: tracked_llm_client)
         .reflect(window: window, category: category)
     end
 
     # Reasoning action: render a prompt from working memory, call the LLM, write
     # the result back. Composable; does not touch long-term memory.
     def reason(template:, into: Actions::Reason::DEFAULT_SLOT, parse: nil)
-      Actions::Reason.call(working_memory: working_memory, template: template, into: into, parse: parse, llm: @llm)
+      Actions::Reason.call(working_memory: working_memory, template: template, into: into, parse: parse, llm: tracked_llm_client)
     end
 
     # Mines recent episodes for reusable skills (Voyager-style). Human-in-the-loop
@@ -81,7 +87,7 @@ module Llmemory
     # `auto_register: true`, registers them in procedural memory (with provenance
     # back to the source episodes) and returns the new skill ids.
     def mine_skills!(window: SkillMining::Miner::DEFAULT_WINDOW, outcomes: nil, auto_register: false)
-      SkillMining::Miner.new(episodic: episodic, procedural: procedural, llm: @llm)
+      SkillMining::Miner.new(episodic: episodic, procedural: procedural, llm: tracked_llm_client)
         .mine(window: window, outcomes: outcomes, auto_register: auto_register)
     end
 
@@ -91,7 +97,7 @@ module Llmemory
     def maintain!(**opts)
       Maintenance::CognitivePass.run!(
         @user_id,
-        memory: self, episodic: episodic, procedural: procedural, semantic: @long_term, llm: @llm,
+        memory: self, episodic: episodic, procedural: procedural, semantic: @long_term, llm: tracked_llm_client,
         **opts
       )
     end
@@ -245,6 +251,10 @@ module Llmemory
       @user_id
     end
 
+    def llm_usage
+      Llmemory::LLM::UsageLedger.new(store: @short_term_store).totals(@user_id)
+    end
+
     private
 
     def summarize_messages(msgs)
@@ -263,7 +273,16 @@ module Llmemory
     end
 
     def llm_client
-      @llm ||= Llmemory::LLM.client
+      tracked_llm_client
+    end
+
+    def tracked_llm_client
+      @tracked_llm_client ||= Llmemory::LLM::TrackingClient.new(
+        nil,
+        user_id: @user_id,
+        store: @short_term_store,
+        api_key: @api_key
+      )
     end
 
     def flush_memory_before_compaction!(msgs)
@@ -339,7 +358,7 @@ module Llmemory
     end
 
     def build_long_term(long_term_type)
-      llm_opts = @llm ? { llm: @llm } : {}
+      llm_opts = { llm: tracked_llm_client }
       case long_term_type.to_s.to_sym
       when :graph_based
         LongTerm::GraphBased::Memory.new(

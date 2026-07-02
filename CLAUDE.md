@@ -43,7 +43,9 @@ rake spec                   # Run tests via Rakefile (default task)
 
 - **Provenance / ForgetLog** (`lib/llmemory/provenance.rb`, `lib/llmemory/forget_log.rb`) - Lineage on items/nodes/edges/insights (sources, method, confidence); `ForgetLog` audits removals.
 
-- **LLM Providers** (`lib/llmemory/llm/`) - OpenAI and Anthropic implementations with structured output support.
+- **LLM Providers** (`lib/llmemory/llm/`) - OpenAI and Anthropic implementations with structured output support. Token usage parsed from API responses; `TrackingClient` + `UsageLedger` accumulate per user.
+
+- **LLM token usage** (`lib/llmemory/llm/usage*.rb`, `tracking_client.rb`) - `Memory#llm_usage`, persisted totals in short-term store (`__llm_usage__`). Instrumentation events include token counts.
 
 - **Retrieval** (`lib/llmemory/retrieval/`) - `Engine` orchestrates retrieval, `TemporalRanker` applies time decay + importance, `ContextAssembler` formats output. `FeedbackStore` + `Engine#report_feedback` enable adaptive retrieval; `Engine#iterative_retrieve` does multi-hop retrieval.
 
@@ -74,6 +76,7 @@ Configure via `Llmemory.configure` block. Key options:
 - `long_term_store`: `:memory`, `:file`, `:postgres`, `:active_record`
 - `encryption_enabled`: `false` — enable AES-256-GCM encryption at rest
 - `encryption_key`: `ENV["LLMEMORY_ENCRYPTION_KEY"]` — default key; override per instance with `Memory.new(encryption_key:)`
+- **Token usage:** `Memory#llm_usage` — cumulative chat + embedding tokens per `user_id`; see README "LLM token usage"
 
 ## Graph-based Memory
 

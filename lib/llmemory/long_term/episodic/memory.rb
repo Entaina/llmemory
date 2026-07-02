@@ -135,6 +135,7 @@ module Llmemory
           vs = vector_store
           return if vs.nil? || text.to_s.strip.empty?
           embedding = vs.embed(text)
+          record_embed_usage(vs)
           return unless embedding
           vs.store(id: id, embedding: embedding, metadata: { text: text, created_at: Time.now }, user_id: @user_id)
         rescue StandardError
@@ -142,7 +143,9 @@ module Llmemory
         end
 
         def vector_candidates(query, top_k, vs)
-          vs.search_by_text(query.to_s, top_k: top_k, user_id: @user_id).filter_map do |r|
+          results = vs.search_by_text(query.to_s, top_k: top_k, user_id: @user_id)
+          record_embed_usage(vs)
+          results.filter_map do |r|
             raw = @storage.get_episode(@user_id, r[:id] || r["id"])
             raw && candidate_for(raw, (r[:score] || r["score"] || 1.0).to_f)
           end
@@ -182,6 +185,14 @@ module Llmemory
           actions = normalized.filter_map { |s| s[:action] }.reject { |a| a.to_s.strip.empty? }
           return nil if actions.empty?
           "Episode with #{normalized.size} step(s): #{actions.join(' -> ')}"
+        end
+
+        def record_embed_usage(vector_store)
+          Llmemory::LLM::UsageRecorder.record_embed_from_store(
+            user_id: @user_id,
+            vector_store: vector_store,
+            store: Llmemory::ShortTerm::Stores.build(cipher: @cipher)
+          )
         end
       end
     end

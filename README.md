@@ -51,6 +51,39 @@ memory.clear_session!
 - **`prune!(mode: nil)`** — Prunes oversized tool results (soft-trim or hard-clear). Only when `prune_tool_results_enabled` is true.
 - **`check_context_window!`** — Triggers consolidate and compact when context exceeds configured thresholds.
 - **`clear_session!`** — Clears short-term only.
+- **`llm_usage`** — Returns cumulative LLM token usage for this `user_id` (chat/completions + embeddings), persisted in the short-term store.
+
+## LLM token usage
+
+llmemory captures **real token counts** from OpenAI and Anthropic API responses (chat and embeddings), accumulates them per `user_id`, and exposes them for cost monitoring.
+
+```ruby
+memory = Llmemory::Memory.new(user_id: "user_123")
+memory.consolidate!
+memory.maintain!
+
+usage = memory.llm_usage
+# => {
+#      invoke: { input_tokens: 1200, output_tokens: 400, total_tokens: 1600, calls: 3 },
+#      embed:  { total_tokens: 48, calls: 2 },
+#      updated_at: "2026-07-02T12:00:00Z"
+#    }
+```
+
+| What | Details |
+|------|---------|
+| **Counted** | `consolidate!`, reflection, skill mining, compaction summaries, iterative retrieval, graph/file extraction, OpenAI embeddings (index + search) |
+| **Scope** | Cumulative per `user_id` (not per session); stored under pseudo-session `__llm_usage__` |
+| **Not counted** | `context_tokens` (local byte estimate), retrieval context budget, MCP auth tokens |
+| **Cache** | Embedding cache hits record zero tokens |
+
+**Other surfaces:**
+
+- **CLI:** `llmemory stats USER_ID` prints an `LLM TOKEN USAGE` section.
+- **MCP:** `memory_stats` includes the same totals.
+- **Rails metrics:** subscribe to `llm_invoke.llmemory` and `llm_embed.llmemory` (payload includes `input_tokens`, `output_tokens`, `total_tokens`, `response_chars`).
+
+Dollar cost is not computed — multiply tokens by your model pricing externally. For lower-level access, `Llmemory::LLM::OpenAI#invoke` returns a `Response` with `#content` (via `#to_s`) and `#usage`.
 
 ## Configuration
 
@@ -685,7 +718,7 @@ MCP_TOKEN=your-secret-token llmemory mcp serve --http --port 443 \
 | `memory_timeline_context` | Get N items before/after a specific memory |
 | `memory_add_message` | Add message to short-term conversation (roles: user, assistant, system, tool, tool_result) |
 | `memory_consolidate` | Extract facts from conversation to long-term |
-| `memory_stats` | Get memory statistics for a user |
+| `memory_stats` | Get memory statistics for a user (includes LLM token usage) |
 | `memory_info` | Documentation on how to use the tools |
 | `memory_episode_record` / `memory_episodes` | Record / list episodic trajectories |
 | `memory_skill_register` / `memory_skill_report` / `memory_skills` | Register / outcome-track / list procedural skills |

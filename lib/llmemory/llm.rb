@@ -1,6 +1,11 @@
 # frozen_string_literal: true
 
 require_relative "llm/base"
+require_relative "llm/usage"
+require_relative "llm/response"
+require_relative "llm/usage_ledger"
+require_relative "llm/usage_recorder"
+require_relative "llm/tracking_client"
 require_relative "llm/openai"
 require_relative "llm/anthropic"
 

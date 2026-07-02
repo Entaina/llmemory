@@ -14,6 +14,8 @@ module Llmemory
         @store = store || build_store
       end
 
+      attr_reader :store
+
       def save_state(state)
         @store.save(@user_id, @session_id, state)
       end

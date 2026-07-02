@@ -162,6 +162,7 @@ module Llmemory
 
             edge_text = "#{subject} #{predicate} #{object}"
             embedding = @vector_store.respond_to?(:embed) ? @vector_store.embed(edge_text) : nil
+            record_embed_usage(@vector_store) if embedding
             if embedding && @vector_store.respond_to?(:store)
               @vector_store.store(id: edge_id, embedding: embedding, metadata: { text: edge_text, created_at: Time.now }, user_id: @user_id)
             end
@@ -172,8 +173,10 @@ module Llmemory
           vector_results = []
           if @vector_store.respond_to?(:search_by_text)
             vector_results = @vector_store.search_by_text(query.to_s, top_k: top_k, user_id: @user_id)
+            record_embed_usage(@vector_store)
           elsif @vector_store.respond_to?(:embed) && @vector_store.respond_to?(:search)
             emb = @vector_store.embed(query.to_s)
+            record_embed_usage(@vector_store)
             vector_results = @vector_store.search(emb, top_k: top_k, user_id: @user_id)
           end
 
@@ -230,6 +233,16 @@ module Llmemory
           lines << ""
           lines << "=== END MEMORIES ==="
           lines.join("\n")
+        end
+
+        def record_embed_usage(vector_store)
+          return unless vector_store
+
+          Llmemory::LLM::UsageRecorder.record_embed_from_store(
+            user_id: @user_id,
+            vector_store: vector_store,
+            store: Llmemory::ShortTerm::Stores.build(cipher: @cipher)
+          )
         end
       end
     end

@@ -11,6 +11,7 @@ module Llmemory
       DEFAULT_MODEL = "claude-sonnet-4-6"
 
       def initialize(api_key: nil, model: nil, base_url: nil)
+        super()
         @api_key = api_key || config.llm_api_key || ENV["ANTHROPIC_API_KEY"]
         @model = model || config.llm_model || DEFAULT_MODEL
         @base_url = base_url || config.llm_base_url || DEFAULT_BASE_URL
@@ -18,7 +19,8 @@ module Llmemory
 
       def invoke(prompt)
         result = nil
-        Llmemory::Instrumentation.instrument(:llm_invoke, provider: :anthropic, model: @model, prompt_chars: prompt.to_s.length) do
+        payload = { provider: :anthropic, model: @model, prompt_chars: prompt.to_s.length }
+        Llmemory::Instrumentation.instrument(:llm_invoke, payload) do
           response = connection.post("v1/messages") do |req|
             req.body = {
               model: @model,
@@ -33,8 +35,11 @@ module Llmemory
           raise Llmemory::LLMError, "Anthropic API error: #{response.body}" unless response.success?
 
           body = response.body.is_a?(Hash) ? response.body : JSON.parse(response.body.to_s)
-          content = body.dig("content", 0, "text")
-          result = content&.strip || ""
+          content = body.dig("content", 0, "text")&.strip || ""
+          usage = parse_anthropic_usage(body["usage"])
+          record_usage(usage)
+          payload.merge!(instrumentation_payload(usage, content))
+          result = Response.new(content, usage: usage)
         end
         result
       end

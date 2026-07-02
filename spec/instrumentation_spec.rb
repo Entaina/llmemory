@@ -36,6 +36,39 @@ RSpec.describe Llmemory::Instrumentation do
     end
   end
 
+  describe "llm_invoke events" do
+    it "includes token usage in payload when ActiveSupport::Notifications is available" do
+      pending "ActiveSupport not in bundle" unless defined?(ActiveSupport::Notifications)
+
+      events = []
+      subscriber = ActiveSupport::Notifications.subscribe("llm_invoke.llmemory") do |*args|
+        events << ActiveSupport::Notifications::Event.new(*args)
+      end
+
+      begin
+        client = Llmemory::LLM::OpenAI.new(api_key: "test-key")
+        stub_request(:post, %r{https://api\.openai\.com.*/chat/completions})
+          .to_return(
+            status: 200,
+            body: {
+              choices: [{ message: { content: "ok" } }],
+              usage: { prompt_tokens: 3, completion_tokens: 2, total_tokens: 5 }
+            }.to_json,
+            headers: { "Content-Type" => "application/json" }
+          )
+        client.invoke("hello")
+      ensure
+        ActiveSupport::Notifications.unsubscribe(subscriber)
+      end
+
+      expect(events).not_to be_empty
+      expect(events.first.payload[:input_tokens]).to eq(3)
+      expect(events.first.payload[:output_tokens]).to eq(2)
+      expect(events.first.payload[:total_tokens]).to eq(5)
+      expect(events.first.payload[:response_chars]).to eq(2)
+    end
+  end
+
   describe "memory_forget events" do
     it "emits memory_forget.llmemory with count when ActiveSupport::Notifications is available" do
       pending "ActiveSupport not in bundle" unless defined?(ActiveSupport::Notifications)

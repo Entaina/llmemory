@@ -77,6 +77,28 @@ RSpec.describe Llmemory::Memory do
     end
   end
 
+  describe "#llm_usage" do
+    it "returns accumulated token usage for the user" do
+      llm_double = double("LLM")
+      allow(llm_double).to receive(:invoke).and_return(
+        Llmemory::LLM::Response.new("fact", usage: Llmemory::LLM::Usage.new(input_tokens: 10, output_tokens: 5, total_tokens: 15))
+      )
+      allow(llm_double).to receive(:last_usage).and_return(
+        Llmemory::LLM::Usage.new(input_tokens: 10, output_tokens: 5, total_tokens: 15)
+      )
+      allow(Llmemory::LLM).to receive(:client).and_return(llm_double)
+
+      shared_store = Llmemory::ShortTerm::Stores::MemoryStore.new
+      checkpoint = Llmemory::ShortTerm::Checkpoint.new(user_id: user_id, session_id: session_id, store: shared_store)
+      memory = described_class.new(user_id: user_id, session_id: session_id, checkpoint: checkpoint)
+      memory.send(:llm_client).invoke("extract facts")
+
+      usage = memory.llm_usage
+      expect(usage[:invoke][:total_tokens]).to eq(15)
+      expect(usage[:invoke][:calls]).to eq(1)
+    end
+  end
+
   describe "#clear_session!" do
     it "clears short-term messages but long-term is unchanged" do
       long_term_storage = Llmemory::LongTerm::FileBased::Storage.new
@@ -290,15 +312,19 @@ RSpec.describe Llmemory::Memory do
   describe "api_key" do
     it "builds LLM client with the given API key and passes it to long-term and retrieval" do
       llm_double = double("LLM")
+      allow(llm_double).to receive(:invoke).and_return(Llmemory::LLM::Response.new("ok"))
+      allow(llm_double).to receive(:last_usage).and_return(Llmemory::LLM::Usage.zero)
       expect(Llmemory::LLM).to receive(:client).with(api_key: "sk-custom-key").and_return(llm_double)
       memory = described_class.new(user_id: user_id, session_id: session_id, api_key: "sk-custom-key")
-      expect(memory).to be_a(described_class)
+      memory.send(:tracked_llm_client).invoke("ping")
       long_term = memory.instance_variable_get(:@long_term)
-      expect(long_term.instance_variable_get(:@llm)).to eq(llm_double)
+      tracker = long_term.instance_variable_get(:@llm)
+      expect(tracker).to be_a(Llmemory::LLM::TrackingClient)
+      expect(tracker.send(:inner_client)).to eq(llm_double)
     end
 
     it "does not build a custom LLM client when api_key is nil" do
-      expect(Llmemory::LLM).not_to receive(:client).with(api_key: anything)
+      expect(Llmemory::LLM).not_to receive(:client)
       described_class.new(user_id: user_id, session_id: session_id)
     end
   end
