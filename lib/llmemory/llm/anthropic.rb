@@ -8,10 +8,11 @@ module Llmemory
   module LLM
     class Anthropic < Base
       DEFAULT_BASE_URL = "https://api.anthropic.com"
+      DEFAULT_MODEL = "claude-sonnet-4-6"
 
       def initialize(api_key: nil, model: nil, base_url: nil)
         @api_key = api_key || config.llm_api_key || ENV["ANTHROPIC_API_KEY"]
-        @model = model || config.llm_model || "claude-3-sonnet-20240229"
+        @model = model || config.llm_model || DEFAULT_MODEL
         @base_url = base_url || config.llm_base_url || DEFAULT_BASE_URL
       end
 

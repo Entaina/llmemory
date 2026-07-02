@@ -10,34 +10,57 @@ module Llmemory
     DEFAULT_SESSION_ID = "default"
     STATE_KEY_MESSAGES = :messages
 
-    def initialize(user_id:, session_id: DEFAULT_SESSION_ID, checkpoint: nil, long_term: nil, long_term_type: nil, retrieval_engine: nil, working_memory: nil, episodic: nil, procedural: nil, api_key: nil)
+    def initialize(user_id:, session_id: DEFAULT_SESSION_ID, checkpoint: nil, long_term: nil, long_term_type: nil, retrieval_engine: nil, working_memory: nil, episodic: nil, procedural: nil, api_key: nil, encryption_key: :inherit)
       @user_id = user_id
       @session_id = session_id
-      @checkpoint = checkpoint || ShortTerm::Checkpoint.new(user_id: user_id, session_id: session_id)
+      resolved_key = encryption_key == :inherit ? nil : encryption_key
+      @cipher = Llmemory.build_cipher(resolved_key)
+      @checkpoint = checkpoint || ShortTerm::Checkpoint.new(
+        user_id: user_id,
+        session_id: session_id,
+        cipher: @cipher
+      )
       @working_memory = working_memory
       @episodic = episodic
       @procedural = procedural
       @llm = api_key.to_s.empty? ? nil : Llmemory::LLM.client(api_key: api_key)
       type = long_term_type || Llmemory.configuration.long_term_type || :file_based
       @long_term = long_term || build_long_term(type)
-      @retrieval_engine = retrieval_engine || Retrieval::Engine.new(@long_term, llm: @llm)
+      short_term_store = build_short_term_store(@cipher)
+      @retrieval_engine = retrieval_engine || Retrieval::Engine.new(
+        @long_term,
+        llm: @llm,
+        feedback: Retrieval::FeedbackStore.new(store: short_term_store)
+      )
     end
 
     # Structured working memory for this session (CoALA working memory),
     # parallel to the message checkpoint. Lazily built.
     def working_memory
-      @working_memory ||= WorkingMemory.new(user_id: @user_id, session_id: @session_id)
+      @working_memory ||= WorkingMemory.new(
+        user_id: @user_id,
+        session_id: @session_id,
+        store: build_short_term_store(@cipher)
+      )
     end
 
     # Episodic long-term memory (CoALA): records and retrieves agent trajectories.
     # Additive — coexists with the semantic store (file/graph). Lazily built.
     def episodic
-      @episodic ||= LongTerm::Episodic::Memory.new(user_id: @user_id)
+      @episodic ||= LongTerm::Episodic::Memory.new(
+        user_id: @user_id,
+        storage: LongTerm::Episodic::Storages.build(cipher: @cipher),
+        cipher: @cipher
+      )
     end
 
     # Procedural long-term memory (Voyager-style skill library). Lazily built.
     def procedural
-      @procedural ||= LongTerm::Procedural::Memory.new(user_id: @user_id)
+      @procedural ||= LongTerm::Procedural::Memory.new(
+        user_id: @user_id,
+        storage: LongTerm::Procedural::Storages.build(cipher: @cipher),
+        cipher: @cipher
+      )
     end
 
     # Reflects over recent episodes and writes distilled insights to the
@@ -321,12 +344,21 @@ module Llmemory
       when :graph_based
         LongTerm::GraphBased::Memory.new(
           user_id: @user_id,
-          storage: LongTerm::GraphBased::Storages.build,
+          storage: LongTerm::GraphBased::Storages.build(cipher: @cipher),
+          cipher: @cipher,
           **llm_opts
         )
       else
-        LongTerm::FileBased::Memory.new(user_id: @user_id, storage: LongTerm::FileBased::Storages.build, **llm_opts)
+        LongTerm::FileBased::Memory.new(
+          user_id: @user_id,
+          storage: LongTerm::FileBased::Storages.build(cipher: @cipher),
+          **llm_opts
+        )
       end
+    end
+
+    def build_short_term_store(cipher)
+      ShortTerm::Stores.build(cipher: cipher)
     end
 
     def save_state(messages:, last_flush_at: nil, last_compact_at: nil)

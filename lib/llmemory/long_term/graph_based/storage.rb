@@ -7,13 +7,14 @@ module Llmemory
   module LongTerm
     module GraphBased
       module Storages
-        def self.build(store: nil)
+        def self.build(store: nil, cipher: nil)
+          resolved_cipher = cipher || Llmemory.build_cipher
           case (store || Llmemory.configuration.long_term_store).to_s.to_sym
           when :memory
             MemoryStorage.new
           when :active_record, :activerecord
             require_relative "storages/active_record_storage"
-            ActiveRecordStorage.new
+            ActiveRecordStorage.new(cipher: resolved_cipher)
           else
             MemoryStorage.new
           end

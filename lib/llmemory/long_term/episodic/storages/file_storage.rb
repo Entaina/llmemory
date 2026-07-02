@@ -4,22 +4,26 @@ require "fileutils"
 require "json"
 require "time"
 require_relative "base"
+require_relative "../../../crypto/field_helpers"
 
 module Llmemory
   module LongTerm
     module Episodic
       module Storages
         class FileStorage < Base
-          def initialize(base_path: nil)
+          include Llmemory::Crypto::FieldHelpers
+
+          def initialize(base_path: nil, cipher: nil)
             @base_path = base_path || Llmemory.configuration.long_term_storage_path || "./llmemory_data"
             @base_path = File.expand_path(@base_path)
+            @cipher = cipher || Llmemory.build_cipher
           end
 
           def save_episode(user_id, episode)
             id = episode[:id] || episode["id"] || "ep_#{next_seq(user_id)}"
             data = stringify_for_json(episode).merge("id" => id, "user_id" => user_id)
             data["created_at"] ||= Time.now.iso8601
-            File.write(episode_path(user_id, id), JSON.generate(data))
+            write_episode_file(episode_path(user_id, id), data)
             id
           end
 
@@ -57,10 +61,10 @@ module Llmemory
             Array(ids).map(&:to_s).count do |id|
               path = episode_path(user_id, id)
               next false unless File.file?(path)
-              data = JSON.parse(File.read(path))
+              data = load_episode_raw(path)
               next false if data["archived_at"]
               data["archived_at"] = Time.now.iso8601
-              File.write(path, JSON.generate(data))
+              write_episode_file(path, data)
               true
             end
           end
@@ -89,11 +93,24 @@ module Llmemory
           end
 
           def load_episode(path)
-            data = JSON.parse(File.read(path), symbolize_names: true)
+            data = load_episode_raw(path)
+            return nil unless data
+
             data[:created_at] = parse_time(data[:created_at])
             data
           rescue JSON::ParserError
             nil
+          end
+
+          def load_episode_raw(path)
+            raw = File.read(path)
+            json = cipher.enabled? && cipher.encrypted?(raw) ? cipher.decrypt(raw) : raw
+            JSON.parse(json, symbolize_names: true)
+          end
+
+          def write_episode_file(path, data)
+            payload = JSON.generate(data)
+            File.write(path, cipher.enabled? ? cipher.encrypt(payload) : payload)
           end
 
           def episode_text(episode)

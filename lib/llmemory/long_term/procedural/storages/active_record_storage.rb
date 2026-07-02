@@ -4,6 +4,7 @@ require "json"
 require "securerandom"
 require "time"
 require_relative "base"
+require_relative "../../../crypto/field_helpers"
 
 module Llmemory
   module LongTerm
@@ -13,7 +14,10 @@ module Llmemory
         # auto-deserializes jsonb to a Hash (string keys), which Skill.from_h
         # handles. Mirrors the file-based ActiveRecordStorage pattern.
         class ActiveRecordStorage < Base
-          def initialize
+          include Llmemory::Crypto::FieldHelpers
+
+          def initialize(cipher: nil)
+            @cipher = cipher || Llmemory.build_cipher
             self.class.load_models!
           end
 
@@ -30,42 +34,50 @@ module Llmemory
             data["created_at"] ||= Time.now.utc.iso8601
             rec = LlmemorySkill.find_or_initialize_by(id: id)
             rec.user_id = user_id
-            rec.data = data
-            rec.search_text = searchable_text(data)
+            rec.data = cipher.enabled? ? enc_json(data) : data
+            rec.search_text = enc(searchable_text(data))
             rec.created_at ||= Time.current
             rec.save!
             id
           end
 
           def get_skill(user_id, id)
-            LlmemorySkill.find_by(user_id: user_id, id: id)&.data
+            rec = LlmemorySkill.find_by(user_id: user_id, id: id)
+            return nil unless rec
+
+            decode_data(rec.data)
           end
 
           def list_skills(user_id, limit: nil, offset: nil)
             scope = LlmemorySkill.where(user_id: user_id, archived_at: nil).order(created_at: :desc)
             scope = scope.limit(limit) if limit && limit.to_i.positive?
             scope = scope.offset(offset) if offset && offset.to_i.positive?
-            scope.map(&:data)
+            scope.map { |r| decode_data(r.data) }
           end
 
           def search_skills(user_id, query)
             token_scope(LlmemorySkill.where(user_id: user_id, archived_at: nil), "search_text", query)
-              .order(created_at: :desc).map(&:data)
+              .order(created_at: :desc).map { |r| decode_data(r.data) }
           end
 
           def find_skills_by_name(user_id, name)
-            LlmemorySkill.where(user_id: user_id, archived_at: nil).where("data->>'name' = ?", name.to_s).map(&:data)
+            if cipher.enabled?
+              LlmemorySkill.where(user_id: user_id, archived_at: nil).map { |r| decode_data(r.data) }
+                .select { |s| (s[:name] || s["name"]).to_s == name.to_s }
+            else
+              LlmemorySkill.where(user_id: user_id, archived_at: nil).where("data->>'name' = ?", name.to_s).map(&:data)
+            end
           end
 
           def record_outcome(user_id, skill_id, success:)
             rec = LlmemorySkill.find_by(user_id: user_id, id: skill_id)
             return nil unless rec
-            data = rec.data || {}
-            key = success ? "success_count" : "failure_count"
+            data = decode_data(rec.data) || {}
+            key = success ? :success_count : :failure_count
             data[key] = (data[key] || 0).to_i + 1
-            data["updated_at"] = Time.now.utc.iso8601
-            rec.data = data
-            rec.search_text = searchable_text(data)
+            data[:updated_at] = Time.now.utc.iso8601
+            rec.data = cipher.enabled? ? enc_json(data) : data
+            rec.search_text = enc(searchable_text(data))
             rec.save!
             data
           end
@@ -105,7 +117,15 @@ module Llmemory
           end
 
           def searchable_text(data)
-            [data["name"], data["description"], data["body"]].compact.join("\n")
+            h = data.is_a?(Hash) ? data : {}
+            [h["name"] || h[:name], h["description"] || h[:description], h["body"] || h[:body]].compact.join("\n")
+          end
+
+          def decode_data(raw)
+            return raw.transform_keys(&:to_sym) if raw.is_a?(Hash)
+            return dec_json(raw) if raw.is_a?(String) && cipher.encrypted?(raw)
+
+            raw
           end
         end
       end

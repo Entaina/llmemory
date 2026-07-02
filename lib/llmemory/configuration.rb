@@ -48,12 +48,14 @@ module Llmemory
                   :message_sanitizer_enabled,
                   :ttl_episodic_days,
                   :ttl_procedural_days,
-                  :skill_mining_enabled
+                  :skill_mining_enabled,
+                  :encryption_enabled,
+                  :encryption_key
 
     def initialize
       @llm_provider = :openai
       @llm_api_key = ENV["OPENAI_API_KEY"]
-      @llm_model = "gpt-4"
+      @llm_model = nil # falls back to the active provider's DEFAULT_MODEL
       @llm_base_url = nil
       @short_term_store = :memory
       @redis_url = ENV["REDIS_URL"] || "redis://localhost:6379/0"
@@ -98,6 +100,8 @@ module Llmemory
       @embedding_cache_max_entries = 10_000
       @max_message_chars = 32_000
       @message_sanitizer_enabled = false
+      @encryption_enabled = false
+      @encryption_key = ENV["LLMEMORY_ENCRYPTION_KEY"]
     end
   end
 
@@ -112,6 +116,22 @@ module Llmemory
 
     def reset_configuration!
       @configuration = Configuration.new
+    end
+
+    # Builds a Crypto::Cipher when encryption is enabled and a key is present;
+    # otherwise returns Crypto::NullCipher. An explicit non-empty instance key
+    # enables encryption even when the global flag is off.
+    def build_cipher(key = nil)
+      explicit_key = !key.nil? && !key.to_s.empty?
+      resolved = key.nil? ? configuration.encryption_key : key
+      enabled = configuration.encryption_enabled || explicit_key
+      if enabled && !resolved.to_s.empty?
+        require_relative "crypto/cipher"
+        Crypto::Cipher.new(resolved)
+      else
+        require_relative "crypto/cipher"
+        Crypto::NullCipher.new
+      end
     end
   end
 end

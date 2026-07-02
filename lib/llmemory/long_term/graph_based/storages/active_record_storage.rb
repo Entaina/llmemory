@@ -4,13 +4,17 @@ require_relative "base"
 require_relative "active_record_models"
 require_relative "../node"
 require_relative "../edge"
+require_relative "../../../crypto/field_helpers"
 
 module Llmemory
   module LongTerm
     module GraphBased
       module Storages
         class ActiveRecordStorage < Base
-          def initialize
+          include Llmemory::Crypto::FieldHelpers
+
+          def initialize(cipher: nil)
+            @cipher = cipher || Llmemory.build_cipher
             self.class.load_models!
           end
 
@@ -26,17 +30,22 @@ module Llmemory
             rec = if n.id
               LlmemoryGraphNode.find_by(user_id: user_id, id: n.id)
             else
-              LlmemoryGraphNode.find_by(user_id: user_id, entity_type: n.entity_type, name: n.name)
+              LlmemoryGraphNode.find_by(
+                user_id: user_id,
+                entity_type: enc_det(n.entity_type),
+                name: enc_det(n.name)
+              )
             end
+            stored_props = store_properties(n.properties || {})
             if rec
-              rec.update!(properties: n.properties || {}, updated_at: Time.current)
+              rec.update!(properties: stored_props, updated_at: Time.current)
               rec.id
             else
               rec = LlmemoryGraphNode.create!(
                 user_id: user_id,
-                entity_type: n.entity_type.to_s,
-                name: n.name.to_s,
-                properties: n.properties || {}
+                entity_type: enc_det(n.entity_type.to_s),
+                name: enc_det(n.name.to_s),
+                properties: stored_props
               )
               rec.id
             end
@@ -48,13 +57,17 @@ module Llmemory
           end
 
           def find_node_by_name(user_id, entity_type, name)
-            rec = LlmemoryGraphNode.find_by(user_id: user_id, entity_type: entity_type.to_s, name: name.to_s)
+            rec = LlmemoryGraphNode.find_by(
+              user_id: user_id,
+              entity_type: enc_det(entity_type.to_s),
+              name: enc_det(name.to_s)
+            )
             record_to_node(rec) if rec
           end
 
           def list_nodes(user_id, entity_type: nil, limit: nil, offset: nil)
             scope = LlmemoryGraphNode.where(user_id: user_id)
-            scope = scope.where(entity_type: entity_type) if entity_type
+            scope = scope.where(entity_type: enc_det(entity_type.to_s)) if entity_type
             scope = scope.limit(limit) if limit && limit.to_i.positive?
             scope = scope.offset(offset) if offset && offset.to_i.positive?
             scope.map { |r| record_to_node(r) }
@@ -64,24 +77,23 @@ module Llmemory
             e = edge.is_a?(Edge) ? edge : Edge.from_h(edge.to_h)
             rec = if e.id && e.id.is_a?(Integer)
               LlmemoryGraphEdge.find_by(user_id: user_id, id: e.id)
-            else
-              nil
             end
+            stored_props = store_properties(e.properties || {})
             if rec
               rec.update!(
                 subject_id: e.subject_id,
-                predicate: e.predicate,
+                predicate: enc_det(e.predicate),
                 object_id: e.target_id,
-                properties: e.properties || {}
+                properties: stored_props
               )
               rec.id
             else
               rec = LlmemoryGraphEdge.create!(
                 user_id: user_id,
                 subject_id: e.subject_id,
-                predicate: e.predicate,
+                predicate: enc_det(e.predicate),
                 object_id: e.target_id,
-                properties: e.properties || {}
+                properties: stored_props
               )
               rec.id
             end
@@ -91,7 +103,7 @@ module Llmemory
             scope = LlmemoryGraphEdge.where(user_id: user_id)
             scope = scope.where(archived_at: nil) unless include_archived
             scope = scope.where(subject_id: subject_id) if subject_id
-            scope = scope.where(predicate: predicate) if predicate
+            scope = scope.where(predicate: enc_det(predicate.to_s)) if predicate
             scope = scope.where(object_id: object_id) if object_id
             scope.map { |r| record_to_edge(r) }
           end
@@ -110,7 +122,7 @@ module Llmemory
           def list_edges(user_id, subject_id: nil, predicate: nil, limit: nil, offset: nil)
             scope = LlmemoryGraphEdge.where(user_id: user_id, archived_at: nil)
             scope = scope.where(subject_id: subject_id) if subject_id
-            scope = scope.where(predicate: predicate) if predicate
+            scope = scope.where(predicate: enc_det(predicate.to_s)) if predicate
             scope = scope.order(created_at: :desc) if limit && limit.to_i.positive?
             scope = scope.limit(limit) if limit && limit.to_i.positive?
             scope = scope.offset(offset) if offset && offset.to_i.positive?
@@ -153,13 +165,27 @@ module Llmemory
 
           private
 
+          def store_properties(props)
+            return props || {} unless cipher.enabled?
+            return {} if props.nil? || props.empty?
+
+            enc_json(props)
+          end
+
+          def load_properties(raw)
+            return raw || {} if raw.nil? || raw == {}
+            return dec_json(raw) if raw.is_a?(String) && cipher.encrypted?(raw)
+
+            raw
+          end
+
           def record_to_node(r)
             Node.new(
               id: r.id,
               user_id: r.user_id,
-              entity_type: r.entity_type,
-              name: r.name,
-              properties: r.properties || {},
+              entity_type: dec(r.entity_type),
+              name: dec(r.name),
+              properties: load_properties(r.properties),
               created_at: r.created_at,
               updated_at: r.updated_at
             )
@@ -170,9 +196,9 @@ module Llmemory
               id: r.id,
               user_id: r.user_id,
               subject_id: r.subject_id,
-              predicate: r.predicate,
+              predicate: dec(r.predicate),
               target_id: r.object_id,
-              properties: r.properties || {},
+              properties: load_properties(r.properties),
               created_at: r.created_at,
               archived_at: r.archived_at
             )

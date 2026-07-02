@@ -21,6 +21,8 @@ rake spec                   # Run tests via Rakefile (default task)
 
 - **`Llmemory::Memory`** (`lib/llmemory/memory.rb`) - Unified API combining short-term and long-term memory. Primary entry point for most use cases.
 
+- **Encryption** (`lib/llmemory/crypto/`) - Optional AES-256-GCM at-rest encryption via `Llmemory.configure` (`encryption_enabled`, `encryption_key`) and per-instance `Memory.new(encryption_key:)`. Hooked into all persistent storage backends; `:memory` backends skip encryption.
+
 - **Short-term** (`lib/llmemory/short_term/`) - Conversation history via `Checkpoint`. Storage backends: memory, Redis, PostgreSQL, ActiveRecord.
 
 - **Long-term File-based** (`lib/llmemory/long_term/file_based/`) - Facts, categories, and resources extracted from conversations. Uses `FactExtractor` to process text via LLM.
@@ -70,6 +72,8 @@ Configure via `Llmemory.configure` block. Key options:
 - `short_term_store`: `:memory`, `:redis`, `:postgres`, `:active_record`
 - `long_term_type`: `:file_based` or `:graph_based`
 - `long_term_store`: `:memory`, `:file`, `:postgres`, `:active_record`
+- `encryption_enabled`: `false` — enable AES-256-GCM encryption at rest
+- `encryption_key`: `ENV["LLMEMORY_ENCRYPTION_KEY"]` — default key; override per instance with `Memory.new(encryption_key:)`
 
 ## Graph-based Memory
 

@@ -4,6 +4,7 @@ require "json"
 require "securerandom"
 require "time"
 require_relative "base"
+require_relative "../../../crypto/field_helpers"
 
 module Llmemory
   module LongTerm
@@ -13,9 +14,12 @@ module Llmemory
         # (plus id/user_id/created_at and a denormalized search_text), mirroring
         # the file-based DatabaseStorage pattern.
         class DatabaseStorage < Base
-          def initialize(database_url: nil)
+          include Llmemory::Crypto::FieldHelpers
+
+          def initialize(database_url: nil, cipher: nil)
             @database_url = database_url || Llmemory.configuration.database_url
             @connection = nil
+            @cipher = cipher || Llmemory.build_cipher
           end
 
           def save_skill(user_id, skill)
@@ -27,7 +31,7 @@ module Llmemory
               "INSERT INTO llmemory_skills (id, user_id, data, search_text, created_at) " \
               "VALUES ($1, $2, $3::jsonb, $4, $5) " \
               "ON CONFLICT (id) DO UPDATE SET data = $3::jsonb, search_text = $4",
-              [id, user_id, JSON.generate(data), searchable_text(data), created_at_value(data)]
+              [id, user_id, store_data(data), enc(searchable_text(data)), created_at_value(data)]
             )
             id
           end
@@ -72,7 +76,7 @@ module Llmemory
             data[:updated_at] = Time.now.utc.iso8601
             conn.exec_params(
               "UPDATE llmemory_skills SET data = $3::jsonb, search_text = $4 WHERE user_id = $1 AND id = $2",
-              [user_id, skill_id, JSON.generate(data), searchable_text(data)]
+              [user_id, skill_id, store_data(data), enc(searchable_text(data))]
             )
             data
           end
@@ -144,9 +148,26 @@ module Llmemory
           end
 
           def parse_data(value)
-            JSON.parse(value.to_s, symbolize_names: true)
+            if value.is_a?(Hash)
+              return value.transform_keys(&:to_sym)
+            end
+
+            str = value.to_s
+            if cipher.encrypted?(str)
+              cipher.decrypt_json(str)
+            else
+              JSON.parse(str, symbolize_names: true)
+            end
           rescue JSON::ParserError
             {}
+          end
+
+          def store_data(data)
+            if cipher.enabled?
+              JSON.generate(enc_json(data))
+            else
+              JSON.generate(data)
+            end
           end
 
           def symbolize(hash)

@@ -6,7 +6,7 @@ module Llmemory
   module ShortTerm
     module Stores
       class MemoryStore < Base
-        def initialize
+        def initialize(cipher: nil)
           @store = {}
         end
 

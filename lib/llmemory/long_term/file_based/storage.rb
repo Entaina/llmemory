@@ -14,17 +14,24 @@ module Llmemory
       Storage = Storages::MemoryStorage
 
       module Storages
-        def self.build(store: nil, base_path: nil, database_url: nil)
+        def self.build(store: nil, base_path: nil, database_url: nil, cipher: nil)
+          resolved_cipher = cipher || Llmemory.build_cipher
           case (store || Llmemory.configuration.long_term_store).to_s.to_sym
           when :memory
             MemoryStorage.new
           when :file
-            FileStorage.new(base_path: base_path || Llmemory.configuration.long_term_storage_path)
+            FileStorage.new(
+              base_path: base_path || Llmemory.configuration.long_term_storage_path,
+              cipher: resolved_cipher
+            )
           when :postgres, :database
-            DatabaseStorage.new(database_url: database_url || Llmemory.configuration.database_url)
+            DatabaseStorage.new(
+              database_url: database_url || Llmemory.configuration.database_url,
+              cipher: resolved_cipher
+            )
           when :active_record, :activerecord
             require_relative "storages/active_record_storage"
-            ActiveRecordStorage.new
+            ActiveRecordStorage.new(cipher: resolved_cipher)
           else
             MemoryStorage.new
           end

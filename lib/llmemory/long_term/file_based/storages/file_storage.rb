@@ -3,15 +3,19 @@
 require "fileutils"
 require "json"
 require_relative "base"
+require_relative "../../../crypto/field_helpers"
 
 module Llmemory
   module LongTerm
     module FileBased
       module Storages
         class FileStorage < Base
-          def initialize(base_path: nil)
+          include Llmemory::Crypto::FieldHelpers
+
+          def initialize(base_path: nil, cipher: nil)
             @base_path = base_path || Llmemory.configuration.long_term_storage_path || "./llmemory_data"
             @base_path = File.expand_path(@base_path)
+            @cipher = cipher || Llmemory.build_cipher
           end
 
           def save_resource(user_id, text)
@@ -19,8 +23,8 @@ module Llmemory
             seq = next_seq(user_id, "resource_id_seq")
             id = "res_#{seq}"
             path = resource_path(user_id, id)
-            data = { text: text, created_at: Time.now.iso8601 }
-            File.write(path, JSON.generate(data))
+            data = { text: enc(text), created_at: Time.now.iso8601 }
+            write_encrypted_file(path, data)
             id
           end
 
@@ -32,26 +36,26 @@ module Llmemory
             data = {
               id: id,
               category: category,
-              content: content,
+              content: enc(content),
               source_resource_id: source_resource_id,
               importance: importance,
-              provenance: provenance,
+              provenance: provenance ? enc_json(provenance) : nil,
               created_at: Time.now.iso8601
             }
-            File.write(path, JSON.generate(data))
+            write_encrypted_file(path, data)
             id
           end
 
           def load_category(user_id, category_name)
             path = category_path(user_id, category_name)
             return "" unless File.file?(path)
-            File.read(path)
+            read_encrypted_text_file(path)
           end
 
           def save_category(user_id, category_name, content)
             ensure_user_dir(user_id, "categories")
             path = category_path(user_id, category_name)
-            File.write(path, content)
+            write_encrypted_text_file(path, content)
             true
           end
 
@@ -83,7 +87,8 @@ module Llmemory
             dir = user_path(user_id, "items")
             return [] unless Dir.exist?(dir)
             Dir.children(dir).select { |f| f.end_with?(".json") }.map do |f|
-              data = JSON.parse(File.read(File.join(dir, f)), symbolize_names: true)
+              data = read_encrypted_file(File.join(dir, f))
+              data = decrypt_item(data)
               data[:created_at] = parse_time(data[:created_at])
               data
             end.sort_by { |i| i[:created_at] }
@@ -93,9 +98,10 @@ module Llmemory
             dir = user_path(user_id, "resources")
             return [] unless Dir.exist?(dir)
             Dir.children(dir).select { |f| f.end_with?(".json") }.map do |f|
-              data = JSON.parse(File.read(File.join(dir, f)), symbolize_names: true)
+              data = read_encrypted_file(File.join(dir, f))
               id = File.basename(f, ".json")
               data[:id] = id
+              data[:text] = dec(data[:text] || data["text"])
               data[:created_at] = parse_time(data[:created_at])
               data
             end.sort_by { |r| r[:created_at] }
@@ -113,7 +119,9 @@ module Llmemory
             id = "item_#{seq}"
             path = item_path(user_id, id)
             data = merged_item.merge(id: id).transform_values { |v| v.respond_to?(:iso8601) ? v.iso8601 : v }
-            File.write(path, JSON.generate(data))
+            data[:content] = enc(data[:content]) if data[:content]
+            data[:provenance] = enc_json(data[:provenance]) if data[:provenance]
+            write_encrypted_file(path, data)
           end
 
           def archive_items(user_id, item_ids)
@@ -127,9 +135,8 @@ module Llmemory
           def save_daily_log_entry(user_id, date, content)
             ensure_user_dir(user_id, "memory")
             path = daily_log_path(user_id, date)
-            existing = File.file?(path) ? File.read(path) : ""
             entry = "#{Time.now.strftime('%H:%M')} #{content}\n"
-            File.write(path, existing + entry)
+            write_encrypted_text_file(path, entry, append: File.file?(path))
             true
           end
 
@@ -143,7 +150,7 @@ module Llmemory
               path = daily_log_path(user_id, d)
               next unless File.file?(path)
 
-              { date: d, content: File.read(path) }
+              { date: d, content: read_encrypted_text_file(path) }
             end
           end
 
@@ -223,6 +230,13 @@ module Llmemory
             return val if val.is_a?(Time)
             return Time.parse(val.to_s) if val
             Time.now
+          end
+
+          def decrypt_item(data)
+            data[:content] = dec(data[:content] || data["content"])
+            prov = data[:provenance] || data["provenance"]
+            data[:provenance] = parse_provenance(prov) if prov
+            data
           end
         end
       end

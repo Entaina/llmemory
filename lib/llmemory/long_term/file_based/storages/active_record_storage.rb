@@ -2,13 +2,17 @@
 
 require "securerandom"
 require_relative "base"
+require_relative "../../../crypto/field_helpers"
 
 module Llmemory
   module LongTerm
     module FileBased
       module Storages
         class ActiveRecordStorage < Base
-          def initialize
+          include Llmemory::Crypto::FieldHelpers
+
+          def initialize(cipher: nil)
+            @cipher = cipher || Llmemory.build_cipher
             self.class.load_models!
           end
 
@@ -24,7 +28,7 @@ module Llmemory
             LlmemoryResource.create!(
               id: id,
               user_id: user_id,
-              text: text,
+              text: enc(text),
               created_at: Time.current
             )
             id
@@ -36,24 +40,26 @@ module Llmemory
               id: id,
               user_id: user_id,
               category: category,
-              content: content,
+              content: enc(content),
               source_resource_id: source_resource_id,
               created_at: Time.current
             }
             attrs[:importance] = importance if LlmemoryItem.column_names.include?("importance")
-            attrs[:provenance] = provenance if provenance && LlmemoryItem.column_names.include?("provenance")
+            if provenance && LlmemoryItem.column_names.include?("provenance")
+              attrs[:provenance] = cipher.enabled? ? enc_json(provenance) : provenance
+            end
             LlmemoryItem.create!(attrs)
             id
           end
 
           def load_category(user_id, category_name)
             rec = LlmemoryCategory.find_by(user_id: user_id, category_name: category_name)
-            rec ? rec.content.to_s : ""
+            rec ? dec(rec.content.to_s) : ""
           end
 
           def save_category(user_id, category_name, content)
             rec = LlmemoryCategory.find_or_initialize_by(user_id: user_id, category_name: category_name)
-            rec.content = content
+            rec.content = enc(content)
             rec.updated_at = Time.current
             rec.save!
             true
@@ -101,7 +107,7 @@ module Llmemory
               id: "item_#{SecureRandom.hex(8)}",
               user_id: user_id,
               category: merged_item[:category],
-              content: merged_item[:content],
+              content: enc(merged_item[:content]),
               source_resource_id: merged_item[:source_resource_id],
               created_at: created_at
             }
@@ -194,19 +200,19 @@ module Llmemory
             h = {
               id: r.id,
               category: r.category,
-              content: r.content,
+              content: dec(r.content),
               source_resource_id: r.source_resource_id,
               created_at: r.created_at
             }
             h[:importance] = r.respond_to?(:importance) ? (r.importance || 0.7).to_f : 0.7
-            h[:provenance] = r.provenance if r.respond_to?(:provenance)
+            h[:provenance] = parse_provenance(r.provenance) if r.respond_to?(:provenance)
             h
           end
 
           def row_to_resource(r)
             {
               id: r.id,
-              text: r.text,
+              text: dec(r.text),
               created_at: r.created_at
             }
           end

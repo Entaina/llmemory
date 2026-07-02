@@ -65,6 +65,12 @@ Llmemory.configure do |config|
   config.long_term_store = :memory  # or :file, :postgres, :active_record
   config.long_term_storage_path = "./llmemory_data"  # for :file
   config.database_url = ENV["DATABASE_URL"]          # for :postgres
+
+  # Optional encryption at rest (AES-256-GCM). Requires a key; isolates data
+  # cryptographically per key (e.g. per agent/user). See "Encryption at rest".
+  config.encryption_enabled = false
+  config.encryption_key = ENV["LLMEMORY_ENCRYPTION_KEY"]
+
   config.time_decay_half_life_days = 30
   config.max_retrieval_tokens = 2000
   config.prune_after_days = 90
@@ -111,6 +117,31 @@ Llmemory.configure do |config|
   config.auto_recall_enabled = false
 end
 ```
+
+## Encryption at rest
+
+Optional AES-256-GCM encryption protects persisted memory. Without the key, stored data is unreadable — useful for isolating agents or tenants.
+
+```ruby
+# Global default key (applies to all Memory instances)
+Llmemory.configure do |config|
+  config.encryption_enabled = true
+  config.encryption_key = ENV["LLMEMORY_ENCRYPTION_KEY"]
+end
+
+memory = Llmemory::Memory.new(user_id: "agent-1")
+
+# Per-instance key override (isolates this agent even if global config differs)
+memory = Llmemory::Memory.new(user_id: "agent-1", encryption_key: "tenant-specific-secret")
+```
+
+**What is encrypted:** conversation checkpoints (redis/postgres/active_record), file-based facts/resources/categories, episodic/procedural documents, graph node names/types/predicates (deterministic) and properties (random IV). **Vector embeddings are not encrypted** (required for pgvector search); associated `text_content` metadata is encrypted.
+
+**Trade-offs:**
+- Database keyword search (`LIKE`, BM25 on encrypted columns) no longer works on ciphertext; file backends still search in memory after decrypt.
+- `:memory` backends are in-process only and are **not** encrypted at rest.
+- Existing plaintext data remains readable (markers `enc:v1:` / `encd:v1:`); new writes are encrypted when enabled.
+- Deterministic encryption on graph identifiers leaks equality (same name ⇒ same ciphertext) but keeps graph traversal working.
 
 ## Long-Term Storage
 

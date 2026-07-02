@@ -1,14 +1,18 @@
 # frozen_string_literal: true
 
 require_relative "base"
+require_relative "../../crypto/field_helpers"
 
 module Llmemory
   module ShortTerm
     module Stores
       class RedisStore < Base
-        def initialize(redis_url: nil)
+        include Llmemory::Crypto::FieldHelpers
+
+        def initialize(redis_url: nil, cipher: nil)
           @redis_url = redis_url || Llmemory.configuration.redis_url
           @redis = nil
+          @cipher = cipher || Llmemory.build_cipher
         end
 
         def save(user_id, session_id, state)
@@ -50,13 +54,11 @@ module Llmemory
         end
 
         def serialize(state)
-          require "json"
-          JSON.generate(state)
+          serialize_state(state)
         end
 
         def deserialize(data)
-          require "json"
-          JSON.parse(data, symbolize_names: true)
+          deserialize_state(data)
         end
       end
     end

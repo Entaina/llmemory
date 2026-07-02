@@ -7,9 +7,10 @@ module Llmemory
     class Checkpoint
       DEFAULT_SESSION_ID = "default"
 
-      def initialize(user_id:, session_id: DEFAULT_SESSION_ID, store: nil)
+      def initialize(user_id:, session_id: DEFAULT_SESSION_ID, store: nil, cipher: nil)
         @user_id = user_id
         @session_id = session_id
+        @cipher = cipher
         @store = store || build_store
       end
 
@@ -28,7 +29,7 @@ module Llmemory
       private
 
       def build_store
-        Stores.build
+        Stores.build(cipher: @cipher)
       end
     end
   end

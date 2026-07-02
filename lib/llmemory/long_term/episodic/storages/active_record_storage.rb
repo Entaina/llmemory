@@ -4,6 +4,7 @@ require "json"
 require "securerandom"
 require "time"
 require_relative "base"
+require_relative "../../../crypto/field_helpers"
 
 module Llmemory
   module LongTerm
@@ -13,7 +14,10 @@ module Llmemory
         # AR auto-deserializes jsonb to a Hash (string keys), which Episode.from_h
         # handles. Mirrors the file-based ActiveRecordStorage pattern.
         class ActiveRecordStorage < Base
-          def initialize
+          include Llmemory::Crypto::FieldHelpers
+
+          def initialize(cipher: nil)
+            @cipher = cipher || Llmemory.build_cipher
             self.class.load_models!
           end
 
@@ -30,8 +34,8 @@ module Llmemory
             data["created_at"] ||= Time.now.utc.iso8601
             rec = LlmemoryEpisode.find_or_initialize_by(id: id)
             rec.user_id = user_id
-            rec.data = data
-            rec.search_text = searchable_text(data)
+            rec.data = cipher.enabled? ? enc_json(data) : data
+            rec.search_text = enc(searchable_text(data))
             rec.created_at ||= Time.current
             rec.save!
             id
@@ -39,19 +43,21 @@ module Llmemory
 
           def get_episode(user_id, id)
             rec = LlmemoryEpisode.find_by(user_id: user_id, id: id)
-            rec&.data
+            return nil unless rec
+
+            decode_data(rec.data)
           end
 
           def list_episodes(user_id, limit: nil, offset: nil)
             scope = LlmemoryEpisode.where(user_id: user_id, archived_at: nil).order(created_at: :desc)
             scope = scope.limit(limit) if limit && limit.to_i.positive?
             scope = scope.offset(offset) if offset && offset.to_i.positive?
-            scope.map(&:data)
+            scope.map { |r| decode_data(r.data) }
           end
 
           def search_episodes(user_id, query)
             token_scope(LlmemoryEpisode.where(user_id: user_id, archived_at: nil), "search_text", query)
-              .order(created_at: :desc).map(&:data)
+              .order(created_at: :desc).map { |r| decode_data(r.data) }
           end
 
           def count_episodes(user_id)
@@ -95,6 +101,13 @@ module Llmemory
               parts << s["observation"] << s["action"] << s["result"]
             end
             parts.compact.join("\n")
+          end
+
+          def decode_data(raw)
+            return raw.transform_keys(&:to_sym) if raw.is_a?(Hash)
+            return dec_json(raw) if raw.is_a?(String) && cipher.encrypted?(raw)
+
+            raw
           end
         end
       end

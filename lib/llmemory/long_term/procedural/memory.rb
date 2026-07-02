@@ -22,9 +22,10 @@ module Llmemory
 
         attr_reader :user_id, :storage
 
-        def initialize(user_id:, storage: nil, vector_store: nil)
+        def initialize(user_id:, storage: nil, vector_store: nil, cipher: nil)
           @user_id = user_id
-          @storage = storage || Storages.build
+          @cipher = cipher || Llmemory.build_cipher
+          @storage = storage || Storages.build(cipher: @cipher)
           @vector_store = vector_store
           @vector_explicit = !vector_store.nil?
         end
@@ -131,7 +132,7 @@ module Llmemory
           if @vector_explicit
             @vector_store
           elsif Llmemory.configuration.procedural_vector_enabled
-            @vector_store ||= Llmemory::VectorStore.build(source_type: "skill")
+            @vector_store ||= Llmemory::VectorStore.build(source_type: "skill", cipher: @cipher)
           end
         end
 

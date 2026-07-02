@@ -7,10 +7,11 @@ module Llmemory
     # Persists embeddings in llmemory_embeddings (pgvector).
     # Use when long_term_store is :active_record so hybrid search finds persisted embeddings.
     class ActiveRecordStore < Base
-      def initialize(embedding_provider: nil, source_type: "edge")
+      def initialize(embedding_provider: nil, source_type: "edge", cipher: nil)
         self.class.load_model!
         @embedding_provider = embedding_provider
         @source_type = source_type.to_s
+        @cipher = cipher || Llmemory.build_cipher
       end
 
       def self.load_model!
@@ -34,7 +35,7 @@ module Llmemory
           source_id: id.to_s
         )
         rec.embedding = embedding.to_a.map(&:to_f)
-        rec.text_content = text_content
+        rec.text_content = encrypt_text_content(text_content)
         rec.save!
         id
       end
@@ -58,7 +59,11 @@ module Llmemory
           {
             id: r.source_id,
             score: score,
-            metadata: { "text" => r.text_content, "created_at" => r.created_at, "user_id" => r.user_id }
+            metadata: {
+              "text" => decrypt_text_content(r.text_content),
+              "created_at" => r.created_at,
+              "user_id" => r.user_id
+            }
           }
         end
       end
@@ -68,6 +73,22 @@ module Llmemory
         return [] unless @embedding_provider&.respond_to?(:embed)
         query_embedding = @embedding_provider.embed(query_text)
         search(query_embedding, top_k: top_k, user_id: user_id)
+      end
+
+      private
+
+      def encrypt_text_content(text)
+        return text if text.nil? || text.to_s.empty?
+        return text unless @cipher.enabled?
+
+        @cipher.encrypt(text.to_s)
+      end
+
+      def decrypt_text_content(text)
+        return text if text.nil?
+        return text unless text.is_a?(String) && @cipher.enabled? && @cipher.encrypted?(text)
+
+        @cipher.decrypt(text)
       end
     end
   end

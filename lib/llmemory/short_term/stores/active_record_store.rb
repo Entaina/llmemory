@@ -1,12 +1,16 @@
 # frozen_string_literal: true
 
 require_relative "base"
+require_relative "../../crypto/field_helpers"
 
 module Llmemory
   module ShortTerm
     module Stores
       class ActiveRecordStore < Base
-        def initialize
+        include Llmemory::Crypto::FieldHelpers
+
+        def initialize(cipher: nil)
+          @cipher = cipher || Llmemory.build_cipher
           self.class.load_model!
         end
 
@@ -22,7 +26,7 @@ module Llmemory
             user_id: user_id,
             session_id: session_id
           )
-          record.state = state
+          record.state = cipher.enabled? ? serialize_state(state) : state
           record.updated_at = Time.current
           record.save!
           true
@@ -34,8 +38,13 @@ module Llmemory
             session_id: session_id
           )
           return nil unless record
+
           raw = record.state
-          raw.is_a?(Hash) ? raw.transform_keys(&:to_sym) : deserialize(raw)
+          if raw.is_a?(Hash)
+            raw.transform_keys(&:to_sym)
+          else
+            deserialize_state(raw)
+          end
         end
 
         def delete(user_id, session_id)
@@ -52,13 +61,6 @@ module Llmemory
 
         def list_sessions(user_id:)
           Llmemory::ShortTerm::Stores::ActiveRecordCheckpoint.where(user_id: user_id).pluck(:session_id)
-        end
-
-        private
-
-        def deserialize(data)
-          return data if data.is_a?(Hash)
-          JSON.parse(data.to_s, symbolize_names: true)
         end
       end
     end

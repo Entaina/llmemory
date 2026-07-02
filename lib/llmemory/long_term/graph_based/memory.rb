@@ -14,9 +14,10 @@ module Llmemory
       class Memory
         include Llmemory::MemoryModule
 
-        def initialize(user_id:, storage: nil, vector_store: nil, llm: nil, extractor: nil)
+        def initialize(user_id:, storage: nil, vector_store: nil, llm: nil, extractor: nil, cipher: nil)
           @user_id = user_id
-          @graph_storage = storage || Storages.build
+          @cipher = cipher || Llmemory.build_cipher
+          @graph_storage = storage || Storages.build(cipher: @cipher)
           @kg = KnowledgeGraph.new(user_id: user_id, storage: @graph_storage)
           @conflict_resolver = ConflictResolver.new(@kg)
           @vector_store = vector_store || build_vector_store
@@ -112,7 +113,7 @@ module Llmemory
         private
 
         def build_vector_store
-          Llmemory::VectorStore.build(source_type: "edge")
+          Llmemory::VectorStore.build(source_type: "edge", cipher: @cipher)
         end
 
         def extract_graph(text)

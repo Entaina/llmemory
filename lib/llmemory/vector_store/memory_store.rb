@@ -5,9 +5,10 @@ require_relative "base"
 module Llmemory
   module VectorStore
     class MemoryStore < Base
-      def initialize(embedding_provider: nil)
+      def initialize(embedding_provider: nil, cipher: nil)
         @entries = {}
         @embedding_provider = embedding_provider
+        @cipher = cipher || Llmemory.build_cipher
       end
 
       def embed(text)
@@ -17,7 +18,13 @@ module Llmemory
 
       def store(id:, embedding:, metadata: {}, user_id: nil)
         key = user_id ? "#{user_id}:#{id}" : id.to_s
-        @entries[key] = { embedding: embedding.to_a.map(&:to_f), metadata: (metadata || {}).merge("user_id" => user_id) }
+        meta = (metadata || {}).dup
+        if meta["text"] && @cipher.enabled?
+          meta["text"] = @cipher.encrypt(meta["text"].to_s)
+        elsif meta[:text] && @cipher.enabled?
+          meta[:text] = @cipher.encrypt(meta[:text].to_s)
+        end
+        @entries[key] = { embedding: embedding.to_a.map(&:to_f), metadata: meta.merge("user_id" => user_id) }
         id
       end
 
@@ -27,7 +34,7 @@ module Llmemory
         entries = user_id ? @entries.select { |k, _| k.to_s.start_with?("#{user_id}:") } : @entries
         scores = entries.map do |id, data|
           sim = cosine_similarity(query, data[:embedding])
-          { id: id, score: sim, metadata: data[:metadata] }
+          { id: id, score: sim, metadata: decrypt_metadata(data[:metadata]) }
         end
         scores.sort_by { |s| -s[:score] }.first(top_k)
       end
@@ -39,6 +46,19 @@ module Llmemory
       end
 
       private
+
+      def decrypt_metadata(meta)
+        return meta unless meta.is_a?(Hash) && @cipher.enabled?
+
+        out = meta.dup
+        text = out["text"] || out[:text]
+        if text.is_a?(String) && @cipher.encrypted?(text)
+          decrypted = @cipher.decrypt(text)
+          out["text"] = decrypted
+          out[:text] = decrypted
+        end
+        out
+      end
 
       def cosine_similarity(a, b)
         return 0.0 if a.size != b.size || a.empty?

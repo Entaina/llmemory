@@ -26,3 +26,5 @@ module Llmemory
   class StoreError < Error; end
   class LLMError < Error; end
 end
+
+require_relative "llmemory/crypto/cipher"

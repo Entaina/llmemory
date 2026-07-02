@@ -8,10 +8,11 @@ module Llmemory
   module LLM
     class OpenAI < Base
       DEFAULT_BASE_URL = "https://api.openai.com/v1"
+      DEFAULT_MODEL = "gpt-4"
 
       def initialize(api_key: nil, model: nil, base_url: nil)
         @api_key = api_key || config.llm_api_key
-        @model = model || config.llm_model
+        @model = model || config.llm_model || DEFAULT_MODEL
         @base_url = base_url || config.llm_base_url || DEFAULT_BASE_URL
       end
 

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 RSpec.describe Llmemory::LLM::Anthropic do
-  let(:client) { described_class.new(api_key: "test-key", model: "claude-3-sonnet-20240229") }
+  let(:client) { described_class.new(api_key: "test-key", model: "claude-sonnet-4-6") }
 
   before do
     stub_request(:post, "https://api.anthropic.com/v1/messages")

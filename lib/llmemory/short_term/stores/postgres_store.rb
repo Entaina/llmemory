@@ -1,14 +1,18 @@
 # frozen_string_literal: true
 
 require_relative "base"
+require_relative "../../crypto/field_helpers"
 
 module Llmemory
   module ShortTerm
     module Stores
       class PostgresStore < Base
-        def initialize(database_url: nil)
+        include Llmemory::Crypto::FieldHelpers
+
+        def initialize(database_url: nil, cipher: nil)
           @database_url = database_url || Llmemory.configuration.database_url
           @connection = nil
+          @cipher = cipher || Llmemory.build_cipher
         end
 
         def save(user_id, session_id, state)
@@ -81,13 +85,15 @@ module Llmemory
         end
 
         def serialize(state)
-          require "json"
-          JSON.generate(state)
+          payload = serialize_state(state)
+          cipher.enabled? ? JSON.generate(payload) : payload
         end
 
         def deserialize(data)
-          require "json"
-          JSON.parse(data, symbolize_names: true)
+          if data.is_a?(String) && !cipher.encrypted?(data)
+            data = JSON.parse(data)
+          end
+          deserialize_state(data)
         end
       end
     end

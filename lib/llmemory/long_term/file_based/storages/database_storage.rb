@@ -3,15 +3,19 @@
 require "json"
 require "securerandom"
 require_relative "base"
+require_relative "../../../crypto/field_helpers"
 
 module Llmemory
   module LongTerm
     module FileBased
       module Storages
         class DatabaseStorage < Base
-          def initialize(database_url: nil)
+          include Llmemory::Crypto::FieldHelpers
+
+          def initialize(database_url: nil, cipher: nil)
             @database_url = database_url || Llmemory.configuration.database_url
             @connection = nil
+            @cipher = cipher || Llmemory.build_cipher
           end
 
           def save_resource(user_id, text)
@@ -19,7 +23,7 @@ module Llmemory
             id = "res_#{SecureRandom.hex(8)}"
             conn.exec_params(
               "INSERT INTO llmemory_resources (id, user_id, text, created_at) VALUES ($1, $2, $3, $4)",
-              [id, user_id, text, Time.now.utc.iso8601]
+              [id, user_id, enc(text), Time.now.utc.iso8601]
             )
             id
           end
@@ -29,7 +33,7 @@ module Llmemory
             id = "item_#{SecureRandom.hex(8)}"
             conn.exec_params(
               "INSERT INTO llmemory_items (id, user_id, category, content, source_resource_id, importance, provenance, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8)",
-              [id, user_id, category, content, source_resource_id, importance.to_f, provenance ? JSON.generate(provenance) : nil, Time.now.utc.iso8601]
+              [id, user_id, category, enc(content), source_resource_id, importance.to_f, provenance_json(provenance), Time.now.utc.iso8601]
             )
             id
           end
@@ -40,7 +44,7 @@ module Llmemory
               "SELECT content FROM llmemory_categories WHERE user_id = $1 AND category_name = $2",
               [user_id, category_name]
             )
-            result.any? ? result.first["content"].to_s : ""
+            result.any? ? dec(result.first["content"].to_s) : ""
           end
 
           def save_category(user_id, category_name, content)
@@ -52,7 +56,7 @@ module Llmemory
                 ON CONFLICT (user_id, category_name)
                 DO UPDATE SET content = $3, updated_at = $4
               SQL
-              [user_id, category_name, content, Time.now.utc.iso8601]
+              [user_id, category_name, enc(content), Time.now.utc.iso8601]
             )
             true
           end
@@ -145,7 +149,7 @@ module Llmemory
                 id,
                 user_id,
                 merged_item[:category],
-                merged_item[:content],
+                enc(merged_item[:content]),
                 merged_item[:source_resource_id],
                 created_at
               ]
@@ -283,7 +287,7 @@ module Llmemory
               {
                 id: r["id"],
                 category: r["category"],
-                content: r["content"],
+                content: dec(r["content"]),
                 source_resource_id: r["source_resource_id"],
                 importance: (r["importance"] || 0.7).to_f,
                 provenance: parse_provenance(r["provenance"]),
@@ -304,16 +308,28 @@ module Llmemory
 
           def parse_provenance(value)
             return nil if value.nil? || value.to_s.strip.empty?
+            return value.transform_keys(&:to_sym) if value.is_a?(Hash)
+            return dec_json(value) if value.is_a?(String) && cipher.encrypted?(value)
+
             JSON.parse(value, symbolize_names: true)
           rescue JSON::ParserError
             nil
+          end
+
+          def provenance_json(provenance)
+            return nil unless provenance
+            if cipher.enabled?
+              JSON.generate(enc_json(provenance))
+            else
+              JSON.generate(provenance)
+            end
           end
 
           def rows_to_resources(rows)
             rows.map do |r|
               {
                 id: r["id"],
-                text: r["text"],
+                text: dec(r["text"]),
                 created_at: Time.parse(r["created_at"])
               }
             end
