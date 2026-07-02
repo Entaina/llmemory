@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.2.3] - 2026-07-02
+
+### Changes
+- 499abc8 AES-256-GCM at-rest encryption
 
 ## [0.2.2] - 2026-06-08
 
