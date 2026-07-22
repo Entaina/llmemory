@@ -36,6 +36,10 @@ module Llmemory
       def encrypted?(str)
         false
       end
+
+      def blind_index(token)
+        token.to_s.downcase
+      end
     end
 
     # AES-256-GCM encryption with separate content (random IV) and index
@@ -109,6 +113,14 @@ module Llmemory
       def encrypted?(str)
         s = str.to_s
         s.start_with?(MARKER) || s.start_with?(DETERMINISTIC_MARKER)
+      end
+
+      # Deterministic HMAC digest for blind-index keyword search over encrypted fields.
+      def blind_index(token)
+        str = token.to_s.downcase
+        return str if str.empty?
+
+        OpenSSL::HMAC.hexdigest("SHA256", @index_key, str)[0, 32]
       end
 
       private

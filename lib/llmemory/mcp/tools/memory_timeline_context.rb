@@ -31,7 +31,11 @@ module Llmemory
             end
 
             storage = build_storage
-            result = storage.get_items_around(user_id, reference, before: before_count, after: after_count)
+            result = if graph_based?
+              storage.get_edges_around(user_id, reference, before: before_count, after: after_count)
+            else
+              storage.get_items_around(user_id, reference, before: before_count, after: after_count)
+            end
 
             ::MCP::Tool::Response.new([{
               type: "text",
@@ -47,11 +51,15 @@ module Llmemory
           private
 
           def build_storage
-            if Llmemory.configuration.long_term_type.to_s == "graph_based"
+            if graph_based?
               LongTerm::GraphBased::Storages.build
             else
               LongTerm::FileBased::Storages.build
             end
+          end
+
+          def graph_based?
+            Llmemory.configuration.long_term_type.to_s == "graph_based"
           end
 
           def format_context(result, reference)
@@ -122,10 +130,12 @@ module Llmemory
           end
 
           def extract_category(item)
-            if item.respond_to?(:category)
-              item.category
-            else
+            if item.is_a?(Hash)
               item[:category] || item["category"]
+            elsif item.respond_to?(:members) && item.members.include?(:category)
+              item.category
+            elsif item.respond_to?(:category)
+              item.category
             end
           end
 

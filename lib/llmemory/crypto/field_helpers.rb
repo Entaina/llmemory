@@ -105,6 +105,31 @@ module Llmemory
       rescue JSON::ParserError
         nil
       end
+
+      # Space-delimited blind-index digests for encrypted keyword search.
+      def search_tokens_for(text)
+        tokens = Llmemory::Tokenizer.tokenize(text).uniq
+        return nil if tokens.empty?
+
+        digests = tokens.map { |t| cipher.blind_index(t) }
+        " #{digests.join(' ')} "
+      end
+
+      # OR-of-token SQL filter. Uses blind index on `search_tokens_column` when
+      # encryption is enabled; otherwise LIKE on the plaintext `column`.
+      def blind_token_filter(column, query, start_index, search_tokens_column: nil)
+        tokens = Llmemory::Tokenizer.tokenize(query)
+        return ["", []] if tokens.empty?
+
+        if cipher.enabled? && search_tokens_column
+          digests = tokens.map { |t| cipher.blind_index(t) }
+          likes = digests.each_index.map { |i| "#{search_tokens_column} LIKE $#{start_index + i}" }
+          [" AND (#{likes.join(' OR ')})", digests.map { |d| "% #{d} %" }]
+        else
+          likes = tokens.each_index.map { |i| "LOWER(#{column}) LIKE $#{start_index + i}" }
+          [" AND (#{likes.join(' OR ')})", tokens.map { |t| "%#{t}%" }]
+        end
+      end
     end
   end
 end

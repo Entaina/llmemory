@@ -35,7 +35,9 @@ module Llmemory
             rec = LlmemoryEpisode.find_or_initialize_by(id: id)
             rec.user_id = user_id
             rec.data = cipher.enabled? ? enc_json(data) : data
-            rec.search_text = enc(searchable_text(data))
+            text = searchable_text(data)
+            rec.search_text = enc(text)
+            rec.search_tokens = search_tokens_for(text) if LlmemoryEpisode.column_names.include?("search_tokens")
             rec.created_at ||= Time.current
             rec.save!
             id
@@ -56,8 +58,10 @@ module Llmemory
           end
 
           def search_episodes(user_id, query)
-            token_scope(LlmemoryEpisode.where(user_id: user_id, archived_at: nil), "search_text", query)
-              .order(created_at: :desc).map { |r| decode_data(r.data) }
+            scope = LlmemoryEpisode.where(user_id: user_id, archived_at: nil)
+            token_scope(scope, "search_text", query, model: LlmemoryEpisode)
+              .sort_by { |r| -r.created_at.to_i }
+              .map { |r| decode_data(r.data) }
           end
 
           def count_episodes(user_id)
@@ -83,11 +87,25 @@ module Llmemory
 
           private
 
-          def token_scope(scope, column, query)
+          def token_scope(scope, column, query, model:)
             tokens = Llmemory::Tokenizer.tokenize(query)
-            return scope if tokens.empty?
-            clause = tokens.map { "LOWER(#{column}) LIKE LOWER(?)" }.join(" OR ")
-            scope.where(clause, *tokens.map { |t| "%#{t}%" })
+            return scope.to_a if tokens.empty?
+
+            if cipher.enabled? && model.column_names.include?("search_tokens")
+              digests = tokens.map { |t| cipher.blind_index(t) }
+              clause = digests.map { "search_tokens LIKE ?" }.join(" OR ")
+              indexed = scope.where(clause, *digests.map { |d| "% #{d} %" })
+              legacy_scope = scope.where(search_tokens: nil)
+              indexed_records = indexed.to_a
+              legacy_records = legacy_scope.to_a.select do |record|
+                plaintext = dec(record.public_send(column))
+                Llmemory::Tokenizer.matches?(plaintext, query)
+              end
+              (indexed_records + legacy_records).uniq { |r| r.id }
+            else
+              clause = tokens.map { "LOWER(#{column}) LIKE LOWER(?)" }.join(" OR ")
+              scope.where(clause, *tokens.map { |t| "%#{t}%" }).to_a
+            end
           end
 
           def stringify(hash)

@@ -30,7 +30,11 @@ module Llmemory
         elsif meta[:text] && @cipher.enabled?
           meta[:text] = @cipher.encrypt(meta[:text].to_s)
         end
-        @entries[key] = { embedding: embedding.to_a.map(&:to_f), metadata: meta.merge("user_id" => user_id) }
+        @entries[key] = {
+          source_id: id.to_s,
+          embedding: embedding.to_a.map(&:to_f),
+          metadata: meta.merge("user_id" => user_id)
+        }
         id
       end
 
@@ -38,9 +42,9 @@ module Llmemory
         query = query_embedding.to_a.map(&:to_f)
         return [] if query.empty?
         entries = user_id ? @entries.select { |k, _| k.to_s.start_with?("#{user_id}:") } : @entries
-        scores = entries.map do |id, data|
+        scores = entries.map do |_key, data|
           sim = cosine_similarity(query, data[:embedding])
-          { id: id, score: sim, metadata: decrypt_metadata(data[:metadata]) }
+          { id: data[:source_id], score: sim, metadata: decrypt_metadata(data[:metadata]) }
         end
         scores.sort_by { |s| -s[:score] }.first(top_k)
       end

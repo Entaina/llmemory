@@ -88,6 +88,30 @@ module Llmemory
           def get_resources_around(user_id, reference, before: 5, after: 5)
             raise NotImplementedError, "#{self.class}#get_resources_around must be implemented"
           end
+
+          protected
+
+          def find_around(items, reference, before, after, id_key: :id)
+            return { before: [], target: nil, after: [] } if items.empty?
+
+            idx = if reference.is_a?(String) && reference.match?(/^\d{4}-/)
+              target_time = Time.parse(reference)
+              items.index { |i| (i[:created_at] || i["created_at"]) >= target_time } || items.size
+            else
+              items.index { |i| (i[id_key] || i[id_key.to_s]) == reference }
+            end
+
+            return { before: [], target: nil, after: [] } unless idx
+
+            start_idx = [idx - before, 0].max
+            end_idx = [idx + after, items.size - 1].min
+
+            {
+              before: items[start_idx...idx] || [],
+              target: items[idx],
+              after: items[(idx + 1)..end_idx] || []
+            }
+          end
         end
       end
     end

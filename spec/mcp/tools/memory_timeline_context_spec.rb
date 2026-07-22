@@ -80,6 +80,31 @@ RSpec.describe Llmemory::MCP::Tools::MemoryTimelineContext do
       expect(text).to include("Timeline Context")
     end
 
+    it "returns context around graph edges when graph_based" do
+      Llmemory.configuration.long_term_type = :graph_based
+      storage = Llmemory::LongTerm::GraphBased::Storages::MemoryStorage.new
+      allow(Llmemory::LongTerm::GraphBased::Storages).to receive(:build).and_return(storage)
+
+      edge_ids = 3.times.map do |i|
+        id = storage.save_edge(
+          "user123",
+          Llmemory::LongTerm::GraphBased::Edge.new(
+            subject_id: "n#{i}",
+            predicate: "relates_to",
+            target_id: "n#{i + 1}"
+          )
+        )
+        sleep 0.01
+        id
+      end
+
+      response = described_class.call(user_id: "user123", item_id: edge_ids[1], before: 1, after: 1)
+
+      text = response.content.first[:text]
+      expect(text).to include("Timeline Context")
+      expect(text).to include("relates_to")
+    end
+
     it "handles errors gracefully" do
       allow(Llmemory::LongTerm::FileBased::Storages).to receive(:build).and_raise(StandardError.new("Storage error"))
 

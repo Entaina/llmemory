@@ -29,10 +29,10 @@ module Llmemory
             data[:created_at] ||= Time.now.utc.iso8601
             search = searchable_text(data)
             conn.exec_params(
-              "INSERT INTO llmemory_episodes (id, user_id, data, search_text, created_at) " \
-              "VALUES ($1, $2, $3::jsonb, $4, $5) " \
-              "ON CONFLICT (id) DO UPDATE SET data = $3::jsonb, search_text = $4",
-              [id, user_id, store_data(data), enc(search), created_at_value(data)]
+              "INSERT INTO llmemory_episodes (id, user_id, data, search_text, search_tokens, created_at) " \
+              "VALUES ($1, $2, $3::jsonb, $4, $5, $6) " \
+              "ON CONFLICT (id) DO UPDATE SET data = $3::jsonb, search_text = $4, search_tokens = $5",
+              [id, user_id, store_data(data), enc(search), search_tokens_for(search), created_at_value(data)]
             )
             id
           end
@@ -53,11 +53,30 @@ module Llmemory
 
           def search_episodes(user_id, query)
             ensure_tables!
-            suffix, params = token_filter("search_text", query, 2)
-            conn.exec_params(
+            tokens = Llmemory::Tokenizer.tokenize(query)
+            return conn.exec_params(
+              "SELECT data FROM llmemory_episodes WHERE user_id = $1 AND archived_at IS NULL ORDER BY created_at DESC",
+              [user_id]
+            ).map { |r| parse_data(r["data"]) } if tokens.empty?
+
+            suffix, params = blind_token_filter("search_text", query, 2, search_tokens_column: cipher.enabled? ? "search_tokens" : nil)
+            rows = conn.exec_params(
               "SELECT data FROM llmemory_episodes WHERE user_id = $1 AND archived_at IS NULL#{suffix} ORDER BY created_at DESC",
               [user_id, *params]
-            ).map { |r| parse_data(r["data"]) }
+            )
+            episodes = rows.map { |r| parse_data(r["data"]) }
+            return episodes unless cipher.enabled?
+
+            legacy_rows = conn.exec_params(
+              "SELECT data FROM llmemory_episodes WHERE user_id = $1 AND archived_at IS NULL AND search_tokens IS NULL",
+              [user_id]
+            )
+            legacy = legacy_rows.map { |r| parse_data(r["data"]) }.select do |ep|
+              Llmemory::Tokenizer.matches?(searchable_text(ep), query)
+            end
+            by_id = {}
+            (episodes + legacy).each { |ep| by_id[ep[:id] || ep["id"]] = ep }
+            by_id.values
           end
 
           def count_episodes(user_id)
@@ -116,16 +135,14 @@ module Llmemory
               );
               CREATE INDEX IF NOT EXISTS idx_llmemory_episodes_user_id ON llmemory_episodes(user_id);
               ALTER TABLE llmemory_episodes ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ;
+              ALTER TABLE llmemory_episodes ADD COLUMN IF NOT EXISTS search_tokens TEXT;
             SQL
           end
 
           # OR-of-token LIKE filter (see file-based DatabaseStorage). [""] for an
           # empty query => match all.
           def token_filter(column, query, start_index)
-            tokens = Llmemory::Tokenizer.tokenize(query)
-            return ["", []] if tokens.empty?
-            likes = tokens.each_index.map { |i| "LOWER(#{column}) LIKE $#{start_index + i}" }
-            [" AND (#{likes.join(' OR ')})", tokens.map { |t| "%#{t}%" }]
+            blind_token_filter(column, query, start_index, search_tokens_column: cipher.enabled? ? "search_tokens" : nil)
           end
 
           def parse_data(value)

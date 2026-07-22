@@ -25,7 +25,7 @@ RSpec.describe Llmemory::VectorStore::MemoryStore do
       store.store(id: "y", embedding: [0.1] * 1536, metadata: {}, user_id: "user_2")
       results = store.search([0.1] * 1536, top_k: 5, user_id: "user_1")
       ids = results.map { |r| r[:id].to_s }
-      expect(ids).to all(match(/^user_1:/))
+      expect(ids).to eq(["x"])
     end
   end
 

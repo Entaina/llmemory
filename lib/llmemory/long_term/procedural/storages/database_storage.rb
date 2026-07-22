@@ -27,11 +27,13 @@ module Llmemory
             id = skill[:id] || skill["id"] || "skill_#{SecureRandom.hex(8)}"
             data = symbolize(skill).merge(id: id, user_id: user_id)
             data[:created_at] ||= Time.now.utc.iso8601
+            search = searchable_text(data)
+            name = (data[:name] || data["name"]).to_s
             conn.exec_params(
-              "INSERT INTO llmemory_skills (id, user_id, data, search_text, created_at) " \
-              "VALUES ($1, $2, $3::jsonb, $4, $5) " \
-              "ON CONFLICT (id) DO UPDATE SET data = $3::jsonb, search_text = $4",
-              [id, user_id, store_data(data), enc(searchable_text(data)), created_at_value(data)]
+              "INSERT INTO llmemory_skills (id, user_id, data, search_text, search_tokens, name_det, created_at) " \
+              "VALUES ($1, $2, $3::jsonb, $4, $5, $6, $7) " \
+              "ON CONFLICT (id) DO UPDATE SET data = $3::jsonb, search_text = $4, search_tokens = $5, name_det = $6",
+              [id, user_id, store_data(data), enc(search), search_tokens_for(search), enc_det(name), created_at_value(data)]
             )
             id
           end
@@ -52,19 +54,56 @@ module Llmemory
 
           def search_skills(user_id, query)
             ensure_tables!
-            suffix, params = token_filter("search_text", query, 2)
-            conn.exec_params(
+            tokens = Llmemory::Tokenizer.tokenize(query)
+            return conn.exec_params(
+              "SELECT data FROM llmemory_skills WHERE user_id = $1 AND archived_at IS NULL ORDER BY created_at DESC",
+              [user_id]
+            ).map { |r| parse_data(r["data"]) } if tokens.empty?
+
+            suffix, params = blind_token_filter("search_text", query, 2, search_tokens_column: cipher.enabled? ? "search_tokens" : nil)
+            rows = conn.exec_params(
               "SELECT data FROM llmemory_skills WHERE user_id = $1 AND archived_at IS NULL#{suffix} ORDER BY created_at DESC",
               [user_id, *params]
-            ).map { |r| parse_data(r["data"]) }
+            )
+            skills = rows.map { |r| parse_data(r["data"]) }
+            return skills unless cipher.enabled?
+
+            legacy_rows = conn.exec_params(
+              "SELECT data FROM llmemory_skills WHERE user_id = $1 AND archived_at IS NULL AND search_tokens IS NULL",
+              [user_id]
+            )
+            legacy = legacy_rows.map { |r| parse_data(r["data"]) }.select do |skill|
+              Llmemory::Tokenizer.matches?(searchable_text(skill), query)
+            end
+            by_id = {}
+            (skills + legacy).each { |skill| by_id[skill[:id] || skill["id"]] = skill }
+            by_id.values
           end
 
           def find_skills_by_name(user_id, name)
             ensure_tables!
-            conn.exec_params(
-              "SELECT data FROM llmemory_skills WHERE user_id = $1 AND archived_at IS NULL AND data->>'name' = $2",
-              [user_id, name.to_s]
-            ).map { |r| parse_data(r["data"]) }
+            if cipher.enabled?
+              rows = conn.exec_params(
+                "SELECT data FROM llmemory_skills WHERE user_id = $1 AND archived_at IS NULL AND name_det = $2",
+                [user_id, enc_det(name.to_s)]
+              )
+              indexed = rows.map { |r| parse_data(r["data"]) }
+              legacy_rows = conn.exec_params(
+                "SELECT data FROM llmemory_skills WHERE user_id = $1 AND archived_at IS NULL AND name_det IS NULL",
+                [user_id]
+              )
+              legacy = legacy_rows.map { |r| parse_data(r["data"]) }.select do |skill|
+                (skill[:name] || skill["name"]).to_s == name.to_s
+              end
+              by_id = {}
+              (indexed + legacy).each { |skill| by_id[skill[:id] || skill["id"]] = skill }
+              by_id.values
+            else
+              conn.exec_params(
+                "SELECT data FROM llmemory_skills WHERE user_id = $1 AND archived_at IS NULL AND data->>'name' = $2",
+                [user_id, name.to_s]
+              ).map { |r| parse_data(r["data"]) }
+            end
           end
 
           def record_outcome(user_id, skill_id, success:)
@@ -74,9 +113,11 @@ module Llmemory
             key = success ? :success_count : :failure_count
             data[key] = (data[key] || 0).to_i + 1
             data[:updated_at] = Time.now.utc.iso8601
+            search = searchable_text(data)
+            name = (data[:name] || data["name"]).to_s
             conn.exec_params(
-              "UPDATE llmemory_skills SET data = $3::jsonb, search_text = $4 WHERE user_id = $1 AND id = $2",
-              [user_id, skill_id, store_data(data), enc(searchable_text(data))]
+              "UPDATE llmemory_skills SET data = $3::jsonb, search_text = $4, search_tokens = $5, name_det = $6 WHERE user_id = $1 AND id = $2",
+              [user_id, skill_id, store_data(data), enc(search), search_tokens_for(search), enc_det(name)]
             )
             data
           end
@@ -137,14 +178,13 @@ module Llmemory
               );
               CREATE INDEX IF NOT EXISTS idx_llmemory_skills_user_id ON llmemory_skills(user_id);
               ALTER TABLE llmemory_skills ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ;
+              ALTER TABLE llmemory_skills ADD COLUMN IF NOT EXISTS search_tokens TEXT;
+              ALTER TABLE llmemory_skills ADD COLUMN IF NOT EXISTS name_det TEXT;
             SQL
           end
 
           def token_filter(column, query, start_index)
-            tokens = Llmemory::Tokenizer.tokenize(query)
-            return ["", []] if tokens.empty?
-            likes = tokens.each_index.map { |i| "LOWER(#{column}) LIKE $#{start_index + i}" }
-            [" AND (#{likes.join(' OR ')})", tokens.map { |t| "%#{t}%" }]
+            blind_token_filter(column, query, start_index, search_tokens_column: cipher.enabled? ? "search_tokens" : nil)
           end
 
           def parse_data(value)

@@ -68,6 +68,21 @@ RSpec.describe Llmemory::MCP::Tools::MemoryTimeline do
       expect(response.content.first[:text]).to include("last 48 hours")
     end
 
+    it "includes graph relations when long_term_type is graph_based" do
+      Llmemory.configuration.long_term_type = :graph_based
+      storage = Llmemory::LongTerm::GraphBased::Storages::MemoryStorage.new
+      allow(Llmemory::LongTerm::GraphBased::Storages).to receive(:build).and_return(storage)
+
+      storage.save_node("user123", Llmemory::LongTerm::GraphBased::Node.new(id: "n1", entity_type: "person", name: "Alice"))
+      storage.save_node("user123", Llmemory::LongTerm::GraphBased::Node.new(id: "n2", entity_type: "company", name: "Acme"))
+      storage.save_edge("user123", Llmemory::LongTerm::GraphBased::Edge.new(subject_id: "n1", predicate: "works_at", target_id: "n2"))
+
+      response = described_class.call(user_id: "user123", hours: 24)
+
+      expect(response.content.first[:text]).to include("[REL]")
+      expect(response.content.first[:text]).to include("works_at")
+    end
+
     it "handles errors gracefully" do
       storage = double("Storage")
       allow(storage).to receive(:get_items_since).and_raise(StandardError.new("DB error"))

@@ -22,8 +22,8 @@ module Llmemory
             ensure_tables!
             id = "res_#{SecureRandom.hex(8)}"
             conn.exec_params(
-              "INSERT INTO llmemory_resources (id, user_id, text, created_at) VALUES ($1, $2, $3, $4)",
-              [id, user_id, enc(text), Time.now.utc.iso8601]
+              "INSERT INTO llmemory_resources (id, user_id, text, search_tokens, created_at) VALUES ($1, $2, $3, $4, $5)",
+              [id, user_id, enc(text), search_tokens_for(text), Time.now.utc.iso8601]
             )
             id
           end
@@ -32,8 +32,8 @@ module Llmemory
             ensure_tables!
             id = "item_#{SecureRandom.hex(8)}"
             conn.exec_params(
-              "INSERT INTO llmemory_items (id, user_id, category, content, source_resource_id, importance, provenance, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8)",
-              [id, user_id, category, enc(content), source_resource_id, importance.to_f, provenance_json(provenance), Time.now.utc.iso8601]
+              "INSERT INTO llmemory_items (id, user_id, category, content, source_resource_id, importance, provenance, search_tokens, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9)",
+              [id, user_id, category, enc(content), source_resource_id, importance.to_f, provenance_json(provenance), search_tokens_for(content), Time.now.utc.iso8601]
             )
             id
           end
@@ -69,22 +69,34 @@ module Llmemory
 
           def search_items(user_id, query)
             ensure_tables!
-            suffix, params = token_filter("content", query, 2)
+            tokens = Llmemory::Tokenizer.tokenize(query)
+            return get_all_items(user_id) if tokens.empty?
+
+            suffix, params = blind_token_filter("content", query, 2, search_tokens_column: cipher.enabled? ? "search_tokens" : nil)
             rows = conn.exec_params(
               "SELECT id, category, content, source_resource_id, importance, provenance, created_at FROM llmemory_items WHERE user_id = $1#{suffix}",
               [user_id, *params]
             )
-            rows_to_items(rows)
+            items = rows_to_items(rows)
+            return items unless cipher.enabled?
+
+            merge_legacy_search(items, legacy_item_rows(user_id), query, text_key: :content)
           end
 
           def search_resources(user_id, query)
             ensure_tables!
-            suffix, params = token_filter("text", query, 2)
+            tokens = Llmemory::Tokenizer.tokenize(query)
+            return get_all_resources(user_id) if tokens.empty?
+
+            suffix, params = blind_token_filter("text", query, 2, search_tokens_column: cipher.enabled? ? "search_tokens" : nil)
             rows = conn.exec_params(
               "SELECT id, text, created_at FROM llmemory_resources WHERE user_id = $1#{suffix}",
               [user_id, *params]
             )
-            rows_to_resources(rows)
+            resources = rows_to_resources(rows)
+            return resources unless cipher.enabled?
+
+            merge_legacy_search(resources, legacy_resource_rows(user_id), query, text_key: :text)
           end
 
           def get_resources_since(user_id, hours:)
@@ -144,13 +156,14 @@ module Llmemory
             created_at = created_at.utc.iso8601 if created_at.respond_to?(:utc)
             id = "item_#{SecureRandom.hex(8)}"
             conn.exec_params(
-              "INSERT INTO llmemory_items (id, user_id, category, content, source_resource_id, created_at) VALUES ($1, $2, $3, $4, $5, $6)",
+              "INSERT INTO llmemory_items (id, user_id, category, content, source_resource_id, search_tokens, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)",
               [
                 id,
                 user_id,
                 merged_item[:category],
                 enc(merged_item[:content]),
                 merged_item[:source_resource_id],
+                search_tokens_for(merged_item[:content]),
                 created_at
               ]
             )
@@ -205,38 +218,42 @@ module Llmemory
 
           def get_items_around(user_id, reference, before: 5, after: 5)
             ensure_tables!
-            items = get_all_items(user_id)
-            find_around(items, reference, before, after)
+            find_around(get_all_items(user_id), reference, before, after)
           end
 
           def get_resources_around(user_id, reference, before: 5, after: 5)
             ensure_tables!
-            resources = get_all_resources(user_id)
-            find_around(resources, reference, before, after)
+            find_around(get_all_resources(user_id), reference, before, after)
           end
 
           private
 
-          def find_around(items, reference, before, after)
-            return { before: [], target: nil, after: [] } if items.empty?
+          def legacy_item_rows(user_id)
+            conn.exec_params(
+              "SELECT id, category, content, source_resource_id, importance, provenance, created_at FROM llmemory_items WHERE user_id = $1 AND search_tokens IS NULL",
+              [user_id]
+            )
+          end
 
-            idx = if reference.is_a?(String) && reference.match?(/^\d{4}-/)
-              target_time = Time.parse(reference)
-              items.index { |i| i[:created_at] >= target_time } || items.size
+          def legacy_resource_rows(user_id)
+            conn.exec_params(
+              "SELECT id, text, created_at FROM llmemory_resources WHERE user_id = $1 AND search_tokens IS NULL",
+              [user_id]
+            )
+          end
+
+          def merge_legacy_search(indexed, legacy_rows, query, text_key:)
+            return indexed if legacy_rows.none?
+
+            legacy = if text_key == :content
+              rows_to_items(legacy_rows)
             else
-              items.index { |i| i[:id] == reference }
+              rows_to_resources(legacy_rows)
             end
-
-            return { before: [], target: nil, after: [] } unless idx
-
-            start_idx = [idx - before, 0].max
-            end_idx = [idx + after, items.size - 1].min
-
-            {
-              before: items[start_idx...idx] || [],
-              target: items[idx],
-              after: items[(idx + 1)..end_idx] || []
-            }
+            legacy_matches = legacy.select { |row| Llmemory::Tokenizer.matches?(row[text_key], query) }
+            by_id = {}
+            (indexed + legacy_matches).each { |row| by_id[row[:id]] = row }
+            by_id.values
           end
 
           def conn
@@ -271,6 +288,8 @@ module Llmemory
             SQL
             conn.exec("ALTER TABLE llmemory_items ADD COLUMN IF NOT EXISTS importance REAL DEFAULT 0.7") rescue nil
             conn.exec("ALTER TABLE llmemory_items ADD COLUMN IF NOT EXISTS provenance JSONB") rescue nil
+            conn.exec("ALTER TABLE llmemory_items ADD COLUMN IF NOT EXISTS search_tokens TEXT") rescue nil
+            conn.exec("ALTER TABLE llmemory_resources ADD COLUMN IF NOT EXISTS search_tokens TEXT") rescue nil
             conn.exec(<<~SQL)
               CREATE TABLE IF NOT EXISTS llmemory_categories (
                 user_id TEXT NOT NULL,
@@ -300,10 +319,7 @@ module Llmemory
           # ["" , []] for an empty query (match all). Tokens are [a-z0-9]{2,} so
           # they carry no LIKE wildcards.
           def token_filter(column, query, start_index)
-            tokens = Llmemory::Tokenizer.tokenize(query)
-            return ["", []] if tokens.empty?
-            likes = tokens.each_index.map { |i| "LOWER(#{column}) LIKE $#{start_index + i}" }
-            [" AND (#{likes.join(' OR ')})", tokens.map { |t| "%#{t}%" }]
+            blind_token_filter(column, query, start_index)
           end
 
           def parse_provenance(value)

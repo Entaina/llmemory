@@ -58,6 +58,24 @@ RSpec.describe Llmemory::Crypto::Cipher do
       expect(cipher.decrypt_json(encrypted)).to eq(data)
     end
   end
+
+  describe "#blind_index" do
+    it "is deterministic for the same token" do
+      expect(cipher.blind_index("ruby")).to eq(cipher.blind_index("ruby"))
+    end
+
+    it "normalizes case" do
+      expect(cipher.blind_index("Ruby")).to eq(cipher.blind_index("ruby"))
+    end
+
+    it "produces different digests for different tokens" do
+      expect(cipher.blind_index("ruby")).not_to eq(cipher.blind_index("python"))
+    end
+
+    it "returns a 32-character hex digest" do
+      expect(cipher.blind_index("test")).to match(/\A[0-9a-f]{32}\z/)
+    end
+  end
 end
 
 RSpec.describe Llmemory::Crypto::NullCipher do
@@ -67,6 +85,7 @@ RSpec.describe Llmemory::Crypto::NullCipher do
     expect(cipher.encrypt("hello")).to eq("hello")
     expect(cipher.decrypt("hello")).to eq("hello")
     expect(cipher.enabled?).to be false
+    expect(cipher.blind_index("Ruby")).to eq("ruby")
   end
 end
 

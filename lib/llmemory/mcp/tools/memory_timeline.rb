@@ -23,19 +23,10 @@ module Llmemory
             timeline = []
 
             # Get recent items from long-term memory
-            storage = build_long_term_storage
-            begin
-              items = storage.get_items_since(user_id, hours: hours)
-              items.each do |item|
-                timeline << {
-                  type: "fact",
-                  timestamp: item[:created_at] || item["created_at"],
-                  category: item[:category] || item["category"],
-                  content: item[:content] || item["content"]
-                }
-              end
-            rescue NotImplementedError
-              # Some storages may not implement get_items_since
+            if graph_based?
+              append_graph_timeline(timeline, user_id, hours)
+            else
+              append_file_timeline(timeline, user_id, hours)
             end
 
             # Get recent messages from short-term
@@ -89,7 +80,48 @@ module Llmemory
           end
 
           def build_long_term_storage
-            LongTerm::FileBased::Storages.build
+            if graph_based?
+              LongTerm::GraphBased::Storages.build
+            else
+              LongTerm::FileBased::Storages.build
+            end
+          end
+
+          def graph_based?
+            Llmemory.configuration.long_term_type.to_s == "graph_based"
+          end
+
+          def append_file_timeline(timeline, user_id, hours)
+            storage = build_long_term_storage
+            items = storage.get_items_since(user_id, hours: hours)
+            items.each do |item|
+              timeline << {
+                type: "fact",
+                timestamp: item[:created_at] || item["created_at"],
+                category: item[:category] || item["category"],
+                content: item[:content] || item["content"]
+              }
+            end
+          rescue NotImplementedError
+            # Some storages may not implement get_items_since
+          end
+
+          def append_graph_timeline(timeline, user_id, hours)
+            storage = build_long_term_storage
+            cutoff = Time.now - (hours * 3600)
+            storage.list_edges(user_id).each do |edge|
+              created_at = edge.respond_to?(:created_at) ? edge.created_at : edge[:created_at]
+              next unless created_at && created_at >= cutoff
+
+              subject = edge.respond_to?(:subject_id) ? edge.subject_id : edge[:subject_id]
+              predicate = edge.respond_to?(:predicate) ? edge.predicate : edge[:predicate]
+              target = edge.respond_to?(:target_id) ? edge.target_id : edge[:target_id]
+              timeline << {
+                type: "relation",
+                timestamp: created_at,
+                content: "#{subject} -> #{predicate} -> #{target}"
+              }
+            end
           end
 
           def format_timeline(timeline, hours)
@@ -101,6 +133,8 @@ module Llmemory
               when "fact"
                 cat_info = entry[:category] ? "[#{entry[:category]}]" : ""
                 output << "- [FACT] #{cat_info} #{truncate(entry[:content], 150)}"
+              when "relation"
+                output << "- [REL] #{truncate(entry[:content], 150)}"
               when "message"
                 output << "- [MSG #{entry[:session_id]}] [#{entry[:role]}] #{truncate(entry[:content], 150)}"
               end

@@ -6,6 +6,7 @@ class CreateLlmemoryTables < ActiveRecord::Migration[7.0]
       t.string :id, null: false, primary_key: true
       t.string :user_id, null: false
       t.text :text, null: false
+      t.text :search_tokens
       t.timestamps
     end
     add_index :llmemory_resources, :user_id
@@ -18,6 +19,7 @@ class CreateLlmemoryTables < ActiveRecord::Migration[7.0]
       t.string :source_resource_id
       t.float :importance, default: 0.7
       t.jsonb :provenance
+      t.text :search_tokens
       t.timestamps
     end
     add_index :llmemory_items, :user_id
@@ -36,6 +38,7 @@ class CreateLlmemoryTables < ActiveRecord::Migration[7.0]
       t.string :user_id, null: false
       t.jsonb :data, null: false, default: {}
       t.text :search_text
+      t.text :search_tokens
       t.datetime :archived_at
       t.timestamps
     end
@@ -47,6 +50,8 @@ class CreateLlmemoryTables < ActiveRecord::Migration[7.0]
       t.string :user_id, null: false
       t.jsonb :data, null: false, default: {}
       t.text :search_text
+      t.text :search_tokens
+      t.text :name_det
       t.datetime :archived_at
       t.timestamps
     end

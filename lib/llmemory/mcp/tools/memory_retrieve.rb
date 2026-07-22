@@ -55,6 +55,8 @@ module Llmemory
           private
 
           def fetch_timeline_context(user_id, query, window)
+            return "" if Llmemory.configuration.long_term_type.to_s == "graph_based"
+
             storage = build_storage
             items = storage.search_items(user_id, query)
             return "" if items.empty?

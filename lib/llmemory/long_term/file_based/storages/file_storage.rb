@@ -91,7 +91,7 @@ module Llmemory
               data = decrypt_item(data)
               data[:created_at] = parse_time(data[:created_at])
               data
-            end.sort_by { |i| i[:created_at] }
+            end.sort_by { |i| [i[:created_at], i[:id].to_s] }
           end
 
           def get_all_resources(user_id)
@@ -104,7 +104,7 @@ module Llmemory
               data[:text] = dec(data[:text] || data["text"])
               data[:created_at] = parse_time(data[:created_at])
               data
-            end.sort_by { |r| r[:created_at] }
+            end.sort_by { |r| [r[:created_at], r[:id].to_s] }
           end
 
           def get_items_since(user_id, hours:)
@@ -175,6 +175,14 @@ module Llmemory
 
           def count_items(user_id:)
             get_all_items(user_id).size
+          end
+
+          def get_items_around(user_id, reference, before: 5, after: 5)
+            find_around(get_all_items(user_id), reference, before, after)
+          end
+
+          def get_resources_around(user_id, reference, before: 5, after: 5)
+            find_around(get_all_resources(user_id), reference, before, after)
           end
 
           private

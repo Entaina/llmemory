@@ -16,7 +16,9 @@ module Llmemory
             require_relative "storages/active_record_storage"
             ActiveRecordStorage.new(cipher: resolved_cipher)
           else
-            MemoryStorage.new
+            store_name = (store || Llmemory.configuration.long_term_store).to_s
+            raise Llmemory::ConfigurationError,
+                  "graph_based long-term memory supports long_term_store :memory or :active_record; got #{store_name.inspect}"
           end
         end
       end

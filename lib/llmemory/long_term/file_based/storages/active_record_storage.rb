@@ -25,12 +25,14 @@ module Llmemory
 
           def save_resource(user_id, text)
             id = "res_#{SecureRandom.hex(8)}"
-            LlmemoryResource.create!(
+            attrs = {
               id: id,
               user_id: user_id,
               text: enc(text),
               created_at: Time.current
-            )
+            }
+            attrs[:search_tokens] = search_tokens_for(text) if LlmemoryResource.column_names.include?("search_tokens")
+            LlmemoryResource.create!(attrs)
             id
           end
 
@@ -48,6 +50,7 @@ module Llmemory
             if provenance && LlmemoryItem.column_names.include?("provenance")
               attrs[:provenance] = cipher.enabled? ? enc_json(provenance) : provenance
             end
+            attrs[:search_tokens] = search_tokens_for(content) if LlmemoryItem.column_names.include?("search_tokens")
             LlmemoryItem.create!(attrs)
             id
           end
@@ -70,11 +73,13 @@ module Llmemory
           end
 
           def search_items(user_id, query)
-            token_scope(LlmemoryItem.where(user_id: user_id), "content", query).map { |r| row_to_item(r) }
+            scope = LlmemoryItem.where(user_id: user_id)
+            token_scope(scope, "content", query, model: LlmemoryItem).map { |r| row_to_item(r) }
           end
 
           def search_resources(user_id, query)
-            token_scope(LlmemoryResource.where(user_id: user_id), "text", query).map { |r| row_to_resource(r) }
+            scope = LlmemoryResource.where(user_id: user_id)
+            token_scope(scope, "text", query, model: LlmemoryResource).map { |r| row_to_resource(r) }
           end
 
           def get_resources_since(user_id, hours:)
@@ -112,6 +117,7 @@ module Llmemory
               created_at: created_at
             }
             attrs[:importance] = merged_item[:importance] if LlmemoryItem.column_names.include?("importance") && merged_item[:importance]
+            attrs[:search_tokens] = search_tokens_for(merged_item[:content]) if LlmemoryItem.column_names.include?("search_tokens")
             LlmemoryItem.create!(attrs)
           end
 
@@ -150,50 +156,38 @@ module Llmemory
           end
 
           def get_items_around(user_id, reference, before: 5, after: 5)
-            items = get_all_items(user_id)
-            find_around(items, reference, before, after)
+            find_around(get_all_items(user_id), reference, before, after)
           end
 
           def get_resources_around(user_id, reference, before: 5, after: 5)
-            resources = get_all_resources(user_id)
-            find_around(resources, reference, before, after)
+            find_around(get_all_resources(user_id), reference, before, after)
           end
 
           private
 
-          def find_around(items, reference, before, after)
-            return { before: [], target: nil, after: [] } if items.empty?
+          def token_scope(scope, column, query, model:)
+            tokens = Llmemory::Tokenizer.tokenize(query)
+            return scope if tokens.empty?
 
-            idx = if reference.is_a?(String) && reference.match?(/^\d{4}-/)
-              target_time = Time.parse(reference)
-              items.index { |i| i[:created_at] >= target_time } || items.size
+            if cipher.enabled? && model.column_names.include?("search_tokens")
+              digests = tokens.map { |t| cipher.blind_index(t) }
+              clause = digests.map { "search_tokens LIKE ?" }.join(" OR ")
+              indexed = scope.where(clause, *digests.map { |d| "% #{d} %" })
+              legacy_scope = scope.where(search_tokens: nil)
+              indexed_records = indexed.to_a
+              legacy_records = legacy_scope.to_a.select do |record|
+                plaintext = dec(record.public_send(column))
+                Llmemory::Tokenizer.matches?(plaintext, query)
+              end
+              (indexed_records + legacy_records).uniq { |r| r.id }
             else
-              items.index { |i| i[:id] == reference }
+              clause = tokens.map { "LOWER(#{column}) LIKE LOWER(?)" }.join(" OR ")
+              scope.where(clause, *tokens.map { |t| "%#{sanitize_like(t)}%" }).to_a
             end
-
-            return { before: [], target: nil, after: [] } unless idx
-
-            start_idx = [idx - before, 0].max
-            end_idx = [idx + after, items.size - 1].min
-
-            {
-              before: items[start_idx...idx] || [],
-              target: items[idx],
-              after: items[(idx + 1)..end_idx] || []
-            }
           end
 
           def sanitize_like(str)
             (str || "").to_s.gsub(/[%_\\]/) { |c| "\\#{c}" }
-          end
-
-          # OR-of-token LIKE scope for keyword search; unchanged scope (match all)
-          # when the query has no tokens.
-          def token_scope(scope, column, query)
-            tokens = Llmemory::Tokenizer.tokenize(query)
-            return scope if tokens.empty?
-            clause = tokens.map { "LOWER(#{column}) LIKE LOWER(?)" }.join(" OR ")
-            scope.where(clause, *tokens.map { |t| "%#{sanitize_like(t)}%" })
           end
 
           def row_to_item(r)
