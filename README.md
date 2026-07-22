@@ -14,7 +14,7 @@ gem "llmemory"
 
 Then run `bundle install`.
 
-**Upgrading?** See the [Migration guide](docs/MIGRATION.md) for database columns, encryption backfill, and graph store configuration changes.
+**Upgrading?** See the [Migration guide](migration/MIGRATION.md) for database columns, encryption backfill, and graph store configuration changes.
 
 ## Quick Start (Unified API)
 
@@ -173,7 +173,7 @@ memory = Llmemory::Memory.new(user_id: "agent-1", encryption_key: "tenant-specif
 **What is encrypted:** conversation checkpoints (redis/postgres/active_record), file-based facts/resources/categories, episodic/procedural documents, graph node names/types/predicates (deterministic) and properties (random IV). **Vector embeddings are not encrypted** (required for pgvector search); associated `text_content` metadata is encrypted.
 
 **Trade-offs:**
-- Database keyword search on encrypted columns requires the `search_tokens` blind-index column (see [Migration guide](docs/MIGRATION.md)); file backends search in memory after decrypt without schema changes.
+- Database keyword search on encrypted columns requires the `search_tokens` blind-index column (see [Migration guide](migration/MIGRATION.md)); file backends search in memory after decrypt without schema changes.
 - `:memory` backends are in-process only and are **not** encrypted at rest.
 - Existing plaintext data remains readable (markers `enc:v1:` / `encd:v1:`); new writes are encrypted when enabled.
 - Deterministic encryption on graph identifiers leaks equality (same name ⇒ same ciphertext) but keeps graph traversal working.
