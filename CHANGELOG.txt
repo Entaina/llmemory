@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.2.5] - 2026-07-22
+
+### Changes
+- 7db9da0 fixes and optimizations
 ## [0.2.4] - 2026-07-02
 
 ### Changes
