@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.8] - 2026-07-23
+
+### Fixed
+
+- **`VectorStore::ActiveRecordStore`** require path for `ActiveRecordHelpers`
+  (`../active_record_helpers` instead of `../../active_record_helpers`).
+
 ## [0.2.7] - 2026-07-23
 
 ### Added

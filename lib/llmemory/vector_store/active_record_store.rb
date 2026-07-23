@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "base"
-require_relative "../../active_record_helpers"
+require_relative "../active_record_helpers"
 
 module Llmemory
   module VectorStore

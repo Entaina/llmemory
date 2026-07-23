@@ -1,22 +1,77 @@
 # frozen_string_literal: true
 
 namespace :release do
-  desc "Bump version (patch|minor|major). Checks: branch=main, no uncommitted changes, tests pass. Then: Gemfile.lock, CHANGELOG, commit, push, tag"
-  task :bump, [:bump_type] => [] do |_t, args|
+  RELEASE_FILES = %w[lib/llmemory/version.rb Gemfile.lock CHANGELOG.txt].freeze
+  DEFAULT_NOTES_PATH = File.expand_path("../../tmp/release_notes.txt", __dir__)
+
+  def self.resolve_notes_path(arg)
+    path = arg.to_s.strip
+    path = DEFAULT_NOTES_PATH if path.empty?
+    File.expand_path(path)
+  end
+
+  def self.build_changelog_entry(version, date, notes_body)
+    body = notes_body.strip
+    body = body.sub(/\A#+\s*[^\n]*\n+/, "") # drop optional leading markdown title
+
+    <<~ENTRY
+
+      ## [#{version}] - #{date}
+
+      #{body}
+    ENTRY
+  end
+
+  desc "Show commits and diff stat since the last tag (helper before writing release notes)"
+  task :since_tag do
+    last_tag = `git describe --tags --abbrev=0 2>/dev/null`.strip
+    range = last_tag.empty? ? "HEAD" : "#{last_tag}..HEAD"
+    puts "Last tag: #{last_tag.empty? ? '(none)' : last_tag}"
+    puts "Range: #{range}\n\n"
+    puts "Commits:"
+    puts(`git log #{range} --oneline`.strip)
+    puts "\nDiff stat:"
+    puts(`git diff #{range} --stat`.strip)
+  end
+
+  desc "Bump version (patch|minor|major). Requires tmp/release_notes.txt or notes path. Checks: branch=main, clean tree, tests pass. Then: version, CHANGELOG, commit, push, tag"
+  task :bump, [:bump_type, :notes_file] => [] do |_t, args|
     require_relative "../llmemory/version"
 
-    # Pre-flight checks
     current_branch = `git rev-parse --abbrev-ref HEAD`.strip
     abort "Current branch must be main (got: #{current_branch})" unless current_branch == "main"
 
-    # Allow only release-related files to be modified (we'll commit them)
-    release_files = %w[lib/llmemory/version.rb Gemfile.lock CHANGELOG.txt]
-    status_lines = `git status --porcelain`.strip.lines
+    status_lines = `git status --porcelain --untracked-files=normal`.strip.lines
     other_changes = status_lines.reject do |line|
-      path = line.sub(/\A..\s+/, "").strip
-      release_files.include?(path)
+      path = line.sub(/\A..\s+/, "").strip.split(" -> ").last
+      RELEASE_FILES.include?(path)
     end
-    abort "Working tree has uncommitted changes outside release files. Commit or stash them first." unless other_changes.empty?
+    unless other_changes.empty?
+      abort "Working tree has uncommitted changes outside release files. Commit or stash them first.\n#{other_changes.join}"
+    end
+
+    notes_path = Release.resolve_notes_path(args[:notes_file])
+    unless File.exist?(notes_path)
+      abort <<~MSG
+        Release notes file not found: #{notes_path}
+
+        1. Inspect changes since the last tag:
+             bundle exec rake release:since_tag
+
+        2. Write a changelog entry (user-visible changes, not raw commits) to:
+             tmp/release_notes.txt
+
+           Use sections such as Added / Changed / Fixed / Removed / Notes.
+           Follow the style of recent entries in CHANGELOG.txt (e.g. v0.2.7).
+
+        3. Re-run:
+             bundle exec rake release:bump[#{args[:bump_type] || 'patch'}]
+             bundle exec rake release:bump[#{args[:bump_type] || 'patch'},path/to/notes.txt]
+      MSG
+    end
+
+    notes_body = File.read(notes_path).strip
+    abort "Release notes file is empty: #{notes_path}" if notes_body.empty?
 
     puts "Running tests..."
     sh "bundle exec rspec"
@@ -36,41 +91,21 @@ namespace :release do
     new_version_s = new_version.to_s
 
     puts "Bumping #{Llmemory::VERSION} -> #{new_version_s} (#{bump_type})"
+    puts "  Release notes: #{notes_path}"
 
-    # 1. Update version.rb
     version_file = File.expand_path("../llmemory/version.rb", __dir__)
     content = File.read(version_file)
     content = content.sub(/VERSION = "[^"]+"/, %(VERSION = "#{new_version_s}"))
     File.write(version_file, content)
     puts "  Updated lib/llmemory/version.rb"
 
-    # 2. bundle install
     sh "bundle install"
     puts "  Updated Gemfile.lock"
 
-    # 3. Update CHANGELOG.txt
     changelog_path = File.expand_path("../../CHANGELOG.txt", __dir__)
-    changelog_content = if File.exist?(changelog_path)
-      File.read(changelog_path)
-    else
-      ""
-    end
-
+    changelog_content = File.exist?(changelog_path) ? File.read(changelog_path) : ""
     today = Time.now.strftime("%Y-%m-%d")
-    last_tag = `git describe --tags --abbrev=0 2>/dev/null`.strip
-    commits = if last_tag.empty?
-      `git log --oneline`.strip
-    else
-      `git log #{last_tag}..HEAD --oneline`.strip
-    end
-
-    new_entry = <<~CHANGELOG
-
-      ## [#{new_version_s}] - #{today}
-
-      ### Changes
-      #{commits.lines.map { |l| "- #{l.strip}" }.join("\n")}
-    CHANGELOG
+    new_entry = Release.build_changelog_entry(new_version_s, today, notes_body)
 
     header = "# Changelog\n\n"
     if changelog_content.empty?
@@ -82,19 +117,13 @@ namespace :release do
     File.write(changelog_path, changelog_content)
     puts "  Updated CHANGELOG.txt"
 
-    # 4. Commit
     sh "git add lib/llmemory/version.rb Gemfile.lock CHANGELOG.txt"
     sh "git commit -m 'Release v#{new_version_s}'"
-
-    # 5. Push
     sh "git push"
-
-    # 6. Tag
     sh "git tag v#{new_version_s}"
-
-    # 7. Push tag
     sh "git push origin v#{new_version_s}"
 
+    File.delete(notes_path) if File.expand_path(notes_path) == File.expand_path(DEFAULT_NOTES_PATH) && File.exist?(notes_path)
     puts "\nDone. Released v#{new_version_s}"
   end
 end
