@@ -1,5 +1,71 @@
 # Changelog
 
+## [0.2.7] - 2026-07-23
+
+### Added
+
+- **Unified cognitive retrieval.** `Retrieval::MultiSource` feeds the retrieval
+  engine from semantic (file/graph), episodic and procedural memory in one pass;
+  `Memory#retrieve` now surfaces episodes and skills by default alongside facts.
+- **Short-term CAS API.** `Stores#update(user_id, session_id) { |state| … }` on
+  all short-term backends (MemoryStore mutex, Redis WATCH/MULTI/EXEC, Postgres
+  FOR UPDATE, ActiveRecord lock). RMW writers migrated: `add_message`,
+  `WorkingMemory`, `ForgetLog`, `UsageLedger`, `FeedbackStore`.
+- **Batch fact classification.** `FactExtractor#classify_items` classifies many
+  facts in one structured-output LLM call (fallback to per-item on failure).
+- **Dashboard HTTP auth.** `config.dashboard_auth` and
+  `config.dashboard_require_auth` gate the Rails dashboard outside development.
+- **LLM HTTP client.** Shared `Llmemory::LLM::HttpClient` (Faraday) with
+  timeouts and retries for OpenAI/Anthropic providers.
+- **KeyCodec.** Short-term store keys encode `:` in user/session ids to avoid
+  collisions.
+- **ActiveRecord race retry.** `ActiveRecordHelpers#with_unique_retry` on
+  short-term checkpoints, vector embeddings, and episodic/procedural/file AR
+  storages.
+
+### Changed
+
+- **`FileBased#retrieve`** now uses `search_candidates` + `ContextAssembler`
+  (same path as `Retrieval::Engine`) instead of the legacy 3-LLM pipeline in
+  `file_based/retrieval.rb`.
+- **`EntityRelationExtractor`** truncates long conversations preserving ~70%
+  head + ~30% tail (marker `[...]`) so recent facts are not dropped.
+- **Graph node matching** in `extract_node_ids_from_text` uses token overlap
+  instead of `String#include?` (avoids false positives on short names).
+- **Redis short-term store** uses `SCAN` instead of `KEYS` for
+  `list_users`/`list_sessions`; Postgres `ensure_table!` is memoized per
+  instance; PG/Redis connections guarded by a per-store mutex.
+- **MCP HTTP server** binds to `127.0.0.1` by default; **`MCP_TOKEN` is
+  required** when listening on a non-loopback address.
+- **Consolidator** merge keeps `max(importance)` and the most recent
+  `provenance` when deduplicating items.
+- **`Provenance` confidence** maps `"high"`/`"medium"`/`"low"` to 0.9/0.6/0.3
+  (numeric values clamped to [0, 1]).
+- **TemporalRanker**, graph keyword scoring, vector-store deletes, and MCP tool
+  store wiring refinements from the security/hardening pass.
+
+### Fixed
+
+- **`clear_session!`** also clears working memory slots.
+- **Pruner** produces valid UTF-8 after byte-based soft-trim (`scrub`).
+- **`SessionLifecycle`** skips sessions with corrupt `last_activity_at` instead
+  of aborting cleanup.
+- **Encryption** fail-fast on misconfiguration; clearer `DecryptionError`;
+  `ForgetLog`/`WorkingMemory` use the instance short-term store (not global).
+- **MemoryStore** returns deep copies; MCP dashboard XSS in short-term view;
+  shared `:memory` stores for MCP when `shared_memory_stores` is enabled.
+
+### Removed
+
+- Unused **`vcr`** development dependency from the gemspec.
+
+### Notes
+
+- Distributed locks across separate processes (multi-worker beyond Redis WATCH /
+  PG row locks) remain out of scope; MemoryStore mutex is process-local.
+- KDF upgrade to PBKDF2 / `enc:v2` is still deferred (would break existing
+  `enc:v1` ciphertext).
+
 ## [0.2.6] - 2026-07-22
 
 ### Changes
