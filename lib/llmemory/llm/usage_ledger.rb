@@ -15,31 +15,32 @@ module Llmemory
       end
 
       def record(user_id, usage, operation:)
-        state = load_raw(user_id)
-        case operation.to_sym
-        when :invoke
-          bucket = symbolize_bucket(state[:invoke] || state["invoke"])
-          state = state.merge(
-            invoke: {
-              input_tokens: bucket[:input_tokens] + usage.input_tokens,
-              output_tokens: bucket[:output_tokens] + usage.output_tokens,
-              total_tokens: bucket[:total_tokens] + usage.total_tokens,
-              calls: bucket[:calls] + 1
-            }
-          )
-        when :embed
-          bucket = symbolize_bucket(state[:embed] || state["embed"], embed: true)
-          state = state.merge(
-            embed: {
-              total_tokens: bucket[:total_tokens] + usage.total_tokens,
-              calls: bucket[:calls] + 1
-            }
-          )
-        else
-          return totals(user_id)
+        @store.update(user_id, SESSION_KEY) do |state|
+          state = normalize(state || default_state)
+          case operation.to_sym
+          when :invoke
+            bucket = state[:invoke]
+            state = state.merge(
+              invoke: {
+                input_tokens: bucket[:input_tokens] + usage.input_tokens,
+                output_tokens: bucket[:output_tokens] + usage.output_tokens,
+                total_tokens: bucket[:total_tokens] + usage.total_tokens,
+                calls: bucket[:calls] + 1
+              }
+            )
+          when :embed
+            bucket = state[:embed]
+            state = state.merge(
+              embed: {
+                total_tokens: bucket[:total_tokens] + usage.total_tokens,
+                calls: bucket[:calls] + 1
+              }
+            )
+          else
+            next state
+          end
+          state.merge(updated_at: Time.now.iso8601)
         end
-        state[:updated_at] = Time.now.iso8601
-        @store.save(user_id, SESSION_KEY, stringify(state))
         totals(user_id)
       end
 

@@ -36,18 +36,21 @@ module Llmemory
     end
 
     def set(slot, value)
-      state = read
-      state[slot.to_sym] = value
-      persist(state)
+      @store.update(@user_id, @store_key) do |state|
+        state = symbolize(state || {})
+        state[slot.to_sym] = value
+        state
+      end
       value
     end
 
     # Bulk update in a single write.
     def update(**slots)
-      state = read
-      slots.each { |k, v| state[k.to_sym] = v }
-      persist(state)
-      state
+      @store.update(@user_id, @store_key) do |state|
+        state = symbolize(state || {})
+        slots.each { |k, v| state[k.to_sym] = v }
+        state
+      end
     end
 
     # Slots set by the caller beyond the predefined typed ones.

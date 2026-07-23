@@ -43,12 +43,16 @@ module Llmemory
 
       def merge_items(group)
         contents = group.map { |i| i[:content].to_s }.uniq
+        importances = group.map { |i| (i[:importance] || i["importance"]).to_f }.compact
+        provenances = group.filter_map { |i| i[:provenance] || i["provenance"] }
         {
           id: "merged_#{SecureRandom.hex(4)}",
           category: group.first[:category],
           content: contents.join("; "),
-          source_resource_id: group.first[:source_resource_id]
-        }
+          source_resource_id: group.first[:source_resource_id],
+          importance: importances.empty? ? nil : importances.max,
+          provenance: provenances.last
+        }.compact
       end
     end
   end

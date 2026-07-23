@@ -16,9 +16,14 @@ module Llmemory
       module Storages
         def self.build(store: nil, base_path: nil, database_url: nil, cipher: nil)
           resolved_cipher = cipher || Llmemory.build_cipher
-          case (store || Llmemory.configuration.long_term_store).to_s.to_sym
+          store_type = (store || Llmemory.configuration.long_term_store).to_s.to_sym
+          case store_type
           when :memory
-            MemoryStorage.new
+            if Llmemory.configuration.shared_memory_stores
+              shared_memory_storage
+            else
+              MemoryStorage.new
+            end
           when :file
             FileStorage.new(
               base_path: base_path || Llmemory.configuration.long_term_storage_path,
@@ -35,6 +40,14 @@ module Llmemory
           else
             MemoryStorage.new
           end
+        end
+
+        def self.shared_memory_storage
+          @shared_memory_storage ||= MemoryStorage.new
+        end
+
+        def self.reset_shared_singletons!
+          @shared_memory_storage = nil
         end
       end
     end

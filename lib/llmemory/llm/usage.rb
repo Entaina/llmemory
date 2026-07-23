@@ -26,6 +26,10 @@ module Llmemory
       def to_h
         { input_tokens: @input_tokens, output_tokens: @output_tokens, total_tokens: @total_tokens }
       end
+
+      def zero?
+        @input_tokens.zero? && @output_tokens.zero? && @total_tokens.zero?
+      end
     end
   end
 end

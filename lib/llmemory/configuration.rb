@@ -6,6 +6,10 @@ module Llmemory
                   :llm_api_key,
                   :llm_model,
                   :llm_base_url,
+                  :llm_timeout_seconds,
+                  :llm_open_timeout_seconds,
+                  :llm_http_retries,
+                  :redis_session_ttl_override,
                   :short_term_store,
                   :redis_url,
                   :long_term_type,
@@ -50,13 +54,20 @@ module Llmemory
                   :ttl_procedural_days,
                   :skill_mining_enabled,
                   :encryption_enabled,
-                  :encryption_key
+                  :encryption_key,
+                  :shared_memory_stores,
+                  :dashboard_auth,
+                  :dashboard_require_auth
 
     def initialize
       @llm_provider = :openai
       @llm_api_key = ENV["OPENAI_API_KEY"]
       @llm_model = nil # falls back to the active provider's DEFAULT_MODEL
       @llm_base_url = nil
+      @llm_timeout_seconds = 60
+      @llm_open_timeout_seconds = 10
+      @llm_http_retries = 2
+      @redis_session_ttl_override = nil
       @short_term_store = :memory
       @redis_url = ENV["REDIS_URL"] || "redis://localhost:6379/0"
       @long_term_type = :file_based
@@ -102,6 +113,21 @@ module Llmemory
       @message_sanitizer_enabled = false
       @encryption_enabled = false
       @encryption_key = ENV["LLMEMORY_ENCRYPTION_KEY"]
+      @shared_memory_stores = false
+      @dashboard_auth = nil
+      @dashboard_require_auth = nil
+    end
+
+    def dashboard_require_auth?
+      return @dashboard_require_auth unless @dashboard_require_auth.nil?
+
+      defined?(Rails) && Rails.respond_to?(:env) && Rails.env.development? ? false : true
+    end
+
+    def redis_session_ttl_seconds
+      return @redis_session_ttl_override if @redis_session_ttl_override
+
+      session_prune_after_days.to_i * 86_400
     end
   end
 
@@ -116,20 +142,29 @@ module Llmemory
 
     def reset_configuration!
       @configuration = Configuration.new
+      ShortTerm::Stores.reset_shared_singletons! if defined?(ShortTerm::Stores)
+      if defined?(LongTerm::FileBased::Storages)
+        LongTerm::FileBased::Storages.reset_shared_singletons!
+      end
+      if defined?(LongTerm::GraphBased::Storages)
+        LongTerm::GraphBased::Storages.reset_shared_singletons!
+      end
     end
 
     # Builds a Crypto::Cipher when encryption is enabled and a key is present;
     # otherwise returns Crypto::NullCipher. An explicit non-empty instance key
     # enables encryption even when the global flag is off.
     def build_cipher(key = nil)
-      explicit_key = !key.nil? && !key.to_s.empty?
       resolved = key.nil? ? configuration.encryption_key : key
-      enabled = configuration.encryption_enabled || explicit_key
-      if enabled && !resolved.to_s.empty?
-        require_relative "crypto/cipher"
+      enabled = configuration.encryption_enabled || (!key.nil? && !key.to_s.empty?)
+      if enabled && resolved.to_s.empty?
+        raise ConfigurationError, "encryption_key cannot be empty when encryption is enabled"
+      end
+
+      require_relative "crypto/cipher"
+      if enabled
         Crypto::Cipher.new(resolved)
       else
-        require_relative "crypto/cipher"
         Crypto::NullCipher.new
       end
     end

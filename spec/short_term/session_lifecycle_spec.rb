@@ -21,6 +21,16 @@ RSpec.describe Llmemory::ShortTerm::SessionLifecycle do
       deleted = lifecycle.cleanup_idle_sessions!(user_id: "user1", idle_minutes: 1)
       expect(deleted).to eq(0)
     end
+
+    it "skips sessions with corrupt last_activity_at timestamps" do
+      store.save("user1", "s1", { messages: [], last_activity_at: "not-a-time" })
+      store.save("user1", "s2", { messages: [], last_activity_at: Time.now - 7200 })
+
+      deleted = lifecycle.cleanup_idle_sessions!(user_id: "user1", idle_minutes: 60)
+      expect(deleted).to eq(1)
+      expect(store.load("user1", "s1")).not_to be_nil
+      expect(store.load("user1", "s2")).to be_nil
+    end
   end
 
   describe "#cleanup_stale_sessions!" do

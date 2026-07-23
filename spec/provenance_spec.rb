@@ -30,6 +30,12 @@ RSpec.describe Llmemory::Provenance do
       prov = described_class.build(method: "m", created_at: t)
       expect(prov[:created_at]).to eq(t.iso8601)
     end
+
+    it "maps confidence labels to numeric scores" do
+      expect(described_class.build(method: "m", confidence: "high")[:confidence]).to eq(0.9)
+      expect(described_class.build(method: "m", confidence: "medium")[:confidence]).to eq(0.6)
+      expect(described_class.build(method: "m", confidence: "low")[:confidence]).to eq(0.3)
+    end
   end
 
   describe ".from_resource" do

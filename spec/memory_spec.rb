@@ -55,6 +55,17 @@ RSpec.describe Llmemory::Memory do
       expect(context).to include("RELEVANT MEMORIES")
       expect(context).to include("User is vegan")
     end
+
+    it "includes episodic memories in unified retrieval" do
+      long_term_storage = Llmemory::LongTerm::FileBased::Storages::MemoryStorage.new
+      long_term = Llmemory::LongTerm::FileBased::Memory.new(user_id: user_id, storage: long_term_storage, llm: double("LLM", invoke: "[]"))
+      episodic = Llmemory::LongTerm::Episodic::Memory.new(user_id: user_id)
+      episodic.record_episode(steps: [{ action: "rolled back deploy" }], outcome: "service restored")
+
+      memory = described_class.new(user_id: user_id, session_id: session_id, long_term: long_term, episodic: episodic)
+      context = memory.retrieve("rolled back")
+      expect(context).to include("rolled back")
+    end
   end
 
   describe "#consolidate!" do
@@ -108,6 +119,13 @@ RSpec.describe Llmemory::Memory do
       expect(memory.messages.size).to eq(1)
       memory.clear_session!
       expect(memory.messages).to eq([])
+    end
+
+    it "clears working memory slots" do
+      memory = described_class.new(user_id: user_id, session_id: session_id)
+      memory.working_memory.current_task = "debug queue"
+      memory.clear_session!
+      expect(memory.working_memory.current_task).to be_nil
     end
 
     it "returns true" do
@@ -526,6 +544,11 @@ RSpec.describe Llmemory::Memory do
       expect(memory.procedural).to be_a(Llmemory::LongTerm::Procedural::Memory)
       expect(memory.episodic).to equal(memory.episodic)
       expect(memory.procedural).to equal(memory.procedural)
+    end
+
+    it "shares the checkpoint short-term store with working memory" do
+      expect(memory.working_memory.instance_variable_get(:@store))
+        .to equal(memory.instance_variable_get(:@short_term_store))
     end
 
     it "routes #reason through Actions::Reason and updates working memory" do

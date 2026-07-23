@@ -21,9 +21,10 @@ module Llmemory
 
         attr_reader :user_id, :storage
 
-        def initialize(user_id:, storage: nil, vector_store: nil, cipher: nil)
+        def initialize(user_id:, storage: nil, vector_store: nil, cipher: nil, forget_log_store: nil)
           @user_id = user_id
           @cipher = cipher || Llmemory.build_cipher
+          @forget_log_store = forget_log_store
           @storage = storage || Storages.build(cipher: @cipher)
           @vector_store = vector_store
           @vector_explicit = !vector_store.nil?
@@ -71,11 +72,13 @@ module Llmemory
         # recency (temporal decay) and importance (P3), with provenance (P10).
         # Hybrid (vector + keyword) when a vector store is active; otherwise
         # keyword-only.
+        KEYWORD_MATCH_SCORE = 0.6
+
         def search_candidates(query, user_id: nil, top_k: 20)
           uid = user_id || @user_id
           return [] unless uid == @user_id
 
-          keyword = @storage.search_episodes(uid, query).first(top_k).map { |e| candidate_for(e, 1.0) }
+          keyword = @storage.search_episodes(uid, query).first(top_k).map { |e| candidate_for(e, KEYWORD_MATCH_SCORE) }
           vs = vector_store
           return keyword unless vs
 

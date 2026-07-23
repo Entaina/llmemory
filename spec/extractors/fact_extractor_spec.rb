@@ -56,4 +56,25 @@ RSpec.describe Llmemory::Extractors::FactExtractor do
       expect(extractor.classify_item("")).to eq("general")
     end
   end
+
+  describe "#classify_items" do
+    it "classifies multiple facts in one structured-output call" do
+      llm_batch = double("LLM").tap do |d|
+        allow(d).to receive(:respond_to?).with(:invoke_with_json_schema).and_return(true)
+        allow(d).to receive(:invoke_with_json_schema).and_return(
+          "items" => [
+            { "content" => "User is vegan", "category" => "preferences" },
+            { "content" => "Works at Acme", "category" => "work_life" }
+          ]
+        )
+      end
+      batch_extractor = described_class.new(llm: llm_batch)
+      result = batch_extractor.classify_items(["User is vegan", "Works at Acme"])
+      expect(result).to eq(
+        "User is vegan" => "preferences",
+        "Works at Acme" => "work_life"
+      )
+      expect(llm_batch).to have_received(:invoke_with_json_schema).once
+    end
+  end
 end

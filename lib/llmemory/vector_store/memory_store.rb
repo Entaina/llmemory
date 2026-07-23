@@ -55,6 +55,15 @@ module Llmemory
         search(query_embedding, top_k: top_k, user_id: user_id)
       end
 
+      def delete(id:, user_id: nil)
+        if user_id
+          @entries.delete("#{user_id}:#{id}")
+        else
+          @entries.delete_if { |_key, data| data[:source_id].to_s == id.to_s }
+        end
+        true
+      end
+
       private
 
       def decrypt_metadata(meta)

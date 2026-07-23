@@ -1,12 +1,14 @@
 # frozen_string_literal: true
 
 require_relative "base"
+require_relative "../../active_record_helpers"
 
 module Llmemory
   module VectorStore
     # Persists embeddings in llmemory_embeddings (pgvector).
     # Use when long_term_store is :active_record so hybrid search finds persisted embeddings.
     class ActiveRecordStore < Base
+      include Llmemory::ActiveRecordHelpers
       def initialize(embedding_provider: nil, source_type: "edge", cipher: nil)
         self.class.load_model!
         @embedding_provider = embedding_provider
@@ -35,14 +37,16 @@ module Llmemory
       def store(id:, embedding:, metadata: {}, user_id: nil)
         return id if user_id.nil? || user_id.to_s.empty?
         text_content = (metadata || {}).dig("text") || (metadata || {}).dig(:text)
-        rec = Llmemory::VectorStore::ActiveRecordEmbedding.find_or_initialize_by(
-          user_id: user_id.to_s,
-          source_type: @source_type,
-          source_id: id.to_s
-        )
-        rec.embedding = embedding.to_a.map(&:to_f)
-        rec.text_content = encrypt_text_content(text_content)
-        rec.save!
+        with_unique_retry do
+          rec = Llmemory::VectorStore::ActiveRecordEmbedding.find_or_initialize_by(
+            user_id: user_id.to_s,
+            source_type: @source_type,
+            source_id: id.to_s
+          )
+          rec.embedding = embedding.to_a.map(&:to_f)
+          rec.text_content = encrypt_text_content(text_content)
+          rec.save!
+        end
         id
       end
 
@@ -79,6 +83,17 @@ module Llmemory
         return [] unless @embedding_provider&.respond_to?(:embed)
         query_embedding = @embedding_provider.embed(query_text)
         search(query_embedding, top_k: top_k, user_id: user_id)
+      end
+
+      def delete(id:, user_id: nil)
+        return false if user_id.nil? || user_id.to_s.empty?
+
+        Llmemory::VectorStore::ActiveRecordEmbedding.where(
+          user_id: user_id.to_s,
+          source_type: @source_type,
+          source_id: id.to_s
+        ).delete_all
+        true
       end
 
       private

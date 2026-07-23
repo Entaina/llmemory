@@ -5,18 +5,21 @@ require "json"
 require "digest"
 require_relative "base"
 require_relative "../llm/usage"
+require_relative "../llm/http_client"
 
 module Llmemory
   module VectorStore
     class OpenAIEmbeddings < Base
+      include Llmemory::LLM::HttpClient
       DEFAULT_MODEL = "text-embedding-3-small"
       DEFAULT_DIMS = 1536
 
       attr_reader :last_usage
 
-      def initialize(api_key: nil, model: nil)
+      def initialize(api_key: nil, model: nil, base_url: nil)
         @api_key = api_key || Llmemory.configuration.llm_api_key
         @model = model || DEFAULT_MODEL
+        @base_url = base_url || Llmemory.configuration.llm_base_url || "https://api.openai.com/v1"
         @cache = {}
         @cache_order = []
         @last_usage = Llmemory::LLM::Usage.zero
@@ -64,7 +67,7 @@ module Llmemory
         result = nil
         payload = { provider: :openai, model: @model, text_chars: text.to_s.length }
         Llmemory::Instrumentation.instrument(:llm_embed, payload) do
-          response = connection.post("embeddings") do |req|
+          response = post_with_resilience(connection, "embeddings") do |req|
             req.headers["Authorization"] = "Bearer #{@api_key}"
             req.headers["Content-Type"] = "application/json"
             req.body = { input: text.to_s.strip, model: @model }.to_json
@@ -90,11 +93,7 @@ module Llmemory
       end
 
       def connection
-        @connection ||= Faraday.new(url: "https://api.openai.com/v1") do |f|
-          f.request :json
-          f.response :json
-          f.adapter Faraday.default_adapter
-        end
+        @connection ||= build_faraday_connection(@base_url)
       end
 
       def store(id:, embedding:, metadata: {})

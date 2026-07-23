@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative "../store_helpers"
+
 module Llmemory
   module MCP
     module Tools
@@ -48,7 +50,7 @@ module Llmemory
           private
 
           def search_short_term(user_id, query, limit)
-            store = build_short_term_store
+            store = StoreHelpers.short_term_store
             sessions = store.list_sessions(user_id: user_id)
             results = []
             query_lower = query.downcase
@@ -74,9 +76,21 @@ module Llmemory
           end
 
           def search_long_term(user_id, query, limit)
-            storage = build_long_term_storage
             results = []
 
+            if StoreHelpers.graph_based?
+              memory = StoreHelpers.long_term_memory(user_id: user_id)
+              memory.search_candidates(query, user_id: user_id, top_k: limit).each do |item|
+                results << {
+                  type: "long_term_fact",
+                  content: item[:text] || item["text"] || item[:id] || item["id"],
+                  created_at: item[:timestamp] || item["timestamp"]
+                }
+              end
+              return results
+            end
+
+            storage = StoreHelpers.long_term_storage
             items = storage.search_items(user_id, query)
             items.first(limit).each do |item|
               results << {
@@ -88,23 +102,6 @@ module Llmemory
             end
 
             results
-          end
-
-          def build_short_term_store
-            case Llmemory.configuration.short_term_store.to_sym
-            when :memory then ShortTerm::Stores::MemoryStore.new
-            when :redis then ShortTerm::Stores::RedisStore.new
-            when :postgres then ShortTerm::Stores::PostgresStore.new
-            when :active_record, :activerecord
-              require_relative "../../short_term/stores/active_record_store"
-              ShortTerm::Stores::ActiveRecordStore.new
-            else
-              ShortTerm::Stores::MemoryStore.new
-            end
-          end
-
-          def build_long_term_storage
-            LongTerm::FileBased::Storages.build
           end
 
           def format_results(results)

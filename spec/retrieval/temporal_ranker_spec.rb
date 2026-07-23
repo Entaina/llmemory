@@ -101,4 +101,17 @@ RSpec.describe Llmemory::Retrieval::TemporalRanker do
       expect(ranked.first[:temporal_score]).to be_within(0.001).of(0.5)
     end
   end
+
+  it "falls back to a safe half-life when configured to zero" do
+    ranker = described_class.new(half_life_days: 0)
+    ranked = ranker.rank([{ text: "a", timestamp: Time.now, score: 1.0 }], now: Time.now)
+    expect(ranked.first[:temporal_score]).to be_finite
+  end
+
+  it "does not inflate scores for future timestamps" do
+    ranker = described_class.new(half_life_days: 30)
+    future = Time.now + 86_400
+    ranked = ranker.rank([{ text: "a", timestamp: future, score: 1.0 }], now: Time.now)
+    expect(ranked.first[:temporal_score]).to be <= 1.0
+  end
 end

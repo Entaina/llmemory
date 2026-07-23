@@ -30,10 +30,9 @@ module Llmemory
           state = @store.load(user_id, session_id)
           next unless state.is_a?(Hash)
 
-          last_activity = state[:last_activity_at] || state["last_activity_at"]
-          next if last_activity.nil?
+          last_time = parse_activity_time(state)
+          next if last_time.nil?
 
-          last_time = last_activity.is_a?(Time) ? last_activity : Time.parse(last_activity.to_s)
           if last_time < cutoff
             @store.delete(user_id, session_id)
             deleted += 1
@@ -52,10 +51,9 @@ module Llmemory
           state = @store.load(user_id, session_id)
           next unless state.is_a?(Hash)
 
-          last_activity = state[:last_activity_at] || state["last_activity_at"]
-          next if last_activity.nil?
+          last_time = parse_activity_time(state)
+          next if last_time.nil?
 
-          last_time = last_activity.is_a?(Time) ? last_activity : Time.parse(last_activity.to_s)
           if last_time < cutoff
             @store.delete(user_id, session_id)
             deleted += 1
@@ -70,10 +68,9 @@ module Llmemory
         sessions = user_sessions(user_id)
         return 0 if sessions.size <= max_entries
 
-        session_ages = sessions.map do |session_id|
+        session_ages = sessions.filter_map do |session_id|
           state = @store.load(user_id, session_id)
-          last_activity = state&.dig(:last_activity_at) || state&.dig("last_activity_at")
-          last_time = last_activity.is_a?(Time) ? last_activity : (last_activity ? Time.parse(last_activity.to_s) : Time.at(0))
+          last_time = parse_activity_time(state) || Time.at(0)
           [session_id, last_time]
         end
 
@@ -87,6 +84,18 @@ module Llmemory
 
       def user_sessions(user_id)
         @store.list_sessions(user_id: user_id).reject { |s| self.class.pseudo_session?(s) }
+      end
+
+      def parse_activity_time(state)
+        return nil unless state.is_a?(Hash)
+
+        last_activity = state[:last_activity_at] || state["last_activity_at"]
+        return nil if last_activity.nil?
+        return last_activity if last_activity.is_a?(Time)
+
+        Time.parse(last_activity.to_s)
+      rescue ArgumentError, TypeError
+        nil
       end
 
       def build_store

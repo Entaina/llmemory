@@ -35,5 +35,16 @@ RSpec.describe Llmemory::Extractors::EntityRelationExtractor do
       expect(result[:entities]).to eq([])
       expect(result[:relations]).to eq([])
     end
+
+    it "preserves head and tail of long conversations in the prompt" do
+      tail_marker = "UNIQUE_TAIL_MARKER_xyz"
+      long_text = "#{'a' * 2000}#{'b' * 2000}#{tail_marker}"
+      captured = nil
+      allow(llm_double).to receive(:invoke) { |prompt| captured = prompt; '{"entities": [], "relations": []}' }
+      extractor.extract(long_text)
+      expect(captured).to include("[...]")
+      expect(captured).to include("aaa")
+      expect(captured).to include(tail_marker)
+    end
   end
 end

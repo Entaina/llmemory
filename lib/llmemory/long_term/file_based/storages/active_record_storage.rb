@@ -3,6 +3,7 @@
 require "securerandom"
 require_relative "base"
 require_relative "../../../crypto/field_helpers"
+require_relative "../../../active_record_helpers"
 
 module Llmemory
   module LongTerm
@@ -10,6 +11,7 @@ module Llmemory
       module Storages
         class ActiveRecordStorage < Base
           include Llmemory::Crypto::FieldHelpers
+          include Llmemory::ActiveRecordHelpers
 
           def initialize(cipher: nil)
             @cipher = cipher || Llmemory.build_cipher
@@ -64,7 +66,7 @@ module Llmemory
             rec = LlmemoryCategory.find_or_initialize_by(user_id: user_id, category_name: category_name)
             rec.content = enc(content)
             rec.updated_at = Time.current
-            rec.save!
+            with_unique_retry { rec.save! }
             true
           end
 

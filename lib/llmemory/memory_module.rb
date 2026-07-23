@@ -54,9 +54,13 @@ module Llmemory
     end
 
     # Shared audit trail for #forget. Lazily built; override or inject by setting
-    # @forget_log if a specific backend/store is required.
+    # @forget_log, or pass @forget_log_store when constructing the memory.
     def forget_log
-      @forget_log ||= Llmemory::ForgetLog.new
+      @forget_log ||= Llmemory::ForgetLog.new(store: forget_log_store)
+    end
+
+    def forget_log_store
+      @forget_log_store
     end
   end
 end

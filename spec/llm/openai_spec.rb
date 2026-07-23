@@ -36,6 +36,17 @@ RSpec.describe Llmemory::LLM::OpenAI do
     end
   end
 
+  context "when the network fails" do
+    before do
+      stub_request(:post, %r{https://api\.openai\.com.*/chat/completions})
+        .to_raise(Faraday::ConnectionFailed.new("connection refused"))
+    end
+
+    it "raises LLMError" do
+      expect { client.invoke("Hello") }.to raise_error(Llmemory::LLMError, /HTTP request failed/)
+    end
+  end
+
   describe "#invoke_with_json_schema" do
     before do
       stub_request(:post, %r{https://api\.openai\.com.*/chat/completions})

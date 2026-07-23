@@ -15,22 +15,20 @@ module Llmemory
 
       def invoke(prompt)
         response = inner_client.invoke(prompt)
-        usage = if response.respond_to?(:usage)
-                  response.usage
-                elsif inner_client.respond_to?(:last_usage)
-                  inner_client.last_usage
-                else
-                  Usage.zero
-                end
-        UsageRecorder.record(user_id: @user_id, usage: usage, operation: :invoke, store: @store)
+        record_usage_from_client(:invoke)
         response
       end
 
       def invoke_with_json_schema(prompt, json_schema)
-        result = inner_client.invoke_with_json_schema(prompt, json_schema)
-        usage = inner_client.respond_to?(:last_usage) ? inner_client.last_usage : Usage.zero
-        UsageRecorder.record(user_id: @user_id, usage: usage, operation: :invoke, store: @store)
-        result
+        return nil unless structured_output_supported?
+
+        result = nil
+        begin
+          result = inner_client.invoke_with_json_schema(prompt, json_schema)
+          result
+        ensure
+          record_usage_from_client(:invoke) if structured_output_supported?
+        end
       end
 
       def last_usage
@@ -55,6 +53,18 @@ module Llmemory
 
       def inner_client
         @inner_client ||= @inner || Llmemory::LLM.client(api_key: @api_key)
+      end
+
+      def structured_output_supported?
+        inner_client.class != Llmemory::LLM::Base &&
+          inner_client.method(:invoke_with_json_schema).owner != Llmemory::LLM::Base
+      end
+
+      def record_usage_from_client(operation)
+        usage = inner_client.respond_to?(:last_usage) ? inner_client.last_usage : Usage.zero
+        return if usage.zero?
+
+        UsageRecorder.record(user_id: @user_id, usage: usage, operation: operation, store: @store)
       end
     end
   end

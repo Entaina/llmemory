@@ -53,8 +53,7 @@ module Llmemory
       end
 
       def extract(conversation_text)
-        text = conversation_text.to_s.strip
-        text = text[0, MAX_CONVERSATION_CHARS] + "\n[...]" if text.length > MAX_CONVERSATION_CHARS
+        text = truncate_conversation(conversation_text.to_s.strip)
         prompt = <<~PROMPT
           Infer entities and relations from this user-assistant conversation. Build a knowledge graph from what the user says, even when they don't state facts in formal language.
           - Entities: people, places, companies, concepts (type and name).
@@ -92,6 +91,14 @@ module Llmemory
       end
 
       private
+
+      def truncate_conversation(text)
+        return text if text.length <= MAX_CONVERSATION_CHARS
+
+        head_len = (MAX_CONVERSATION_CHARS * 0.7).to_i
+        tail_len = MAX_CONVERSATION_CHARS - head_len
+        "#{text[0, head_len]}\n[...]\n#{text[-tail_len, tail_len]}"
+      end
 
       def parse_response(response)
         json = response.is_a?(Hash) ? response : extract_json(response)

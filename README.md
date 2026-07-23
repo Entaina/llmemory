@@ -649,6 +649,19 @@ end
 
 The dashboard uses your existing `Llmemory.configuration` (short-term store, long-term store/type, etc.) and does not add any gem dependency; it only runs when Rails is present and you require `llmemory/dashboard`.
 
+**Dashboard authentication**
+
+By default, the dashboard requires HTTP Basic auth in non-development Rails environments (`dashboard_require_auth?` is `true` outside `Rails.env.development?`). Configure credentials in `Llmemory.configure`:
+
+```ruby
+Llmemory.configure do |config|
+  config.dashboard_auth = { username: ENV["LLMEMORY_DASHBOARD_USER"], password: ENV["LLMEMORY_DASHBOARD_PASSWORD"] }
+  config.dashboard_require_auth = true  # set false to disable (e.g. local dev behind a VPN)
+end
+```
+
+Requests without valid credentials receive `401 Unauthorized`.
+
 ## MCP Server (Model Context Protocol)
 
 llmemory includes an MCP server that allows LLM agents (like Claude Code) to interact directly with the memory system. This gives agents "agency" over their own memory—they can search, save, and retrieve memories autonomously.
@@ -685,15 +698,17 @@ llmemory mcp serve --name my-memory
 **HTTP mode** (for remote access or web integrations):
 
 ```bash
-# Start HTTP server on default port 3100
+# Start HTTP server on default port 3100 (binds to 127.0.0.1 by default)
 llmemory mcp serve --http
 
 # Custom port and host
 llmemory mcp serve --http --port 8080 --host 127.0.0.1
 
-# With authentication (recommended for HTTP/HTTPS)
-MCP_TOKEN=your-secret-token llmemory mcp serve --http
+# With authentication (required when binding outside loopback)
+MCP_TOKEN=your-secret-token llmemory mcp serve --http --host 0.0.0.0
 ```
+
+When the HTTP server listens on a non-loopback address (`0.0.0.0`, a public IP, etc.), **`MCP_TOKEN` is required** — the server refuses to start without it. Loopback binds (`127.0.0.1`, `localhost`) allow unauthenticated access for local development; set `MCP_TOKEN` anyway if other processes on the machine should not reach the server.
 
 **HTTPS mode** (secure remote access):
 
@@ -762,7 +777,7 @@ Or with the standalone executable:
 
 | Variable | Description |
 |----------|-------------|
-| `MCP_TOKEN` | Token for HTTP authentication (if set, requests must include valid token) |
+| `MCP_TOKEN` | Token for HTTP authentication (**required** when the HTTP server binds outside loopback; optional on `127.0.0.1`) |
 | `LLMEMORY_DEBUG` | Set to `1` to enable debug output on stderr |
 | `OPENAI_API_KEY` | API key for LLM/embeddings |
 | `REDIS_URL` | Redis URL for short-term store |
@@ -770,7 +785,9 @@ Or with the standalone executable:
 
 ### HTTP Authentication
 
-When `MCP_TOKEN` is set, the HTTP server requires authentication. Requests must include the token via:
+When binding to a non-loopback host, the HTTP server **requires** `MCP_TOKEN` at startup. On loopback, authentication is optional but recommended if untrusted local processes may connect.
+
+When a token is configured (or mandatory), requests must include it via:
 
 - **Authorization header**: `Authorization: Bearer <token>` or `Authorization: <token>`
 - **Query parameter**: `?token=<token>`

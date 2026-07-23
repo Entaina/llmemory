@@ -78,6 +78,18 @@ RSpec.describe Llmemory::MCP::Authentication do
 
         expect(status).to eq(200)
       end
+
+      it "allows URL-encoded tokens" do
+        encoded = "secret%2Btoken%3D1"
+        auth = described_class.new(inner_app, token: "secret+token=1")
+        env = {
+          "REQUEST_METHOD" => "GET",
+          "QUERY_STRING" => "token=#{encoded}"
+        }
+        status, _headers, _body = auth.call(env)
+
+        expect(status).to eq(200)
+      end
     end
 
     context "with valid token in query string with other params" do

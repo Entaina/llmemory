@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "set"
 require_relative "node"
 require_relative "edge"
 require_relative "knowledge_graph"
@@ -14,9 +15,10 @@ module Llmemory
       class Memory
         include Llmemory::MemoryModule
 
-        def initialize(user_id:, storage: nil, vector_store: nil, llm: nil, extractor: nil, cipher: nil)
+        def initialize(user_id:, storage: nil, vector_store: nil, llm: nil, extractor: nil, cipher: nil, forget_log_store: nil)
           @user_id = user_id
           @cipher = cipher || Llmemory.build_cipher
+          @forget_log_store = forget_log_store
           @graph_storage = storage || Storages.build(cipher: @cipher)
           @kg = KnowledgeGraph.new(user_id: user_id, storage: @graph_storage)
           @conflict_resolver = ConflictResolver.new(@kg)
@@ -105,6 +107,7 @@ module Llmemory
           # store only exposes soft archive_edge). Both modes route to archive
           # for now; behavior is the same — kept for API uniformity.
           archived = Array(ids).map(&:to_s).select { |edge_id| @kg.archive_edge(edge_id) }
+          remove_edge_embeddings(archived)
           forget_log.record(@user_id, memory_type: "graph_based", ids: archived, reason: reason)
           Llmemory::Instrumentation.instrument(:memory_forget, memory_type: "graph_based", user_id: @user_id, count: archived.size, mode: mode)
           archived.size
@@ -147,6 +150,14 @@ module Llmemory
             subject_id = name_to_id[subject] || @kg.add_node(entity_type: "concept", name: subject, properties: { "provenance" => provenance })
             object_id = name_to_id[object] || @kg.add_node(entity_type: "concept", name: object, properties: { "provenance" => provenance })
 
+            existing = @kg.find_edges(
+              subject: subject_id,
+              predicate: predicate,
+              object: object_id,
+              include_archived: false
+            )
+            next if existing.any?
+
             edge = Edge.new(
               id: nil,
               user_id: @user_id,
@@ -157,7 +168,8 @@ module Llmemory
               created_at: Time.now,
               archived_at: nil
             )
-            @conflict_resolver.resolve(edge)
+            archived_ids = @conflict_resolver.resolve(edge)
+            remove_edge_embeddings(archived_ids)
             edge_id = @kg.add_edge(subject: subject_id, predicate: predicate, object: object_id, properties: { "provenance" => provenance })
 
             edge_text = "#{subject} #{predicate} #{object}"
@@ -180,8 +192,10 @@ module Llmemory
             vector_results = @vector_store.search(emb, top_k: top_k, user_id: @user_id)
           end
 
-          out = vector_results.map do |v|
+          out = vector_results.filter_map do |v|
             id = v[:id] || v["id"]
+            next unless active_edge?(id)
+
             meta = v[:metadata] || v["metadata"] || {}
             { id: id, text: meta["text"] || meta[:text] || id.to_s, score: v[:score] || v["score"] || 1.0, created_at: meta["created_at"] || meta[:created_at] }
           end
@@ -217,9 +231,14 @@ module Llmemory
 
         def extract_node_ids_from_text(text)
           return [] if text.to_s.empty?
+
+          query_tokens = Llmemory::Tokenizer.tokenize(text).to_set
           ids = []
-          @kg.list_nodes.each do |n|
-            ids << n.id if text.to_s.include?(n.name.to_s)
+          @kg.list_nodes.each do |node|
+            name_tokens = Llmemory::Tokenizer.tokenize(node.name.to_s)
+            next if name_tokens.empty?
+
+            ids << node.id if name_tokens.all? { |token| query_tokens.include?(token) }
           end
           ids
         end
@@ -243,6 +262,21 @@ module Llmemory
             vector_store: vector_store,
             store: Llmemory::ShortTerm::Stores.build(cipher: @cipher)
           )
+        end
+
+        def remove_edge_embeddings(edge_ids)
+          return unless @vector_store.respond_to?(:delete)
+
+          Array(edge_ids).each do |edge_id|
+            @vector_store.delete(id: edge_id, user_id: @user_id)
+          end
+        end
+
+        def active_edge?(edge_id)
+          return false if edge_id.nil?
+
+          @kg.find_edges(subject: nil, predicate: nil, object: nil, include_archived: false)
+            .any? { |edge| edge.id.to_s == edge_id.to_s }
         end
       end
     end

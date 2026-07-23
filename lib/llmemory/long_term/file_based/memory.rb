@@ -13,9 +13,10 @@ module Llmemory
       class Memory
         include Llmemory::MemoryModule
 
-        def initialize(user_id:, storage: nil, llm: nil, extractor: nil)
+        def initialize(user_id:, storage: nil, llm: nil, extractor: nil, forget_log_store: nil)
           @user_id = user_id
           @storage = storage || Storages.build
+          @forget_log_store = forget_log_store
           @llm = llm || Llmemory::LLM.client
           @extractor = extractor || Llmemory::Extractors::FactExtractor.new(llm: @llm)
         end
@@ -27,12 +28,16 @@ module Llmemory
           resource_id = save_resource(text)
           append_to_daily_log(text) if Llmemory.configuration.daily_logs_enabled && @storage.respond_to?(:save_daily_log_entry)
           items = @extractor.extract_items(text)
+          contents = items.map do |item|
+            item.is_a?(Hash) ? (item["content"] || item[:content]).to_s : item.to_s
+          end
+          classifications = @extractor.classify_items(contents)
           updates_by_category = {}
 
           items.each do |item|
             content = item.is_a?(Hash) ? (item["content"] || item[:content]) : item.to_s
             importance = (item["importance"] || item[:importance] || 0.7).to_f
-            cat = @extractor.classify_item(content)
+            cat = classifications[content] || @extractor.classify_item(content)
             updates_by_category[cat] ||= []
             updates_by_category[cat] << content.to_s
             save_item(category: cat, item: item, source_resource_id: resource_id, importance: importance)
@@ -48,8 +53,8 @@ module Llmemory
         end
 
         def retrieve(query)
-          retrieval = Retrieval.new(user_id: @user_id, storage: @storage, llm: @llm)
-          retrieval.retrieve(query)
+          candidates = search_candidates(query, top_k: 20)
+          Llmemory::Retrieval::ContextAssembler.new.assemble(candidates)
         end
 
         def search_candidates(query, user_id: nil, top_k: 20)

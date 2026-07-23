@@ -34,5 +34,39 @@ RSpec.describe Llmemory::ShortTerm::Stores::MemoryStore do
       expect(store.list_sessions(user_id: "u1").sort).to eq(%w[s1 s2])
       expect(store.list_sessions(user_id: "u2")).to eq(%w[s1])
     end
+
+    it "does not collide when ids contain colons" do
+      store.save("a:b", "c", { data: 1 })
+      store.save("a", "b:c", { data: 2 })
+      expect(store.load("a:b", "c")).to eq({ data: 1 })
+      expect(store.load("a", "b:c")).to eq({ data: 2 })
+      expect(store.list_users.sort).to eq(%w[a a:b])
+    end
+
+    it "returns a deep copy so callers cannot mutate persisted state" do
+      store.save("u1", "s1", { messages: [{ role: :user, content: "hi" }] })
+      msgs = store.load("u1", "s1")[:messages]
+      msgs[0][:content] = "mutated"
+      expect(store.load("u1", "s1")[:messages].first[:content]).to eq("hi")
+    end
+  end
+
+  describe "#update" do
+    it "serializes concurrent updates without losing messages" do
+      store.save("u1", "s1", { messages: [] })
+      threads = 2.times.map do |i|
+        Thread.new do
+          store.update("u1", "s1") do |state|
+            state ||= {}
+            msgs = (state[:messages] || []).dup
+            msgs << { role: :user, content: "msg#{i}" }
+            state.merge(messages: msgs)
+          end
+        end
+      end
+      threads.each(&:join)
+      contents = store.load("u1", "s1")[:messages].map { |m| m[:content] }
+      expect(contents).to contain_exactly("msg0", "msg1")
+    end
   end
 end

@@ -3,10 +3,12 @@
 require "faraday"
 require "json"
 require_relative "base"
+require_relative "http_client"
 
 module Llmemory
   module LLM
     class Anthropic < Base
+      include HttpClient
       DEFAULT_BASE_URL = "https://api.anthropic.com"
       DEFAULT_MODEL = "claude-sonnet-4-6"
 
@@ -21,7 +23,7 @@ module Llmemory
         result = nil
         payload = { provider: :anthropic, model: @model, prompt_chars: prompt.to_s.length }
         Llmemory::Instrumentation.instrument(:llm_invoke, payload) do
-          response = connection.post("v1/messages") do |req|
+          response = post_with_resilience(connection, "v1/messages") do |req|
             req.body = {
               model: @model,
               max_tokens: 1024,
@@ -47,11 +49,7 @@ module Llmemory
       private
 
       def connection
-        @connection ||= Faraday.new(url: @base_url) do |f|
-          f.request :json
-          f.response :json
-          f.adapter Faraday.default_adapter
-        end
+        @connection ||= build_faraday_connection(@base_url)
       end
     end
   end

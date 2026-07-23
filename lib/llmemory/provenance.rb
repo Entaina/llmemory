@@ -20,7 +20,7 @@ module Llmemory
       {
         sources: Array(sources).filter_map { |s| normalize_source(s) },
         method: method&.to_s,
-        confidence: confidence.nil? ? nil : confidence.to_f,
+        confidence: normalize_confidence(confidence),
         created_at: normalize_time(created_at)
       }
     end
@@ -59,6 +59,28 @@ module Llmemory
     def normalize_time(value)
       value ||= Time.now
       value.respond_to?(:iso8601) ? value.iso8601 : value.to_s
+    end
+
+    CONFIDENCE_LABELS = {
+      "high" => 0.9,
+      "medium" => 0.6,
+      "low" => 0.3
+    }.freeze
+
+    def normalize_confidence(value)
+      return nil if value.nil?
+
+      if value.is_a?(Numeric)
+        return [[value.to_f, 0.0].max, 1.0].min
+      end
+
+      label = value.to_s.downcase.strip
+      return CONFIDENCE_LABELS[label] if CONFIDENCE_LABELS.key?(label)
+
+      numeric = label.to_f
+      return nil if numeric.zero? && !label.match?(/\A0(\.0+)?\z/)
+
+      [[numeric, 0.0].max, 1.0].min
     end
   end
 end

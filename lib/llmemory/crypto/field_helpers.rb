@@ -92,6 +92,11 @@ module Llmemory
         end
 
         str = data.to_s
+        if !cipher.enabled? && str.start_with?(Crypto::Cipher::MARKER)
+          raise DecryptionError,
+                "Data is encrypted but encryption is disabled; enable encryption with the correct encryption_key"
+        end
+
         json = cipher.enabled? && cipher.encrypted?(str) ? cipher.decrypt(str) : str
         JSON.parse(json, symbolize_names: true)
       end

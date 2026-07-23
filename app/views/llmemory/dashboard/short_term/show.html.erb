@@ -18,7 +18,7 @@
       <% content = (m[:content] || m["content"]).to_s %>
       <div class="message <%= role %>">
         <strong><%= role %>:</strong>
-        <%= content.gsub(/\n/, "<br>").html_safe %>
+        <%= simple_format(content) %>
       </div>
     <% end %>
   <% end %>

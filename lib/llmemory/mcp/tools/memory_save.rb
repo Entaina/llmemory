@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative "../store_helpers"
+
 module Llmemory
   module MCP
     module Tools
@@ -20,20 +22,21 @@ module Llmemory
 
         class << self
           def call(user_id:, content:, category: nil, server_context: nil)
-            storage = build_storage
-
-            # If no category provided, use a default
             cat = category || "observations"
 
-            # Generate a simple resource ID for tracking
-            resource_id = "mcp_#{Time.now.to_i}_#{rand(1000)}"
-
-            storage.save_item(
-              user_id,
-              category: cat,
-              content: content,
-              source_resource_id: resource_id
-            )
+            if StoreHelpers.graph_based?
+              memory = StoreHelpers.long_term_memory(user_id: user_id)
+              memory.remember_fact(content: content, category: cat)
+            else
+              storage = StoreHelpers.long_term_storage
+              resource_id = "mcp_#{Time.now.to_i}_#{rand(1000)}"
+              storage.save_item(
+                user_id,
+                category: cat,
+                content: content,
+                source_resource_id: resource_id
+              )
+            end
 
             ::MCP::Tool::Response.new([{
               type: "text",
@@ -44,12 +47,6 @@ module Llmemory
               type: "text",
               text: "Error saving memory: #{e.message}"
             }], error: true)
-          end
-
-          private
-
-          def build_storage
-            LongTerm::FileBased::Storages.build
           end
         end
       end

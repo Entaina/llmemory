@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "cgi"
+
 module Llmemory
   module MCP
     # Rack middleware for token-based authentication
@@ -17,10 +19,8 @@ module Llmemory
       end
 
       def call(env)
-        # If no token is configured, skip authentication
         return @app.call(env) unless @token
 
-        # Check for valid token
         return UNAUTHORIZED_RESPONSE unless valid_token?(env)
 
         @app.call(env)
@@ -50,7 +50,9 @@ module Llmemory
       def parse_query_string(query_string)
         query_string.split("&").each_with_object({}) do |pair, hash|
           key, value = pair.split("=", 2)
-          hash[key] = value if key
+          next unless key
+
+          hash[CGI.unescape(key)] = CGI.unescape(value.to_s)
         end
       end
 

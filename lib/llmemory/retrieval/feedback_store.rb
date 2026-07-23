@@ -22,11 +22,14 @@ module Llmemory
 
       def record(user_id, item_id, delta)
         return if user_id.nil? || item_id.nil?
-        state = load(user_id)
+
         key = item_id.to_s
-        state[key] = (state[key] || 0) + delta.to_i
-        @store.save(user_id, SESSION_KEY, state)
-        state[key]
+        state = @store.update(user_id, SESSION_KEY) do |current|
+          current = load_from_state(current)
+          current[key] = (current[key] || 0) + delta.to_i
+          current
+        end
+        state ? state[key] : nil
       end
 
       def net(user_id, item_id)
@@ -41,7 +44,10 @@ module Llmemory
       private
 
       def load(user_id)
-        state = @store.load(user_id, SESSION_KEY)
+        load_from_state(@store.load(user_id, SESSION_KEY))
+      end
+
+      def load_from_state(state)
         return {} unless state.is_a?(Hash)
         state.each_with_object({}) { |(k, v), acc| acc[k.to_s] = v.to_i }
       end

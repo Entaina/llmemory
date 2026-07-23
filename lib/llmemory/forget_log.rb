@@ -27,9 +27,13 @@ module Llmemory
         reason: reason,
         at: Time.now.iso8601
       }
-      log = entries(user_id)
-      log << entry
-      @store.save(user_id, SESSION_KEY, { "entries" => log })
+      @store.update(user_id, SESSION_KEY) do |state|
+        state = symbolize(state || {})
+        log = state[:entries]
+        log = log.is_a?(Array) ? log.map { |e| symbolize(e) } : []
+        log << entry
+        state.merge(entries: log)
+      end
       entry
     end
 

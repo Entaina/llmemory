@@ -52,13 +52,25 @@ module Llmemory
       def soft_trim(content)
         return content if content.bytesize <= @soft_trim_max_bytes
 
-        head_chars = (@soft_trim_max_bytes * @head_ratio).to_i
-        tail_chars = (@soft_trim_max_bytes * @tail_ratio).to_i
+        head_bytes = (@soft_trim_max_bytes * @head_ratio).to_i
+        tail_bytes = (@soft_trim_max_bytes * @tail_ratio).to_i
 
-        head = content.byteslice(0, head_chars)
-        tail = content.bytesize > (head_chars + tail_chars) ? content.byteslice(-tail_chars, tail_chars) : ""
+        head = utf8_safe_byteslice(content, 0, head_bytes)
+        tail = if content.bytesize > (head_bytes + tail_bytes)
+                 utf8_safe_byteslice(content, -tail_bytes, tail_bytes)
+               else
+                 ""
+               end
 
         "#{head}\n...\n#{tail}"
+      end
+
+      def utf8_safe_byteslice(str, start, length = nil)
+        slice = length.nil? ? str.byteslice(start) : str.byteslice(start, length)
+        return "" if slice.nil?
+
+        slice.force_encoding(str.encoding)
+        slice.scrub
       end
     end
   end

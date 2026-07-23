@@ -34,7 +34,7 @@ module Llmemory
       type = long_term_type || Llmemory.configuration.long_term_type || :file_based
       @long_term = long_term || build_long_term(type)
       @retrieval_engine = retrieval_engine || Retrieval::Engine.new(
-        @long_term,
+        Retrieval::MultiSource.new(primary: @long_term, memory: self),
         llm: tracked_llm_client,
         feedback: Retrieval::FeedbackStore.new(store: @short_term_store)
       )
@@ -46,7 +46,7 @@ module Llmemory
       @working_memory ||= WorkingMemory.new(
         user_id: @user_id,
         session_id: @session_id,
-        store: build_short_term_store(@cipher)
+        store: @short_term_store
       )
     end
 
@@ -56,7 +56,8 @@ module Llmemory
       @episodic ||= LongTerm::Episodic::Memory.new(
         user_id: @user_id,
         storage: LongTerm::Episodic::Storages.build(cipher: @cipher),
-        cipher: @cipher
+        cipher: @cipher,
+        forget_log_store: @short_term_store
       )
     end
 
@@ -65,7 +66,8 @@ module Llmemory
       @procedural ||= LongTerm::Procedural::Memory.new(
         user_id: @user_id,
         storage: LongTerm::Procedural::Storages.build(cipher: @cipher),
-        cipher: @cipher
+        cipher: @cipher,
+        forget_log_store: @short_term_store
       )
     end
 
@@ -103,9 +105,14 @@ module Llmemory
     end
 
     def add_message(role:, content:)
-      msgs = messages
-      msgs << { role: role.to_sym, content: content.to_s }
-      save_state(messages: msgs, **preserved_flush_state)
+      @short_term_store.update(@user_id, @session_id) do |state|
+        state = normalize_state_hash(state)
+        list = state[STATE_KEY_MESSAGES]
+        list = list.is_a?(Array) ? list.dup : []
+        list << { role: role.to_sym, content: content.to_s }
+        list = sanitize_messages(list) if Llmemory.configuration.message_sanitizer_enabled
+        state.merge(STATE_KEY_MESSAGES => list, last_activity_at: Time.now, **preserved_flush_state_from(state))
+      end
       true
     end
 
@@ -164,6 +171,7 @@ module Llmemory
 
     def clear_session!
       @checkpoint.clear_state
+      working_memory.clear!
       true
     end
 
@@ -315,11 +323,21 @@ module Llmemory
     end
 
     def preserved_flush_state
-      state = restore_state_for_save
+      preserved_flush_state_from(restore_state_for_save)
+    end
+
+    def preserved_flush_state_from(state)
+      state = normalize_state_hash(state)
       {}.tap do |h|
-        h[:last_flush_at] = state[:last_flush_at] || state["last_flush_at"] if state[:last_flush_at] || state["last_flush_at"]
-        h[:last_compact_at] = state[:last_compact_at] || state["last_compact_at"] if state[:last_compact_at] || state["last_compact_at"]
+        h[:last_flush_at] = state[:last_flush_at] if state[:last_flush_at]
+        h[:last_compact_at] = state[:last_compact_at] if state[:last_compact_at]
       end
+    end
+
+    def normalize_state_hash(state)
+      return {} unless state.is_a?(Hash)
+
+      state.transform_keys(&:to_sym)
     end
 
     def estimated_tokens(msgs)
@@ -358,7 +376,7 @@ module Llmemory
     end
 
     def build_long_term(long_term_type)
-      llm_opts = { llm: tracked_llm_client }
+      llm_opts = { llm: tracked_llm_client, forget_log_store: @short_term_store }
       case long_term_type.to_s.to_sym
       when :graph_based
         LongTerm::GraphBased::Memory.new(

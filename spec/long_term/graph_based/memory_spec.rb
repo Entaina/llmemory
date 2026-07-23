@@ -21,6 +21,7 @@ RSpec.describe Llmemory::LongTerm::GraphBased::Memory do
     double("VectorStore").tap do |d|
       allow(d).to receive(:embed).with(anything).and_return([0.1] * 1536)
       allow(d).to receive(:store).with(hash_including(:id, :embedding, :metadata)).and_return("edge_1")
+      allow(d).to receive(:delete).with(hash_including(:id, :user_id)).and_return(true)
       allow(d).to receive(:search_by_text).with(anything, top_k: anything, user_id: anything).and_return([])
       allow(d).to receive(:search).with(anything, top_k: anything, user_id: anything).and_return([])
     end
@@ -50,6 +51,13 @@ RSpec.describe Llmemory::LongTerm::GraphBased::Memory do
       expect(vector_store_double).to have_received(:store).with(
         hash_including(:id, :embedding, :metadata)
       )
+    end
+
+    it "does not duplicate identical active edges on re-ingest" do
+      memory.memorize("I work at Acme.")
+      memory.memorize("I work at Acme.")
+      edges = storage.find_edges(user_id, predicate: "works_at", include_archived: false)
+      expect(edges.size).to eq(1)
     end
 
     it "returns true" do
@@ -87,8 +95,10 @@ RSpec.describe Llmemory::LongTerm::GraphBased::Memory do
 
   describe "#search_candidates" do
     before do
+      memory.memorize("I work at Acme.")
+      edge_id = storage.find_edges(user_id, predicate: "works_at", include_archived: false).first.id
       allow(vector_store_double).to receive(:search_by_text).with("work", top_k: 20, user_id: user_id)
-        .and_return([{ id: "e1", score: 0.85, metadata: { "text" => "User works_at Acme" } }])
+        .and_return([{ id: edge_id, score: 0.85, metadata: { "text" => "User works_at Acme" } }])
     end
 
     it "returns array of candidates with text and score" do
@@ -109,6 +119,43 @@ RSpec.describe Llmemory::LongTerm::GraphBased::Memory do
     end
   end
 
+  describe "node name matching" do
+    let(:extractor_with_ai) do
+      double("EntityRelationExtractor").tap do |d|
+        allow(d).to receive(:extract).and_return(
+          entities: [
+            { type: "concept", name: "AI" },
+            { type: "company", name: "Acme Corp" }
+          ],
+          relations: []
+        )
+      end
+    end
+    let(:memory_with_ai) do
+      described_class.new(
+        user_id: user_id,
+        storage: storage,
+        vector_store: vector_store_double,
+        extractor: extractor_with_ai
+      )
+    end
+
+    before { memory_with_ai.memorize("AI at Acme Corp") }
+
+    it "matches node names by tokens, not substring inclusion" do
+      ids = memory_with_ai.send(:extract_node_ids_from_text, "it was raining yesterday")
+      expect(ids).to be_empty
+    end
+
+    it "matches when all name tokens appear in the query" do
+      ids = memory_with_ai.send(:extract_node_ids_from_text, "Acme Corp deploy")
+      ai_node = storage.list_nodes(user_id).find { |n| n.name == "AI" }
+      acme_node = storage.list_nodes(user_id).find { |n| n.name == "Acme Corp" }
+      expect(ids).to include(acme_node.id)
+      expect(ids).not_to include(ai_node.id) unless ids.include?(ai_node.id)
+    end
+  end
+
   describe "#forget" do
     it "archives matching edges by id and records an audit entry" do
       memory.memorize("I work at Acme.")
@@ -118,6 +165,7 @@ RSpec.describe Llmemory::LongTerm::GraphBased::Memory do
 
       expect(removed).to eq(1)
       expect(storage.find_edges(user_id, predicate: "works_at", include_archived: false)).to be_empty
+      expect(vector_store_double).to have_received(:delete).with(id: edge.id, user_id: user_id)
       expect(memory.forget_log.entries(user_id).last).to include(memory_type: "graph_based", reason: "obsolete")
     end
   end

@@ -10,7 +10,7 @@ module Llmemory
           @server_name = "llmemory"
           @http_mode = false
           @port = 3100
-          @host = "0.0.0.0"
+          @host = "127.0.0.1"
           @ssl_cert = nil
           @ssl_key = nil
 
@@ -18,7 +18,7 @@ module Llmemory
           parser.on("--name NAME", "Server name (default: llmemory)") { |v| @server_name = v }
           parser.on("--http", "Run as HTTP server instead of stdio") { @http_mode = true }
           parser.on("--port PORT", Integer, "HTTP port (default: 3100)") { |v| @port = v }
-          parser.on("--host HOST", "HTTP host (default: 0.0.0.0)") { |v| @host = v }
+          parser.on("--host HOST", "HTTP host (default: 127.0.0.1)") { |v| @host = v }
           parser.on("--ssl-cert FILE", "SSL certificate file for HTTPS") { |v| @ssl_cert = v }
           parser.on("--ssl-key FILE", "SSL private key file for HTTPS") { |v| @ssl_key = v }
           parser.on("-h", "--help", "Show this help") do
@@ -51,7 +51,7 @@ module Llmemory
           puts "  --name NAME      Server name (default: llmemory)"
           puts "  --http           Run as HTTP server instead of stdio"
           puts "  --port PORT      HTTP port (default: 3100)"
-          puts "  --host HOST      HTTP host (default: 0.0.0.0)"
+          puts "  --host HOST      HTTP host (default: 127.0.0.1)"
           puts "  --ssl-cert FILE  SSL certificate file for HTTPS"
           puts "  --ssl-key FILE   SSL private key file for HTTPS"
           puts ""
@@ -98,6 +98,8 @@ module Llmemory
             $stderr.puts "  gem 'mcp', '~> 0.6'"
             exit 1
           end
+
+          Llmemory.configure { |c| c.shared_memory_stores = true }
 
           server = Llmemory::MCP::Server.new(name: @server_name)
 

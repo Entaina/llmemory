@@ -62,4 +62,12 @@ RSpec.describe Llmemory::MCP::Server do
       expect(tool_names).to include("memory_mine_skills", "memory_maintain")
     end
   end
+
+  describe "#run_http bind validation" do
+    it "rejects non-loopback hosts without MCP_TOKEN" do
+      server = described_class.new
+      expect { server.run_http(host: "0.0.0.0", port: 0) }
+        .to raise_error(Llmemory::ConfigurationError, /MCP HTTP server cannot bind/)
+    end
+  end
 end

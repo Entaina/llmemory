@@ -16,6 +16,15 @@ module Llmemory
           raise NotImplementedError, "#{self.class}#delete must be implemented"
         end
 
+        # Atomic read-modify-write. Yields the current state (may be nil) and
+        # persists the block's return value when non-nil.
+        def update(user_id, session_id)
+          current = load(user_id, session_id)
+          new_state = yield(current)
+          save(user_id, session_id, new_state) unless new_state.nil?
+          new_state
+        end
+
         def list_users
           raise NotImplementedError, "#{self.class}#list_users must be implemented"
         end

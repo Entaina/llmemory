@@ -5,6 +5,7 @@ require "securerandom"
 require "time"
 require_relative "base"
 require_relative "../../../crypto/field_helpers"
+require_relative "../../../active_record_helpers"
 
 module Llmemory
   module LongTerm
@@ -15,6 +16,7 @@ module Llmemory
         # handles. Mirrors the file-based ActiveRecordStorage pattern.
         class ActiveRecordStorage < Base
           include Llmemory::Crypto::FieldHelpers
+          include Llmemory::ActiveRecordHelpers
 
           def initialize(cipher: nil)
             @cipher = cipher || Llmemory.build_cipher
@@ -39,7 +41,7 @@ module Llmemory
             rec.search_text = enc(text)
             rec.search_tokens = search_tokens_for(text) if LlmemoryEpisode.column_names.include?("search_tokens")
             rec.created_at ||= Time.current
-            rec.save!
+            with_unique_retry { rec.save! }
             id
           end
 

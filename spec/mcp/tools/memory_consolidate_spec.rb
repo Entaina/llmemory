@@ -19,6 +19,27 @@ RSpec.describe Llmemory::MCP::Tools::MemoryConsolidate do
       expect(response.content.first[:text]).to include("No messages to consolidate")
     end
 
+    it "round-trips add_message and consolidate with shared memory stores" do
+      Llmemory.configure { |c| c.shared_memory_stores = true }
+      extractor = double(
+        "FactExtractor",
+        classify_item: "general",
+        classify_items: {},
+        evolve_summary: "summary",
+        extract_items: []
+      )
+      allow(Llmemory::Extractors::FactExtractor).to receive(:new).and_return(extractor)
+
+      Llmemory::MCP::Tools::MemoryAddMessage.call(
+        user_id: "user123",
+        role: "user",
+        content: "I prefer tea"
+      )
+
+      response = described_class.call(user_id: "user123")
+      expect(response.content.first[:text]).to include("Consolidated 1 messages")
+    end
+
     it "handles errors gracefully" do
       allow(Llmemory::Memory).to receive(:new).and_raise(StandardError.new("Error"))
 

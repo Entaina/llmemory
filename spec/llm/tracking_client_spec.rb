@@ -34,6 +34,13 @@ RSpec.describe Llmemory::LLM::TrackingClient do
     expect(ledger.totals("user_1")[:invoke][:calls]).to eq(1)
   end
 
+  it "does not record usage for providers without structured output support" do
+    anthropic = Llmemory::LLM::Anthropic.new(api_key: "test-key")
+    tracking = described_class.new(anthropic, user_id: "user_1", store: store)
+    tracking.invoke_with_json_schema("hello", {})
+    expect(ledger.totals("user_1")[:invoke][:calls]).to eq(0)
+  end
+
   it "delegates last_usage to the inner client" do
     expect(client.last_usage.total_tokens).to eq(7)
   end

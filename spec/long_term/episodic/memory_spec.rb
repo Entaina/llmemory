@@ -80,7 +80,7 @@ RSpec.describe Llmemory::LongTerm::Episodic::Memory do
       expect(candidates).not_to be_empty
       c = candidates.first
       expect(c).to include(:text, :timestamp, :score, :importance, :provenance)
-      expect(c[:score]).to eq(1.0)
+      expect(c[:score]).to eq(described_class::KEYWORD_MATCH_SCORE)
       expect(c[:importance]).to eq(0.7)
       expect(c[:provenance][:method]).to eq("episode_recording")
     end

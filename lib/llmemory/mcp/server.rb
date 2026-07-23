@@ -39,7 +39,10 @@ module Llmemory
         transport.open
       end
 
-      def run_http(port: 3100, host: "0.0.0.0", ssl_cert: nil, ssl_key: nil)
+      def run_http(port: 3100, host: "127.0.0.1", ssl_cert: nil, ssl_key: nil)
+        require "socket"
+        validate_http_bind!(host)
+
         require "webrick"
 
         @http_transport = ::MCP::Server::Transports::StreamableHTTPTransport.new(@server)
@@ -96,13 +99,25 @@ module Llmemory
 
       def build_rack_app(transport)
         app = ->(env) { transport.handle_request(RackRequest.new(env)) }
-
-        # Wrap with authentication if MCP_TOKEN is set
-        if ENV["MCP_TOKEN"]
-          app = Authentication.new(app)
-        end
-
+        app = Authentication.new(app)
         app
+      end
+
+      def validate_http_bind!(host)
+        return if loopback_host?(host)
+        return if ENV["MCP_TOKEN"] && !ENV["MCP_TOKEN"].to_s.empty?
+
+        raise Llmemory::ConfigurationError,
+              "MCP HTTP server cannot bind to #{host} without MCP_TOKEN; use 127.0.0.1 or set MCP_TOKEN"
+      end
+
+      def loopback_host?(host)
+        case host.to_s
+        when "127.0.0.1", "localhost", "::1"
+          true
+        else
+          false
+        end
       end
 
       def build_rack_env(req)

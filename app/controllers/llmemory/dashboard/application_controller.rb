@@ -3,9 +3,21 @@
 module Llmemory
   module Dashboard
     class ApplicationController < ActionController::Base
+      before_action :ensure_dashboard_authorized!
+
       helper_method :short_term_store, :file_based_storage, :graph_based_storage,
                     :episodic_storage, :procedural_storage, :forget_log,
                     :file_based?, :graph_based?
+
+      protected
+
+      def ensure_dashboard_authorized!
+        return unless Llmemory.configuration.dashboard_require_auth?
+        auth = Llmemory.configuration.dashboard_auth
+        return if auth.respond_to?(:call) && auth.call(self)
+
+        head :forbidden
+      end
 
       protected
 

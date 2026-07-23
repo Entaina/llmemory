@@ -26,6 +26,16 @@ RSpec.describe Llmemory::ShortTerm::Pruner do
       expect(result[1][:content].bytesize).to be < 500
     end
 
+    it "produces valid UTF-8 when trimming multibyte characters" do
+      emoji = "🎉" * 80
+      content = "#{emoji}#{'x' * 400}"
+      messages = [{ role: :tool_result, content: content }]
+      result = pruner.prune!(messages, mode: :soft_trim)
+      trimmed = result[0][:content]
+      expect(trimmed.encoding).to eq(Encoding::UTF_8)
+      expect(trimmed.valid_encoding?).to be true
+    end
+
     it "hard-clears tool_result when mode is hard_clear" do
       messages = [
         { role: :tool_result, content: "Very long tool output " * 100 }

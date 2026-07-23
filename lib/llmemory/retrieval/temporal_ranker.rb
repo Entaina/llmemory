@@ -9,14 +9,16 @@ module Llmemory
       end
 
       def rank(candidates, now: Time.now)
-        lambda_val = Math.log(2) / @half_life_days.to_f
+        half_life = @half_life_days.to_f
+        half_life = 30.0 if half_life <= 0
+        lambda_val = Math.log(2) / half_life
         weight = [@importance_weight.to_f, 0.0].max
 
         candidates.map do |c|
           score = (c[:score] || c["score"] || 1.0).to_f
           timestamp = c[:timestamp] || c["timestamp"]
           timestamp = Time.parse(timestamp.to_s) if timestamp.is_a?(String)
-          age_days = timestamp ? (now - timestamp).to_i / 86400 : 0
+          age_days = timestamp ? [(now - timestamp) / 86_400.0, 0.0].max : 0.0
 
           time_decay = if c[:evergreen] || c["evergreen"]
             1.0

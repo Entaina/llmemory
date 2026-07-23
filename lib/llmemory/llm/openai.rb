@@ -3,10 +3,12 @@
 require "faraday"
 require "json"
 require_relative "base"
+require_relative "http_client"
 
 module Llmemory
   module LLM
     class OpenAI < Base
+      include HttpClient
       DEFAULT_BASE_URL = "https://api.openai.com/v1"
       DEFAULT_MODEL = "gpt-4"
 
@@ -21,7 +23,7 @@ module Llmemory
         result = nil
         payload = { provider: :openai, model: @model, prompt_chars: prompt.to_s.length }
         Llmemory::Instrumentation.instrument(:llm_invoke, payload) do
-          response = connection.post("chat/completions") do |req|
+          response = post_with_resilience(connection, "chat/completions") do |req|
             req.body = {
               model: @model,
               messages: [{ role: "user", content: prompt }],
@@ -63,7 +65,7 @@ module Llmemory
         parsed = nil
         instrument_payload = { provider: :openai, model: @model, prompt_chars: prompt.to_s.length }
         Llmemory::Instrumentation.instrument(:llm_invoke, instrument_payload) do
-          response = connection.post("chat/completions") do |req|
+          response = post_with_resilience(connection, "chat/completions") do |req|
             req.body = payload.to_json
             req.headers["Content-Type"] = "application/json"
             req.headers["Authorization"] = "Bearer #{@api_key}"
@@ -88,11 +90,7 @@ module Llmemory
       private
 
       def connection
-        @connection ||= Faraday.new(url: @base_url) do |f|
-          f.request :json
-          f.response :json
-          f.adapter Faraday.default_adapter
-        end
+        @connection ||= build_faraday_connection(@base_url)
       end
     end
   end

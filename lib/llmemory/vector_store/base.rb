@@ -14,6 +14,10 @@ module Llmemory
       def search(query_embedding, top_k: 10)
         raise NotImplementedError, "#{self.class}#search must be implemented"
       end
+
+      def delete(id:, user_id: nil)
+        raise NotImplementedError, "#{self.class}#delete must be implemented"
+      end
     end
   end
 end

@@ -33,4 +33,15 @@ RSpec.describe Llmemory::Crypto::FieldHelpers do
       expect(tokens).to include(" user prefers ruby ")
     end
   end
+
+  describe "#deserialize_state" do
+    it "raises DecryptionError when ciphertext is read with encryption disabled" do
+      cipher = Llmemory::Crypto::Cipher.new("test-key")
+      encrypted = cipher.encrypt('{"messages":[]}')
+      helper = helper_class.new(Llmemory::Crypto::NullCipher.new)
+
+      expect { helper.send(:deserialize_state, encrypted) }
+        .to raise_error(Llmemory::Crypto::DecryptionError, /encryption is disabled/)
+    end
+  end
 end

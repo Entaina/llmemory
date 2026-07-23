@@ -108,5 +108,18 @@ RSpec.describe Llmemory do
     it "uses an explicit instance key even when global flag is off" do
       expect(Llmemory.build_cipher("instance-key")).to be_enabled
     end
+
+    it "raises ConfigurationError when encryption is enabled without a key" do
+      Llmemory.configure do |c|
+        c.encryption_enabled = true
+        c.encryption_key = nil
+      end
+      expect { Llmemory.build_cipher }.to raise_error(Llmemory::ConfigurationError, /cannot be empty/)
+    end
+
+    it "raises ConfigurationError for an explicit empty instance key when global encryption is enabled" do
+      Llmemory.configure { |c| c.encryption_enabled = true; c.encryption_key = "global-key" }
+      expect { Llmemory.build_cipher("") }.to raise_error(Llmemory::ConfigurationError, /cannot be empty/)
+    end
   end
 end

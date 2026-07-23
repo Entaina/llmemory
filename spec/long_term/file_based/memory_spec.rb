@@ -66,17 +66,13 @@ RSpec.describe Llmemory::LongTerm::FileBased::Memory do
   end
 
   describe "#retrieve" do
-    before do
-      allow(llm_double).to receive(:invoke).with(/Query:.*Available Categories/).and_return('["preferences"]')
-      allow(llm_double).to receive(:invoke).with(/Can you answer the query/).and_return("YES")
-      memory.memorize("I prefer Ruby")
-    end
+    before { memory.memorize("I prefer Ruby") }
 
-    it "returns summaries for relevant categories" do
+    it "returns assembled context from search candidates" do
       result = memory.retrieve("What does the user prefer?")
-      expect(result).to be_a(Hash)
-      expect(result["preferences"]).not_to be_nil
-      expect(result["preferences"].to_s).not_to be_empty
+      expect(result).to be_a(String)
+      expect(result).to include("RELEVANT MEMORIES")
+      expect(result).to include("Ruby")
     end
   end
 
