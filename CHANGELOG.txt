@@ -2,6 +2,8 @@
 
 ## [0.2.9] - 2026-07-30
 
+### Added
+
 - **Rails Railtie.** `Llmemory::Railtie` loads `llmemory` rake tasks when the gem
   is required in a Rails app, so `bundle exec rake llmemory:backfill_search_tokens`
   works without a manual task require. The task depends on `:environment` when
@@ -11,7 +13,6 @@
 
 - Migration docs updated to describe automatic task registration via the Railtie.
 
-Commits: 57e187e, f48a0fd
 ## [0.2.8] - 2026-07-23
 
 ### Fixed

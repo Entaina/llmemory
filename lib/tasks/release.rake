@@ -14,7 +14,8 @@ module Release
 
   def build_changelog_entry(version, date, notes_body)
     body = notes_body.strip
-    body = body.sub(/\A#+\s*[^\n]*\n+/, "") # drop optional leading markdown title
+    # Drop an optional top-level title only (# / ##), keep ### section headers.
+    body = body.sub(/\A(?:#|##)\s+[^\n]*\n+/, "")
 
     <<~ENTRY
 
