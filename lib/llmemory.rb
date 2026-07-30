@@ -28,3 +28,4 @@ module Llmemory
 end
 
 require_relative "llmemory/crypto/cipher"
+require_relative "llmemory/railtie" if defined?(Rails::Railtie)

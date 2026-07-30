@@ -133,6 +133,8 @@ Rows written **before** the migration have `search_tokens IS NULL`. The gem incl
 
 ### Option A — Rake task (recommended)
 
+In Rails apps, the task is registered automatically via `Llmemory::Railtie` when the gem is loaded (`Bundler.require` / `require "llmemory"`). Run:
+
 ```bash
 # Pending rows (search_tokens IS NULL; skills also name_det IS NULL)
 bundle exec rake llmemory:backfill_search_tokens

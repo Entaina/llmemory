@@ -3,7 +3,9 @@
 namespace :llmemory do
   desc "Backfill search_tokens blind index (and name_det on skills) for encrypted keyword search. " \
        "Env: FORCE=1 (re-backfill all rows), DRY_RUN=1 (count only), STORE=active_record|postgres"
-  task :backfill_search_tokens, [:user_id] do |_t, args|
+  task_deps = Rake::Task.task_defined?(:environment) ? [:environment] : []
+
+  task :backfill_search_tokens, [:user_id] => task_deps do |_t, args|
     require "llmemory"
     require_relative "../llmemory/maintenance/search_tokens_backfill"
 
