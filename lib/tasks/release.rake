@@ -1,16 +1,18 @@
 # frozen_string_literal: true
 
-namespace :release do
+module Release
   RELEASE_FILES = %w[lib/llmemory/version.rb Gemfile.lock CHANGELOG.txt].freeze
   DEFAULT_NOTES_PATH = File.expand_path("../../tmp/release_notes.txt", __dir__)
 
-  def self.resolve_notes_path(arg)
+  module_function
+
+  def resolve_notes_path(arg)
     path = arg.to_s.strip
     path = DEFAULT_NOTES_PATH if path.empty?
     File.expand_path(path)
   end
 
-  def self.build_changelog_entry(version, date, notes_body)
+  def build_changelog_entry(version, date, notes_body)
     body = notes_body.strip
     body = body.sub(/\A#+\s*[^\n]*\n+/, "") # drop optional leading markdown title
 
@@ -22,6 +24,12 @@ namespace :release do
     ENTRY
   end
 
+  def allowed_dirty_path?(path, notes_path)
+    RELEASE_FILES.include?(path) || File.expand_path(path) == File.expand_path(notes_path)
+  end
+end
+
+namespace :release do
   desc "Show commits and diff stat since the last tag (helper before writing release notes)"
   task :since_tag do
     last_tag = `git describe --tags --abbrev=0 2>/dev/null`.strip
@@ -41,16 +49,17 @@ namespace :release do
     current_branch = `git rev-parse --abbrev-ref HEAD`.strip
     abort "Current branch must be main (got: #{current_branch})" unless current_branch == "main"
 
+    notes_path = Release.resolve_notes_path(args[:notes_file])
+
     status_lines = `git status --porcelain --untracked-files=normal`.strip.lines
     other_changes = status_lines.reject do |line|
       path = line.sub(/\A..\s+/, "").strip.split(" -> ").last
-      RELEASE_FILES.include?(path)
+      Release.allowed_dirty_path?(path, notes_path)
     end
     unless other_changes.empty?
       abort "Working tree has uncommitted changes outside release files. Commit or stash them first.\n#{other_changes.join}"
     end
 
-    notes_path = Release.resolve_notes_path(args[:notes_file])
     unless File.exist?(notes_path)
       abort <<~MSG
         Release notes file not found: #{notes_path}
@@ -123,7 +132,8 @@ namespace :release do
     sh "git tag v#{new_version_s}"
     sh "git push origin v#{new_version_s}"
 
-    File.delete(notes_path) if File.expand_path(notes_path) == File.expand_path(DEFAULT_NOTES_PATH) && File.exist?(notes_path)
+    default_notes = Release::DEFAULT_NOTES_PATH
+    File.delete(notes_path) if File.expand_path(notes_path) == File.expand_path(default_notes) && File.exist?(notes_path)
     puts "\nDone. Released v#{new_version_s}"
   end
 end
