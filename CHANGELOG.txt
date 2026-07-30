@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.2.10] - 2026-07-30
+
+### Fixed
+
+- **SearchTokensBackfill in ActiveRecord environments.** `load_active_record_models!`
+  now requires file-based, episodic, and procedural `ActiveRecordStorage` before
+  calling `load_models!`, so `bundle exec rake llmemory:backfill_search_tokens`
+  works in Rails without first initializing storage via `Storages.build`.
+
+### Notes
+
+- `release:bump` no longer strips `###` section headers from release notes (only
+  optional top-level `#` / `##` titles).
 ## [0.2.9] - 2026-07-30
 
 ### Added
