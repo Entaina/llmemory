@@ -71,6 +71,10 @@ module Llmemory
       end
 
       def load_active_record_models!
+        require_relative "../long_term/file_based/storages/active_record_storage"
+        require_relative "../long_term/episodic/storages/active_record_storage"
+        require_relative "../long_term/procedural/storages/active_record_storage"
+
         LongTerm::FileBased::Storages::ActiveRecordStorage.load_models!
         LongTerm::Episodic::Storages::ActiveRecordStorage.load_models!
         LongTerm::Procedural::Storages::ActiveRecordStorage.load_models!

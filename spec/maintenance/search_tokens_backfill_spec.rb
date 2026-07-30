@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "open3"
+require "rbconfig"
 require "spec_helper"
 
 RSpec.describe Llmemory::Maintenance::SearchTokensBackfill do
@@ -12,6 +14,32 @@ RSpec.describe Llmemory::Maintenance::SearchTokensBackfill do
     expect {
       described_class.new(store: :file).run
     }.to raise_error(Llmemory::ConfigurationError, /active_record or :postgres/)
+  end
+
+  describe "active_record backend" do
+    # ActiveRecordStorage is loaded lazily via Storages.build; backfill must
+    # require those files itself before calling load_models!.
+    it "loads ActiveRecordStorage without going through Storages.build" do
+      script = <<~'RUBY'
+        require "llmemory"
+        backfill = Llmemory::Maintenance::SearchTokensBackfill.new(
+          store: :active_record,
+          cipher: Llmemory::Crypto::Cipher.new("backfill-ar-spec")
+        )
+        begin
+          backfill.send(:load_active_record_models!)
+        rescue LoadError => e
+          # Without activerecord in the gem bundle, load_models! fails after
+          # constants resolve — that is fine; NameError on ActiveRecordStorage is not.
+          abort e.message unless e.message.include?("active_record")
+        end
+      RUBY
+
+      _stdout, stderr, status = Open3.capture3(RbConfig.ruby, "-Ilib", "-e", script)
+
+      expect(stderr).not_to match(/uninitialized constant.*ActiveRecordStorage/)
+      expect(status).to be_success, stderr
+    end
   end
 
   describe "postgres backend" do
