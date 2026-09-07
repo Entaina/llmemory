@@ -6,6 +6,7 @@ require_relative "category"
 require_relative "storage"
 require_relative "../../noise_filter"
 require_relative "../../memory_module"
+require_relative "../../consolidation/filter"
 
 module Llmemory
   module LongTerm
@@ -28,19 +29,26 @@ module Llmemory
           resource_id = save_resource(text)
           append_to_daily_log(text) if Llmemory.configuration.daily_logs_enabled && @storage.respond_to?(:save_daily_log_entry)
           items = @extractor.extract_items(text)
-          contents = items.map do |item|
-            item.is_a?(Hash) ? (item["content"] || item[:content]).to_s : item.to_s
-          end
-          classifications = @extractor.classify_items(contents)
+          classifications = @extractor.classify_items(
+            items.map { |item| item.is_a?(Hash) ? (item["content"] || item[:content]).to_s : item.to_s }
+          )
+          items = Consolidation::Filter.apply_items(items, classifications)
           updates_by_category = {}
 
           items.each do |item|
             content = item.is_a?(Hash) ? (item["content"] || item[:content]) : item.to_s
             importance = (item["importance"] || item[:importance] || 0.7).to_f
             cat = classifications[content] || @extractor.classify_item(content)
+            volatile = item[:volatile] == true
             updates_by_category[cat] ||= []
             updates_by_category[cat] << content.to_s
-            save_item(category: cat, item: item, source_resource_id: resource_id, importance: importance)
+            save_item(
+              category: cat,
+              item: item,
+              source_resource_id: resource_id,
+              importance: importance,
+              volatile: volatile
+            )
           end
 
           updates_by_category.each do |category, new_memories|
@@ -70,13 +78,15 @@ module Llmemory
           end
 
           items.first(top_k).each do |i|
+            prov = i[:provenance] || i["provenance"]
             out << {
               id: i[:id] || i["id"],
               text: i[:content] || i["content"],
               timestamp: i[:created_at] || i["created_at"],
               score: 1.0,
               importance: (i[:importance] || i["importance"] || 1.0).to_f,
-              evergreen: i[:evergreen] || i["evergreen"]
+              evergreen: i[:evergreen] || i["evergreen"],
+              volatile: Consolidation::Filter.volatile_marked?(prov)
             }
           end
           resources.first([top_k - out.size, 0].max).each do |r|
@@ -152,11 +162,12 @@ module Llmemory
           @storage.save_resource(@user_id, text)
         end
 
-        def save_item(category:, item:, source_resource_id:, importance: 0.7)
+        def save_item(category:, item:, source_resource_id:, importance: 0.7, volatile: false)
           content = item.is_a?(Hash) ? item["content"] || item[:content] : item.to_s
           provenance = Llmemory::Provenance.from_resource(
             source_resource_id, method: "fact_extraction", confidence: importance
           )
+          provenance = Consolidation::Filter.volatile_provenance(provenance) if volatile
           @storage.save_item(@user_id, category: category, content: content, source_resource_id: source_resource_id, importance: importance, provenance: provenance)
         end
 

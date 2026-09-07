@@ -122,4 +122,42 @@ RSpec.describe Llmemory::LongTerm::FileBased::Memory do
       expect(llm_captured.first).to include("Hello world")
     end
   end
+
+  describe "consolidation policy" do
+    let(:policy) do
+      Llmemory::Consolidation::RuleBasedPolicy.new(
+        drop_categories: %w[work_life],
+        volatile_categories: %w[general]
+      )
+    end
+
+    before do
+      allow(Llmemory.configuration).to receive(:consolidation_policy).and_return(policy)
+    end
+
+    let(:llm_multi) do
+      double("LLM").tap do |d|
+        allow(d).to receive(:invoke).with(/Extract discrete facts/).and_return(
+          '[{"content": "User is a PM"}, {"content": "User said hello"}]'
+        )
+        allow(d).to receive(:invoke).with(/Classify this fact/).and_return("work_life", "general")
+        allow(d).to receive(:invoke).with(/Memory Synchronization Specialist/).and_return("# Profile\n- hello")
+      end
+    end
+
+    let(:memory_with_policy) { described_class.new(user_id: user_id, storage: storage, llm: llm_multi) }
+
+    it "does not save dropped category items" do
+      memory_with_policy.memorize("conversation")
+      contents = storage.get_all_items(user_id).map { |i| i[:content] }
+      expect(contents).not_to include("User is a PM")
+      expect(contents).to include("User said hello")
+    end
+
+    it "marks volatile items in provenance" do
+      memory_with_policy.memorize("conversation")
+      item = storage.get_all_items(user_id).find { |i| i[:content] == "User said hello" }
+      expect(Llmemory::Consolidation::Filter.volatile_marked?(item[:provenance])).to be true
+    end
+  end
 end

@@ -14,13 +14,15 @@ module Llmemory
 
         ranked_memories.each do |memory|
           text = memory[:text] || memory["text"] || ""
+          text = label_volatile(text) if volatile_memory?(memory)
           memory_tokens = count_tokens(text)
           break if token_count + memory_tokens > max_tokens
 
           selected << {
             text: text,
             timestamp: memory[:timestamp] || memory["timestamp"],
-            confidence: memory[:temporal_score] || memory[:score] || memory["score"]
+            confidence: memory[:temporal_score] || memory[:score] || memory["score"],
+            volatile: volatile_memory?(memory)
           }
           token_count += memory_tokens
         end
@@ -47,6 +49,20 @@ module Llmemory
         end
         lines << "=== END MEMORIES ==="
         lines.join("\n")
+      end
+
+      def volatile_memory?(memory)
+        memory[:volatile] == true || memory["volatile"] == true
+      end
+
+      def label_volatile_enabled?
+        Llmemory.configuration.retrieval_label_volatile
+      end
+
+      def label_volatile(text)
+        return text unless label_volatile_enabled?
+
+        "[verify live] #{text}"
       end
     end
   end

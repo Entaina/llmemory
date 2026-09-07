@@ -181,4 +181,66 @@ RSpec.describe Llmemory::LongTerm::GraphBased::Memory do
       expect(method).to eq("reflection")
     end
   end
+
+  describe "consolidation policy" do
+    let(:policy) do
+      Llmemory::Consolidation::RuleBasedPolicy.new(
+        drop_predicates: %w[works_at],
+        volatile_predicates: %w[prefers]
+      )
+    end
+
+    before do
+      allow(Llmemory.configuration).to receive(:consolidation_policy).and_return(policy)
+    end
+
+    let(:extractor_multi) do
+      double("EntityRelationExtractor").tap do |d|
+        allow(d).to receive(:extract).and_return(
+          entities: [
+            { type: "person", name: "User" },
+            { type: "company", name: "Acme" },
+            { type: "language", name: "Ruby" }
+          ],
+          relations: [
+            { subject: "User", predicate: "works_at", object: "Acme" },
+            { subject: "User", predicate: "prefers", object: "Ruby" }
+          ]
+        )
+      end
+    end
+
+    let(:memory_with_policy) do
+      described_class.new(
+        user_id: user_id,
+        storage: storage,
+        vector_store: vector_store_double,
+        extractor: extractor_multi
+      )
+    end
+
+    it "does not persist dropped relations" do
+      memory_with_policy.memorize("User works at Acme and prefers Ruby")
+      edges = storage.find_edges(user_id, include_archived: false)
+      predicates = edges.map(&:predicate)
+      expect(predicates).not_to include("works_at")
+      expect(predicates).to include("prefers")
+    end
+
+    it "marks volatile relations in edge properties" do
+      memory_with_policy.memorize("User works at Acme and prefers Ruby")
+      edge = storage.find_edges(user_id, predicate: "prefers", include_archived: false).first
+      expect(Llmemory::Consolidation::Filter.volatile_marked?(edge.properties)).to be true
+    end
+
+    it "exposes volatile flag in search_candidates" do
+      memory_with_policy.memorize("User works at Acme and prefers Ruby")
+      allow(vector_store_double).to receive(:search_by_text).and_return([])
+
+      candidates = memory_with_policy.search_candidates("ruby", top_k: 20)
+      volatile_candidate = candidates.find { |c| c[:text].to_s.include?("prefers") }
+      expect(volatile_candidate).not_to be_nil
+      expect(volatile_candidate[:volatile]).to be true
+    end
+  end
 end

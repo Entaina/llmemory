@@ -57,7 +57,9 @@ module Llmemory
                   :encryption_key,
                   :shared_memory_stores,
                   :dashboard_auth,
-                  :dashboard_require_auth
+                  :dashboard_require_auth,
+                  :consolidation_policy,
+                  :retrieval_label_volatile
 
     def initialize
       @llm_provider = :openai
@@ -116,6 +118,12 @@ module Llmemory
       @shared_memory_stores = false
       @dashboard_auth = nil
       @dashboard_require_auth = nil
+      @consolidation_policy = nil
+      @retrieval_label_volatile = false
+    end
+
+    def consolidation_policy
+      @consolidation_policy ||= Consolidation::NullPolicy.new
     end
 
     def dashboard_require_auth?

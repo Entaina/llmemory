@@ -153,6 +153,31 @@ Llmemory.configure do |config|
 end
 ```
 
+## Consolidation policy
+
+By default, llmemory consolidates every extracted fact into long-term memory. For agents with **authoritative live data** (tools, DB snapshots), configure a `Consolidation::Policy` to **drop** or **mark volatile** facts that should not be treated as stable memory (e.g. current job, plan status, task lists).
+
+```ruby
+Llmemory.configure do |config|
+  config.consolidation_policy = Llmemory::Consolidation::RuleBasedPolicy.new(
+    drop_predicates: %w[current_job works_at job_title plan_status has_task],
+    drop_categories: %w[work_life]
+  )
+
+  # Optional: prefix volatile memories at retrieval time with "[verify live]"
+  config.retrieval_label_volatile = true
+end
+```
+
+Policy decisions per extracted unit: `:keep` (default), `:drop` (not persisted), or `:volatile` (persisted with a volatile marker in provenance/properties).
+
+To clean **legacy** data consolidated before a policy was enabled:
+
+```bash
+USER_ID=user_123 LONG_TERM_TYPE=graph_based bundle exec rake llmemory:prune_by_policy
+DRY_RUN=1 bundle exec rake llmemory:prune_by_policy
+```
+
 ## Encryption at rest
 
 Optional AES-256-GCM encryption protects persisted memory. Without the key, stored data is unreadable — useful for isolating agents or tenants.

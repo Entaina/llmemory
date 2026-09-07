@@ -8,6 +8,7 @@ require_relative "conflict_resolver"
 require_relative "storage"
 require_relative "../../noise_filter"
 require_relative "../../memory_module"
+require_relative "../../consolidation/filter"
 
 module Llmemory
   module LongTerm
@@ -32,6 +33,7 @@ module Llmemory
           return true if text.strip.empty?
 
           entities, relations = extract_graph(text)
+          relations = Consolidation::Filter.apply_relations(relations)
           return true if entities.empty? && relations.empty?
 
           provenance = Llmemory::Provenance.from_text_fingerprint(text, method: "entity_relation_extraction")
@@ -54,7 +56,8 @@ module Llmemory
               text: r[:text],
               timestamp: r[:created_at] || r[:timestamp],
               score: r[:score] || 1.0,
-              importance: r[:importance]
+              importance: r[:importance],
+              volatile: r[:volatile]
             }
           end
         end
@@ -147,8 +150,12 @@ module Llmemory
             object = (r[:object] || r["object"]).to_s.strip
             next if subject.empty? || predicate.empty? || object.empty?
 
-            subject_id = name_to_id[subject] || @kg.add_node(entity_type: "concept", name: subject, properties: { "provenance" => provenance })
-            object_id = name_to_id[object] || @kg.add_node(entity_type: "concept", name: object, properties: { "provenance" => provenance })
+            volatile = r[:volatile] == true
+            relation_provenance = volatile ? Consolidation::Filter.volatile_provenance(provenance) : provenance
+            edge_properties = volatile ? Consolidation::Filter.volatile_properties("provenance" => relation_provenance) : {"provenance" => relation_provenance}
+
+            subject_id = name_to_id[subject] || @kg.add_node(entity_type: "concept", name: subject, properties: { "provenance" => relation_provenance })
+            object_id = name_to_id[object] || @kg.add_node(entity_type: "concept", name: object, properties: { "provenance" => relation_provenance })
 
             existing = @kg.find_edges(
               subject: subject_id,
@@ -164,13 +171,13 @@ module Llmemory
               subject_id: subject_id,
               predicate: predicate,
               target_id: object_id,
-              properties: { "provenance" => provenance },
+              properties: edge_properties,
               created_at: Time.now,
               archived_at: nil
             )
             archived_ids = @conflict_resolver.resolve(edge)
             remove_edge_embeddings(archived_ids)
-            edge_id = @kg.add_edge(subject: subject_id, predicate: predicate, object: object_id, properties: { "provenance" => provenance })
+            edge_id = @kg.add_edge(subject: subject_id, predicate: predicate, object: object_id, properties: edge_properties)
 
             edge_text = "#{subject} #{predicate} #{object}"
             embedding = @vector_store.respond_to?(:embed) ? @vector_store.embed(edge_text) : nil
@@ -197,7 +204,13 @@ module Llmemory
             next unless active_edge?(id)
 
             meta = v[:metadata] || v["metadata"] || {}
-            { id: id, text: meta["text"] || meta[:text] || id.to_s, score: v[:score] || v["score"] || 1.0, created_at: meta["created_at"] || meta[:created_at] }
+            {
+              id: id,
+              text: meta["text"] || meta[:text] || id.to_s,
+              score: v[:score] || v["score"] || 1.0,
+              created_at: meta["created_at"] || meta[:created_at],
+              volatile: volatile_candidate?(edge_properties(id))
+            }
           end
 
           node_ids = out.flat_map { |r| extract_node_ids_from_text(r[:text]) }.compact.uniq
@@ -209,7 +222,7 @@ module Llmemory
               subj = @kg.find_node_by_id(e.subject_id)
               obj = @kg.find_node_by_id(e.target_id)
               edge_text = "#{subj&.name} #{e.predicate} #{obj&.name}"
-              out << { id: e.id, text: edge_text, score: 0.85, created_at: e.created_at } unless out.any? { |o| o[:text] == edge_text }
+              out << { id: e.id, text: edge_text, score: 0.85, created_at: e.created_at, volatile: volatile_candidate?(e.properties) } unless out.any? { |o| o[:text] == edge_text }
             end
           end
 
@@ -222,7 +235,7 @@ module Llmemory
               obj = @kg.find_node_by_id(e.target_id)
               next unless subj && obj
               edge_text = "#{subj.name} #{e.predicate} #{obj.name}"
-              out << { id: e.id, text: edge_text, score: 0.7, created_at: e.created_at }
+              out << { id: e.id, text: edge_text, score: 0.7, created_at: e.created_at, volatile: volatile_candidate?(e.properties) }
             end
           end
 
@@ -277,6 +290,16 @@ module Llmemory
 
           @kg.find_edges(subject: nil, predicate: nil, object: nil, include_archived: false)
             .any? { |edge| edge.id.to_s == edge_id.to_s }
+        end
+
+        def volatile_candidate?(properties_or_provenance)
+          Consolidation::Filter.volatile_marked?(properties_or_provenance)
+        end
+
+        def edge_properties(edge_id)
+          @kg.find_edges(subject: nil, predicate: nil, object: nil, include_archived: false)
+            .find { |edge| edge.id.to_s == edge_id.to_s }
+            &.properties
         end
       end
     end

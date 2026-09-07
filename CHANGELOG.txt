@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.2.11] - 2026-09-07
+
+### Added
+
+- **Consolidation policy.** `Llmemory::Consolidation::Policy` with `NullPolicy`
+  (default) and `RuleBasedPolicy` to drop or mark volatile extracted facts before
+  long-term ingest (graph and file-based backends). Config:
+  `consolidation_policy`, `retrieval_label_volatile`.
+- **Retrieval labeling.** When `retrieval_label_volatile` is enabled,
+  `ContextAssembler` prefixes volatile candidates with `[verify live]`.
+- **Maintenance.** `llmemory:prune_by_policy` archives legacy facts that the
+  current policy would drop (`Maintenance::PolicyPrune`).
+
 ## [0.2.10] - 2026-07-30
 
 ### Fixed
