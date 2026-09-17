@@ -18,22 +18,25 @@ module Llmemory
             @cipher = cipher || Llmemory.build_cipher
           end
 
-          def save_resource(user_id, text)
+          def save_resource(user_id, text, occurred_at: nil)
             ensure_tables!
             id = "res_#{SecureRandom.hex(8)}"
+            ts = (Llmemory.parse_occurred_at(occurred_at) || Time.now).utc.iso8601
             conn.exec_params(
               "INSERT INTO llmemory_resources (id, user_id, text, search_tokens, created_at) VALUES ($1, $2, $3, $4, $5)",
-              [id, user_id, enc(text), search_tokens_for(text), Time.now.utc.iso8601]
+              [id, user_id, enc(text), search_tokens_for(text), ts]
             )
             id
           end
 
-          def save_item(user_id, category:, content:, source_resource_id:, importance: 0.7, provenance: nil)
+          def save_item(user_id, category:, content:, source_resource_id:, importance: 0.7, provenance: nil,
+                        occurred_at: nil)
             ensure_tables!
             id = "item_#{SecureRandom.hex(8)}"
+            ts = (Llmemory.parse_occurred_at(occurred_at) || Time.now).utc.iso8601
             conn.exec_params(
               "INSERT INTO llmemory_items (id, user_id, category, content, source_resource_id, importance, provenance, search_tokens, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9)",
-              [id, user_id, category, enc(content), source_resource_id, importance.to_f, provenance_json(provenance), search_tokens_for(content), Time.now.utc.iso8601]
+              [id, user_id, category, enc(content), source_resource_id, importance.to_f, provenance_json(provenance), search_tokens_for(content), ts]
             )
             id
           end

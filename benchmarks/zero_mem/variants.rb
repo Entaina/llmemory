@@ -4,6 +4,7 @@ module ZeroMemBenchmark
   module Variants
     DEFINITIONS = {
       classic: { mode: :classic },
+      hybrid: { mode: :hybrid },
       zero_mem_full: { mode: :zero_mem },
       hierarchy_only: { mode: :zero_mem, fusion_weights: { graph: 0.0, hierarchy: 1.0 } },
       graph_only: { mode: :zero_mem, fusion_weights: { graph: 1.0, hierarchy: 0.0 } },
@@ -24,6 +25,15 @@ module ZeroMemBenchmark
 
     def zero_mem?(key)
       fetch(key)[:mode] == :zero_mem
+    end
+
+    def hybrid?(key)
+      fetch(key)[:mode] == :hybrid
+    end
+
+    def trace_ingest?(key)
+      mode = fetch(key)[:mode]
+      %i[zero_mem hybrid].include?(mode)
     end
   end
 end

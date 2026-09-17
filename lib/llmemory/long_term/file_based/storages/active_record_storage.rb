@@ -25,20 +25,21 @@ module Llmemory
             @models_loaded = true
           end
 
-          def save_resource(user_id, text)
+          def save_resource(user_id, text, occurred_at: nil)
             id = "res_#{SecureRandom.hex(8)}"
             attrs = {
               id: id,
               user_id: user_id,
               text: enc(text),
-              created_at: Time.current
+              created_at: Llmemory.parse_occurred_at(occurred_at) || Time.current
             }
             attrs[:search_tokens] = search_tokens_for(text) if LlmemoryResource.column_names.include?("search_tokens")
             LlmemoryResource.create!(attrs)
             id
           end
 
-          def save_item(user_id, category:, content:, source_resource_id:, importance: 0.7, provenance: nil)
+          def save_item(user_id, category:, content:, source_resource_id:, importance: 0.7, provenance: nil,
+                        occurred_at: nil)
             id = "item_#{SecureRandom.hex(8)}"
             attrs = {
               id: id,
@@ -46,7 +47,7 @@ module Llmemory
               category: category,
               content: enc(content),
               source_resource_id: source_resource_id,
-              created_at: Time.current
+              created_at: Llmemory.parse_occurred_at(occurred_at) || Time.current
             }
             attrs[:importance] = importance if LlmemoryItem.column_names.include?("importance")
             if provenance && LlmemoryItem.column_names.include?("provenance")

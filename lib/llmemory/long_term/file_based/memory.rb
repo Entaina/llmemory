@@ -22,11 +22,12 @@ module Llmemory
           @extractor = extractor || Llmemory::Extractors::FactExtractor.new(llm: @llm)
         end
 
-        def memorize(conversation_text)
+        def memorize(conversation_text, reference_time: nil)
           text = Llmemory.configuration.noise_filter_enabled ? NoiseFilter.filter?(conversation_text) : conversation_text.to_s
           return true if text.strip.empty?
 
-          resource_id = save_resource(text)
+          text = prepend_conversation_anchor(text, reference_time)
+          resource_id = save_resource(text, occurred_at: reference_time)
           append_to_daily_log(text) if Llmemory.configuration.daily_logs_enabled && @storage.respond_to?(:save_daily_log_entry)
           items = @extractor.extract_items(text)
           classifications = @extractor.classify_items(
@@ -47,7 +48,8 @@ module Llmemory
               item: item,
               source_resource_id: resource_id,
               importance: importance,
-              volatile: volatile
+              volatile: volatile,
+              occurred_at: reference_time
             )
           end
 
@@ -158,17 +160,32 @@ module Llmemory
 
         private
 
-        def save_resource(text)
-          @storage.save_resource(@user_id, text)
+        def save_resource(text, occurred_at: nil)
+          @storage.save_resource(@user_id, text, occurred_at: occurred_at)
         end
 
-        def save_item(category:, item:, source_resource_id:, importance: 0.7, volatile: false)
+        def save_item(category:, item:, source_resource_id:, importance: 0.7, volatile: false, occurred_at: nil)
           content = item.is_a?(Hash) ? item["content"] || item[:content] : item.to_s
           provenance = Llmemory::Provenance.from_resource(
-            source_resource_id, method: "fact_extraction", confidence: importance
+            source_resource_id, method: "fact_extraction", confidence: importance, created_at: occurred_at
           )
           provenance = Consolidation::Filter.volatile_provenance(provenance) if volatile
-          @storage.save_item(@user_id, category: category, content: content, source_resource_id: source_resource_id, importance: importance, provenance: provenance)
+          @storage.save_item(
+            @user_id,
+            category: category,
+            content: content,
+            source_resource_id: source_resource_id,
+            importance: importance,
+            provenance: provenance,
+            occurred_at: occurred_at
+          )
+        end
+
+        def prepend_conversation_anchor(text, reference_time)
+          return text unless reference_time
+
+          anchor = Llmemory::TimeCoercion.iso8601_or_string(reference_time)
+          "# Conversation anchor time (latest message): #{anchor}\n\n#{text}"
         end
 
         def append_to_daily_log(conversation_text)

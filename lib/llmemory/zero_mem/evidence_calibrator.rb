@@ -112,7 +112,9 @@ module Llmemory
       end
 
       def pick_winner(group, fusion_rows)
-        scores = fusion_rows&.index_by { |r| r[:trace_id].to_s } || {}
+        scores = Array(fusion_rows).each_with_object({}) do |r, acc|
+          acc[r[:trace_id].to_s] = r
+        end
         group.max_by do |t|
           row = scores[t.id]
           [row ? row[:final].to_f : 0.0, t.occurred_at.to_f]

@@ -71,7 +71,7 @@ RSpec.describe Llmemory::Memory do
   describe "#consolidate!" do
     it "calls long-term memorize with conversation text" do
       long_term_double = double("LongTerm").tap do |lt|
-        expect(lt).to receive(:memorize).with("user: Soy vegano\nassistant: Ok")
+        expect(lt).to receive(:memorize).with("user: Soy vegano\nassistant: Ok", reference_time: nil)
       end
       memory = described_class.new(user_id: user_id, session_id: session_id, long_term: long_term_double)
       memory.add_message(role: :user, content: "Soy vegano")
@@ -367,7 +367,7 @@ RSpec.describe Llmemory::Memory do
       allow(Llmemory.configuration).to receive(:memory_flush_threshold_tokens).and_return(10)
 
       long_term_double = double("LongTerm")
-      expect(long_term_double).to receive(:memorize).with(/\Auser:.*assistant:/m)
+      expect(long_term_double).to receive(:memorize).with(/\Auser:.*assistant:/m, reference_time: nil)
       memory = described_class.new(user_id: user_id, session_id: session_id, long_term: long_term_double)
       memory.add_message(role: :user, content: "This is a long message that exceeds the token threshold for flush")
       memory.add_message(role: :assistant, content: "Another long response to ensure we pass the threshold")
@@ -424,7 +424,7 @@ RSpec.describe Llmemory::Memory do
       allow(Llmemory.configuration).to receive(:memory_flush_threshold_tokens).and_return(50)
 
       long_term_double = double("LongTerm")
-      expect(long_term_double).to receive(:memorize).with(include("Message number 0"))
+      expect(long_term_double).to receive(:memorize).with(include("Message number 0"), reference_time: nil)
 
       llm_double = double("LLM")
       allow(llm_double).to receive(:invoke).and_return("Summary of old conversation")

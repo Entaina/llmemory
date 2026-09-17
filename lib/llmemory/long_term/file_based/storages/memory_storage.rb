@@ -15,14 +15,15 @@ module Llmemory
             @item_id_seq = 0
           end
 
-          def save_resource(user_id, text)
+          def save_resource(user_id, text, occurred_at: nil)
             @resource_id_seq += 1
             id = "res_#{@resource_id_seq}"
-            @resources[user_id] << { id: id, text: text, created_at: Time.now }
+            @resources[user_id] << { id: id, text: text, created_at: coerce_timestamp(occurred_at) }
             id
           end
 
-          def save_item(user_id, category:, content:, source_resource_id:, importance: 0.7, provenance: nil)
+          def save_item(user_id, category:, content:, source_resource_id:, importance: 0.7, provenance: nil,
+                        occurred_at: nil)
             @item_id_seq += 1
             id = "item_#{@item_id_seq}"
             @items[user_id] << {
@@ -32,7 +33,7 @@ module Llmemory
               source_resource_id: source_resource_id,
               importance: importance,
               provenance: provenance,
-              created_at: Time.now
+              created_at: coerce_timestamp(occurred_at)
             }
             id
           end
@@ -127,6 +128,10 @@ module Llmemory
           def get_resources_around(user_id, reference, before: 5, after: 5)
             resources = @resources[user_id].sort_by { |r| r[:created_at] }
             find_around(resources, reference, before, after)
+          end
+
+          def coerce_timestamp(occurred_at)
+            Llmemory.parse_occurred_at(occurred_at) || Time.now
           end
         end
       end

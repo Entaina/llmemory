@@ -5,11 +5,12 @@ module Llmemory
     module FileBased
       module Storages
         class Base
-          def save_resource(user_id, text)
+          def save_resource(user_id, text, occurred_at: nil)
             raise NotImplementedError, "#{self.class}#save_resource must be implemented"
           end
 
-          def save_item(user_id, category:, content:, source_resource_id:, importance: 0.7, provenance: nil)
+          def save_item(user_id, category:, content:, source_resource_id:, importance: 0.7, provenance: nil,
+                        occurred_at: nil)
             raise NotImplementedError, "#{self.class}#save_item must be implemented"
           end
 

@@ -19,9 +19,14 @@ require_relative "llmemory/extractors"
 require_relative "llmemory/reflection"
 require_relative "llmemory/skill_mining"
 require_relative "llmemory/actions"
+require_relative "llmemory/time_coercion"
 require_relative "llmemory/memory"
 
 module Llmemory
+  def self.parse_occurred_at(value)
+    TimeCoercion.parse_occurred_at(value)
+  end
+
   class Error < StandardError; end
   class ConfigurationError < Error; end
   class StoreError < Error; end

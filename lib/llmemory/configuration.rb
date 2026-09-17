@@ -78,7 +78,8 @@ module Llmemory
                   :zero_mem_ttl_days,
                   :zero_mem_sidecar_timeout_seconds,
                   :zero_mem_sidecar_failure_threshold,
-                  :zero_mem_shadow_write
+                  :zero_mem_shadow_write,
+                  :hybrid_classic_token_ratio
 
     def initialize
       @llm_provider = :openai
@@ -158,6 +159,7 @@ module Llmemory
       @zero_mem_sidecar_timeout_seconds = 5
       @zero_mem_sidecar_failure_threshold = 3
       @zero_mem_shadow_write = false
+      @hybrid_classic_token_ratio = 0.5
     end
 
     def validate!
@@ -176,6 +178,11 @@ module Llmemory
       extractor = zero_mem_entity_extractor.to_sym
       unless %i[heuristic http].include?(extractor)
         raise ConfigurationError, "zero_mem_entity_extractor must be :heuristic or :http"
+      end
+
+      ratio = hybrid_classic_token_ratio.to_f
+      unless ratio.positive? && ratio < 1.0
+        raise ConfigurationError, "hybrid_classic_token_ratio must be in (0, 1)"
       end
     end
 

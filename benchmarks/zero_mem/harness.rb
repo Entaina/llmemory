@@ -48,13 +48,30 @@ module ZeroMemBenchmark
 
       llm = @llm || classic_llm_stub(conversation)
       user_id = "zm0_#{conversation['id']}"
-      if zero_mem_variant?
+      case @variant_opts[:mode]
+      when :zero_mem
         trace_store = Llmemory::ZeroMem::Storages::Memory.new
         Llmemory::Memory.new(
           user_id: user_id,
           session_id: "zm0_session",
           trace_store: trace_store,
           memory_mode: :zero_mem
+        )
+      when :hybrid
+        trace_store = Llmemory::ZeroMem::Storages::Memory.new
+        storage = Llmemory::LongTerm::FileBased::Storages::MemoryStorage.new
+        long_term = Llmemory::LongTerm::FileBased::Memory.new(
+          user_id: user_id,
+          storage: storage,
+          llm: llm
+        )
+        Llmemory::Memory.new(
+          user_id: user_id,
+          session_id: "zm0_session",
+          trace_store: trace_store,
+          memory_mode: :hybrid,
+          long_term: long_term,
+          retrieval_engine: Llmemory::Retrieval::Engine.new(long_term, llm: llm)
         )
       else
         storage = Llmemory::LongTerm::FileBased::Storages::MemoryStorage.new
@@ -74,6 +91,14 @@ module ZeroMemBenchmark
 
     def zero_mem_variant?
       @variant_opts[:mode] == :zero_mem
+    end
+
+    def hybrid_variant?
+      @variant_opts[:mode] == :hybrid
+    end
+
+    def trace_ingest_variant?
+      zero_mem_variant? || hybrid_variant?
     end
 
     def classic_llm_stub(conversation)
@@ -104,17 +129,21 @@ module ZeroMemBenchmark
       Array(conversation["sessions"]).each do |session|
         Array(session["turns"]).each do |turn|
           role = (turn["role"] || "user").to_sym
-          if zero_mem_variant?
+          if trace_ingest_variant?
             trace_id = memory.record_trace(
               role: role,
               content: turn["content"].to_s,
-              occurred_at: turn["occurred_at"] ? Time.parse(turn["occurred_at"].to_s) : nil,
+              occurred_at: Llmemory.parse_occurred_at(turn["occurred_at"]),
               idempotency_key: turn["id"],
               add_to_checkpoint: true
             )
             @turn_to_trace[turn["id"]] = trace_id
           else
-            memory.add_message(role: role, content: turn["content"].to_s)
+            memory.add_message(
+              role: role,
+              content: turn["content"].to_s,
+              occurred_at: Llmemory.parse_occurred_at(turn["occurred_at"])
+            )
           end
         end
       end
@@ -173,11 +202,17 @@ module ZeroMemBenchmark
         variant: @variant,
         conversation_id: conversation["id"],
         query_id: query["id"],
+        query_text: query_text,
         language: conversation["language"],
         workload_class: conversation["workload_class"],
         evidence_gap: query["evidence_gap"],
         session_count: query["session_count"] || conversation["session_count"],
         has_revision: query["has_revision"] || conversation["has_revision"],
+        category: query["category"],
+        question_type: query["question_type"],
+        gold_answer: query["gold_answer"],
+        prediction: answer_text,
+        retrieval_hit: retrieval_hit?(@last_context, query, turns),
         localization: loc,
         answer: answer_metrics,
         cost: {
@@ -226,6 +261,17 @@ module ZeroMemBenchmark
       before_bucket = (before[bucket_key] || before[bucket_key.to_s] || {})
       (after_bucket[:total_tokens] || after_bucket["total_tokens"] || 0).to_i -
         (before_bucket[:total_tokens] || before_bucket["total_tokens"] || 0).to_i
+    end
+
+    def retrieval_hit?(context, query, turns)
+      ctx = context.to_s.downcase
+      gold = query["gold_answer"].to_s.downcase.strip
+      return true if !gold.empty? && ctx.include?(gold)
+
+      Array(query["gold_trace_ids"]).any? do |tid|
+        content = turns[tid]&.dig("content").to_s.downcase.strip
+        !content.empty? && ctx.include?(content)
+      end
     end
 
     def rank_trace_ids_in_context(context, turns, query)

@@ -77,6 +77,7 @@ RSpec.describe Llmemory::Maintenance::CognitivePass do
     it "runs consolidate! when a memory is supplied" do
       memory = instance_double(Llmemory::Memory)
       allow(memory).to receive(:zero_mem_strict?).and_return(false)
+      allow(memory).to receive(:hybrid?).and_return(false)
       allow(memory).to receive(:consolidate!).and_return(true)
 
       report = described_class.run!(
@@ -86,6 +87,25 @@ RSpec.describe Llmemory::Maintenance::CognitivePass do
 
       expect(memory).to have_received(:consolidate!)
       expect(report[:consolidated]).to be(true)
+    end
+
+    it "runs zero_mem_repair when memory is hybrid with a trace store" do
+      trace_store = Llmemory::ZeroMem::Storages::Memory.new
+      memory = Llmemory::Memory.new(
+        user_id: user_id,
+        session_id: "s1",
+        trace_store: trace_store,
+        memory_mode: :hybrid
+      )
+      memory.add_message(role: :user, content: "repair probe")
+      allow(memory).to receive(:consolidate!).and_return(true)
+
+      report = described_class.run!(
+        user_id, memory: memory, episodic: episodic, procedural: procedural,
+        semantic: semantic, llm: llm, reflect: false, mine_skills: false, expire: false
+      )
+
+      expect(report[:zero_mem]).not_to be_nil
     end
   end
 end

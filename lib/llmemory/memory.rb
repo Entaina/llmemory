@@ -129,7 +129,7 @@ module Llmemory
           add_to_checkpoint: true
         )
       else
-        append_message_to_checkpoint(role: role, content: content)
+        append_message_to_checkpoint(role: role, content: content, occurred_at: occurred_at)
       end
       true
     end
@@ -202,7 +202,9 @@ module Llmemory
         )
       end
 
-      append_message_to_checkpoint(role: trace.role, content: trace.content) if add_to_checkpoint
+      if add_to_checkpoint
+        append_message_to_checkpoint(role: trace.role, content: trace.content, occurred_at: trace.occurred_at)
+      end
       trace.id
     end
 
@@ -255,23 +257,26 @@ module Llmemory
     end
 
     def retrieve(query, max_tokens: nil)
-      if zero_mem_enabled? && @trace_store
+      msgs = pruned_messages
+      short_context = format_short_term_context(msgs)
+
+      if hybrid? && @trace_store
+        return retrieve_hybrid(query, short_context, max_tokens)
+      end
+
+      if zero_mem_strict? && @trace_store
         invoke_before = generative_invoke_calls
-        msgs = pruned_messages
-        short_context = format_short_term_context(msgs)
         evidence_context = zero_mem_engine.to_context(query, max_tokens: max_tokens)
         combined = combine_contexts(short_context, evidence_context)
         compliant = generative_invoke_delta(invoke_before).zero?
         Llmemory::Instrumentation.instrument(
           :retrieve,
           query_chars: query.to_s.length,
-          zero_mem_compliant: zero_mem_strict? ? compliant : false
+          zero_mem_compliant: compliant
         )
         return combined
       end
 
-      msgs = pruned_messages
-      short_context = format_short_term_context(msgs)
       long_context = @retrieval_engine.retrieve_for_inference(query, user_id: @user_id, max_tokens: max_tokens)
       combine_contexts(short_context, long_context)
     end
@@ -311,7 +316,8 @@ module Llmemory
       msgs = messages
       return true if msgs.empty?
       conversation_text = msgs.map { |m| format_message(m) }.join("\n")
-      @long_term.memorize(conversation_text)
+      reference_time = consolidation_reference_time(msgs)
+      @long_term.memorize(conversation_text, reference_time: reference_time)
       true
     end
 
@@ -449,6 +455,10 @@ module Llmemory
       ZeroMem::Mode.zero_mem_strict?(@memory_mode)
     end
 
+    def hybrid?
+      @memory_mode == :hybrid
+    end
+
     def shadow_write_enabled?
       @memory_mode == :classic && Llmemory.configuration.zero_mem_shadow_write
     end
@@ -489,12 +499,14 @@ module Llmemory
       true
     end
 
-    def append_message_to_checkpoint(role:, content:)
+    def append_message_to_checkpoint(role:, content:, occurred_at: nil)
       @short_term_store.update(@user_id, @session_id) do |state|
         state = normalize_state_hash(state)
         list = state[STATE_KEY_MESSAGES]
         list = list.is_a?(Array) ? list.dup : []
-        list << { role: role.to_sym, content: content.to_s }
+        entry = { role: role.to_sym, content: content.to_s }
+        entry[:occurred_at] = occurred_at if occurred_at
+        list << entry
         list = sanitize_messages(list) if Llmemory.configuration.message_sanitizer_enabled
         state.merge(STATE_KEY_MESSAGES => list, last_activity_at: Time.now, **preserved_flush_state_from(state))
       end
@@ -675,7 +687,20 @@ module Llmemory
     def format_message(m)
       role = m[:role] || m["role"]
       content = m[:content] || m["content"]
+      ts = m[:occurred_at] || m["occurred_at"]
+      if ts
+        label = Llmemory::TimeCoercion.iso8601_or_string(ts)
+        return "[#{label}] #{role}: #{content}"
+      end
+
       "#{role}: #{content}"
+    end
+
+    def consolidation_reference_time(msgs)
+      times = Array(msgs).filter_map do |m|
+        Llmemory.parse_occurred_at(m[:occurred_at] || m["occurred_at"])
+      end
+      times.max
     end
 
     def combine_contexts(short_context, long_context)
@@ -683,6 +708,37 @@ module Llmemory
       parts << short_context if short_context.to_s.strip.length.positive?
       parts << long_context.to_s.strip if long_context.to_s.strip.length.positive?
       parts.join("\n\n")
+    end
+
+    def retrieve_hybrid(query, short_context, max_tokens)
+      evidence_max, classic_max = split_hybrid_token_budget(max_tokens)
+      evidence_context = zero_mem_engine.to_context(query, max_tokens: evidence_max)
+      long_context = @retrieval_engine.retrieve_for_inference(
+        query,
+        user_id: @user_id,
+        max_tokens: classic_max
+      )
+      memory_context = combine_contexts(evidence_context, long_context)
+      combined = combine_contexts(short_context, memory_context)
+      Llmemory::Instrumentation.instrument(
+        :retrieve,
+        query_chars: query.to_s.length,
+        zero_mem_compliant: false,
+        hybrid: true
+      )
+      combined
+    end
+
+    def split_hybrid_token_budget(max_tokens)
+      return [nil, nil] if max_tokens.nil?
+
+      ratio = Llmemory.configuration.hybrid_classic_token_ratio.to_f
+      ratio = 0.5 unless ratio.positive? && ratio < 1.0
+      classic = (max_tokens * ratio).to_i
+      classic = 1 if classic < 1
+      evidence = max_tokens - classic
+      evidence = 1 if evidence < 1
+      [evidence, classic]
     end
   end
 end

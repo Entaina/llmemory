@@ -1,0 +1,26 @@
+# LM Studio model profiles for local memory benchmarks (12 GB class GPUs).
+# Select with LLMEMORY_BENCH_PROFILE=default|smoke|quality
+
+version: 1
+
+profiles:
+  smoke:
+    llm_model: qwen2.5-3b-instruct
+    quant: Q4_K_M
+    ctx: 8192
+    embedding_model: null
+    note: "Fast adapter smoke only; not for comparable scores."
+
+  default:
+    llm_model: qwen3-4b-instruct-2507
+    quant: Q4_K_M
+    ctx: 8192
+    embedding_model: null
+    note: "Local diagnostic default (LM Studio); set ctx >= 8192 for LoCoMo per-session consolidate."
+
+  quality:
+    llm_model: qwen2.5-14b-instruct
+    quant: Q4_K_M
+    ctx: 16384
+    embedding_model: null
+    note: "Higher answer quality; skip dense embed to save VRAM."

@@ -64,6 +64,9 @@ module Llmemory
         step(report, :reflect)     { report[:insights] = reflect } if @reflect
         step(report, :mine)        { report[:mined] = mine } if @mine_skills
         step(report, :expire)      { report[:expired] = expire } if @expire
+        if @memory&.hybrid? && @memory.trace_store
+          step(report, :zero_mem_repair) { report[:zero_mem] = zero_mem_repair }
+        end
 
         report
       end

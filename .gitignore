@@ -34,3 +34,10 @@ Thumbs.db
 /benchmarks/zero_mem/results/*
 !/benchmarks/zero_mem/results/.gitkeep
 !/benchmarks/zero_mem/results/example_*
+
+# Local LM Studio benchmark artifacts
+/benchmarks/local/results/*
+!/benchmarks/local/results/.gitkeep
+benchmarks/local/benchmarks.env
+/benchmarks/local/data/
+benchmarks/local/scripts/.venv-bench-fetch/

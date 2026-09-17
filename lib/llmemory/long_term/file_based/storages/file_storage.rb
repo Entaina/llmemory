@@ -18,17 +18,18 @@ module Llmemory
             @cipher = cipher || Llmemory.build_cipher
           end
 
-          def save_resource(user_id, text)
+          def save_resource(user_id, text, occurred_at: nil)
             ensure_user_dir(user_id)
             seq = next_seq(user_id, "resource_id_seq")
             id = "res_#{seq}"
             path = resource_path(user_id, id)
-            data = { text: enc(text), created_at: Time.now.iso8601 }
+            data = { text: enc(text), created_at: storage_timestamp(occurred_at).iso8601 }
             write_encrypted_file(path, data)
             id
           end
 
-          def save_item(user_id, category:, content:, source_resource_id:, importance: 0.7, provenance: nil)
+          def save_item(user_id, category:, content:, source_resource_id:, importance: 0.7, provenance: nil,
+                        occurred_at: nil)
             ensure_user_dir(user_id)
             seq = next_seq(user_id, "item_id_seq")
             id = "item_#{seq}"
@@ -40,7 +41,7 @@ module Llmemory
               source_resource_id: source_resource_id,
               importance: importance,
               provenance: provenance ? enc_json(provenance) : nil,
-              created_at: Time.now.iso8601
+              created_at: storage_timestamp(occurred_at).iso8601
             }
             write_encrypted_file(path, data)
             id
@@ -245,6 +246,10 @@ module Llmemory
             prov = data[:provenance] || data["provenance"]
             data[:provenance] = parse_provenance(prov) if prov
             data
+          end
+
+          def storage_timestamp(occurred_at)
+            Llmemory.parse_occurred_at(occurred_at) || Time.now
           end
         end
       end
