@@ -13,6 +13,7 @@ require_relative "cli/commands/mine_skills"
 require_relative "cli/commands/maintain"
 require_relative "cli/commands/stats"
 require_relative "cli/commands/search"
+require_relative "cli/commands/zero_mem"
 require_relative "cli/commands/mcp"
 
 module Llmemory
@@ -60,6 +61,7 @@ module Llmemory
         "mine_skills" => Cli::Commands::MineSkills,
         "maintain" => Cli::Commands::Maintain,
         "search" => Cli::Commands::Search,
+        "zero_mem" => Cli::Commands::ZeroMem,
         "stats" => Cli::Commands::Stats,
         "mcp" => Cli::Commands::Mcp
       }[normalized]
@@ -87,6 +89,7 @@ module Llmemory
           mine-skills USER_ID      Mine reusable skills from episodes (--register to save)
           maintain USER_ID         Run the cognitive maintenance pass (reflect/mine/expire)
           search USER_ID "query"   Search in memory
+          zero-mem SUB ...         Zero-Mem traces, reindex, status, search (experimental)
           stats [USER_ID]          Show statistics
           mcp [serve]              Start MCP server for LLM agents
 

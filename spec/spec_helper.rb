@@ -10,6 +10,8 @@ end
 require "webmock/rspec"
 require "llmemory"
 
+Dir[File.join(__dir__, "support/zero_mem/**/*.rb")].sort.each { |f| require f }
+
 WebMock.disable_net_connect!(allow_localhost: true)
 
 RSpec.configure do |config|

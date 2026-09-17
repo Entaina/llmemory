@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative "../store_helpers"
+
 module Llmemory
   module MCP
     module Tools
@@ -20,7 +22,7 @@ module Llmemory
             session = session_id || "default"
             should_clear = clear_session || false
 
-            memory = Llmemory::Memory.new(user_id: user_id, session_id: session)
+            memory = StoreHelpers.build_memory(user_id: user_id, session_id: session)
 
             messages = memory.messages
             if messages.empty?
@@ -33,9 +35,7 @@ module Llmemory
             message_count = messages.size
             memory.consolidate!
 
-            if should_clear
-              memory.clear_session!
-            end
+            memory.clear_session! if should_clear
 
             response_text = "Consolidated #{message_count} messages from session '#{session}' into long-term memory."
             response_text += "\nSession cleared." if should_clear
@@ -44,6 +44,11 @@ module Llmemory
               type: "text",
               text: response_text
             }])
+          rescue Llmemory::GenerativeOperationDisabled => e
+            ::MCP::Tool::Response.new([{
+              type: "text",
+              text: e.message
+            }], error: true)
           rescue => e
             ::MCP::Tool::Response.new([{
               type: "text",

@@ -5,6 +5,7 @@ require_relative "authentication"
 require_relative "tools/memory_search"
 require_relative "tools/memory_save"
 require_relative "tools/memory_retrieve"
+require_relative "tools/memory_retrieve_evidence"
 require_relative "tools/memory_timeline"
 require_relative "tools/memory_add_message"
 require_relative "tools/memory_consolidate"
@@ -175,6 +176,7 @@ module Llmemory
           Tools::MemorySearch,
           Tools::MemorySave,
           Tools::MemoryRetrieve,
+          Tools::MemoryRetrieveEvidence,
           Tools::MemoryTimeline,
           Tools::MemoryTimelineContext,
           Tools::MemoryAddMessage,

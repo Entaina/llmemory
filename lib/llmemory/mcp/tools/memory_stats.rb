@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative "../store_helpers"
+
 module Llmemory
   module MCP
     module Tools
@@ -53,6 +55,16 @@ module Llmemory
             end
 
             stats[:llm_usage] = Llmemory::LLM::UsageLedger.new(store: store).totals(user_id)
+            stats[:memory_mode] = Llmemory.configuration.memory_mode
+            if ZeroMem::Mode.zero_mem_enabled?(Llmemory.configuration.memory_mode)
+              memory = StoreHelpers.build_memory(user_id: user_id)
+              stats[:zero_mem] = memory.zero_mem_status
+              invoke_calls = stats[:llm_usage].dig(:invoke, :calls).to_i
+              stats[:zero_mem_compliant] = ZeroMem::Mode.zero_mem_strict?(Llmemory.configuration.memory_mode) &&
+                                           invoke_calls.zero?
+            else
+              stats[:zero_mem_compliant] = false
+            end
 
             ::MCP::Tool::Response.new([{
               type: "text",
@@ -106,6 +118,16 @@ module Llmemory
 
             output << ""
             output << Llmemory::LLM::UsageLedger.format_text(stats[:llm_usage] || default_llm_usage)
+            output << ""
+            output << "MEMORY MODE: #{stats[:memory_mode]}"
+            if stats[:zero_mem]
+              zm = stats[:zero_mem]
+              output << "ZERO-MEM:"
+              output << "  traces: #{zm[:trace_count]}"
+              output << "  index_lag: #{zm[:index_lag]}"
+              output << "  index_version: #{zm[:index_version]}"
+            end
+            output << "  zero_mem_compliant: #{stats[:zero_mem_compliant]}"
 
             output.join("\n")
           end

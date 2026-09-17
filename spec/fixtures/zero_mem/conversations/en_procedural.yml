@@ -1,0 +1,37 @@
+---
+id: en_procedural_01
+language: en
+workload_class: procedural
+roles:
+- user
+- assistant
+- tool
+session_count: 1
+has_revision: false
+sessions:
+- id: s1
+  turns:
+  - id: t1
+    role: user
+    content: Export the quarterly report.
+    occurred_at: '2026-01-01T10:00:01Z'
+  - id: t2
+    role: tool
+    content: '{"status":"ok","file":"report_q1.csv"}'
+    occurred_at: '2026-01-02T10:00:02Z'
+  - id: t3
+    role: assistant
+    content: Exported report_q1.csv.
+    occurred_at: '2026-01-03T10:00:03Z'
+queries:
+- id: q1
+  text: Which file was exported?
+  answer_type: task
+  gold_trace_ids:
+  - t2
+  - t3
+  gold_answer: report_q1.csv
+  evidence_gap: 0
+  session_count: 1
+  has_revision: false
+  task_success: true

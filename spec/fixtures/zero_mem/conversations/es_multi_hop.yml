@@ -1,0 +1,40 @@
+---
+id: es_multi_hop_01
+language: es
+workload_class: multi_hop
+roles:
+- user
+- assistant
+session_count: 2
+has_revision: false
+sessions:
+- id: s1
+  turns:
+  - id: t1
+    role: user
+    content: El proyecto Atlas usa la base de datos Nimbus.
+    occurred_at: '2026-01-01T10:00:01Z'
+  - id: t2
+    role: assistant
+    content: Registrado Atlas y Nimbus.
+    occurred_at: '2026-01-02T10:00:02Z'
+- id: s2
+  turns:
+  - id: t3
+    role: user
+    content: "¿Qué base usa Atlas?"
+    occurred_at: '2026-01-01T10:00:01Z'
+  - id: t4
+    role: assistant
+    content: Atlas usa Nimbus según la sesión anterior.
+    occurred_at: '2026-01-02T10:00:02Z'
+queries:
+- id: q1
+  text: "¿Qué base de datos usa el proyecto Atlas?"
+  answer_type: text
+  gold_trace_ids:
+  - t1
+  gold_answer: Nimbus
+  evidence_gap: 1
+  session_count: 2
+  has_revision: false

@@ -10,9 +10,20 @@ module Llmemory
     DEFAULT_SESSION_ID = "default"
     STATE_KEY_MESSAGES = :messages
 
-    def initialize(user_id:, session_id: DEFAULT_SESSION_ID, checkpoint: nil, long_term: nil, long_term_type: nil, retrieval_engine: nil, working_memory: nil, episodic: nil, procedural: nil, api_key: nil, encryption_key: :inherit)
+    def initialize(user_id:, session_id: DEFAULT_SESSION_ID, checkpoint: nil, long_term: nil, long_term_type: nil,
+                   retrieval_engine: nil, working_memory: nil, episodic: nil, procedural: nil, api_key: nil,
+                   encryption_key: :inherit, trace_store: nil, compact_strategy: nil, forget_log: nil,
+                   memory_mode: nil)
       @user_id = user_id
       @session_id = session_id
+      @memory_mode = ZeroMem::Mode.normalize(memory_mode || Llmemory.configuration.memory_mode)
+      @trace_store = trace_store
+      if @trace_store.nil? && (zero_mem_enabled? || shadow_write_enabled?)
+        @trace_store = ZeroMem::Storages.build
+      end
+      @compact_strategy = compact_strategy
+      @forget_log = forget_log
+      @trace_indexer = @trace_store ? ZeroMem::Indexer.new(@trace_store) : nil
       resolved_key = encryption_key == :inherit ? nil : encryption_key
       @cipher = Llmemory.build_cipher(resolved_key)
       if checkpoint
@@ -74,6 +85,7 @@ module Llmemory
     # Reflects over recent episodes and writes distilled insights to the
     # semantic store (file/graph) with provenance back to source episodes.
     def reflect!(window: 10, category: "insights")
+      deny_generative!(:reflect!) if zero_mem_strict?
       Reflection::Reflector.new(episodic: episodic, semantic: @long_term, llm: tracked_llm_client)
         .reflect(window: window, category: category)
     end
@@ -89,6 +101,7 @@ module Llmemory
     # `auto_register: true`, registers them in procedural memory (with provenance
     # back to the source episodes) and returns the new skill ids.
     def mine_skills!(window: SkillMining::Miner::DEFAULT_WINDOW, outcomes: nil, auto_register: false)
+      deny_generative!(:mine_skills!) if zero_mem_strict?
       SkillMining::Miner.new(episodic: episodic, procedural: procedural, llm: tracked_llm_client)
         .mine(window: window, outcomes: outcomes, auto_register: auto_register)
     end
@@ -104,17 +117,134 @@ module Llmemory
       )
     end
 
-    def add_message(role:, content:)
-      @short_term_store.update(@user_id, @session_id) do |state|
-        state = normalize_state_hash(state)
-        list = state[STATE_KEY_MESSAGES]
-        list = list.is_a?(Array) ? list.dup : []
-        list << { role: role.to_sym, content: content.to_s }
-        list = sanitize_messages(list) if Llmemory.configuration.message_sanitizer_enabled
-        state.merge(STATE_KEY_MESSAGES => list, last_activity_at: Time.now, **preserved_flush_state_from(state))
+    def add_message(role:, content:, occurred_at: nil, boundary_id: nil, metadata: nil, idempotency_key: nil)
+      if @trace_store
+        record_trace(
+          role: role,
+          content: content,
+          occurred_at: occurred_at,
+          boundary_id: boundary_id,
+          metadata: metadata,
+          idempotency_key: idempotency_key,
+          add_to_checkpoint: true
+        )
+      else
+        append_message_to_checkpoint(role: role, content: content)
       end
       true
     end
+
+    # Persists an immutable trace before updating the checkpoint (Zero-Mem source of truth).
+    def record_trace(role:, content:, occurred_at: nil, boundary_id: nil, metadata: nil, idempotency_key: nil,
+                     state_key: nil, valid_from: nil, valid_to: nil, supersedes_trace_id: nil, source: :explicit,
+                     add_to_checkpoint: true)
+      raise ConfigurationError, "trace_store is not configured" unless @trace_store
+
+      if idempotency_key && (existing = @trace_store.find_by_idempotency_key(@user_id, idempotency_key))
+        return existing.id
+      end
+
+      sequence = @trace_store.next_sequence(@user_id, @session_id)
+      trace = ZeroMem::Trace.build(
+        user_id: @user_id,
+        session_id: @session_id,
+        role: role,
+        content: content,
+        sequence: sequence,
+        boundary_id: boundary_id,
+        occurred_at: occurred_at,
+        metadata: metadata,
+        idempotency_key: idempotency_key
+      )
+
+      index_stats = {}
+      Llmemory::Instrumentation.instrument(
+        :trace_write,
+        user_id: @user_id,
+        session_id: @session_id,
+        trace_id: trace.id,
+        sequence: sequence,
+        role: trace.role,
+        maintenance_fanout: state_key ? 2 : 1
+      ) do
+        @trace_store.write_trace(trace)
+        if state_key
+          effective_from = valid_from || trace.occurred_at
+          if supersedes_trace_id
+            @trace_store.close_open_state_links(
+              @user_id,
+              state_key,
+              valid_to: effective_from,
+              except_trace_id: trace.id
+            )
+          end
+          link = ZeroMem::TraceStateLink.build(
+            user_id: @user_id,
+            state_key: state_key,
+            trace_id: trace.id,
+            valid_from: effective_from,
+            valid_to: valid_to,
+            supersedes_trace_id: supersedes_trace_id,
+            source: source
+          )
+          @trace_store.write_state_link(link)
+          Llmemory::Instrumentation.instrument(
+            :zero_mem_state_update,
+            user_id: @user_id,
+            state_key: state_key,
+            trace_id: trace.id,
+            supersedes_trace_id: supersedes_trace_id
+          )
+        end
+        index_stats = @trace_indexer.after_trace_write(
+          trace: trace,
+          state_link: !state_key.nil?
+        )
+      end
+
+      append_message_to_checkpoint(role: trace.role, content: trace.content) if add_to_checkpoint
+      trace.id
+    end
+
+    def retrieve_evidence(query, top_k: nil, max_tokens: nil, boundary: nil, explain: false, current_trace_id: nil,
+                          **opts)
+      raise ConfigurationError, "retrieve_evidence requires memory_mode :zero_mem or :hybrid" unless zero_mem_enabled?
+      raise ConfigurationError, "trace_store is not configured" unless @trace_store
+
+      invoke_before = generative_invoke_calls
+      result = zero_mem_engine.retrieve_evidence(
+        query,
+        top_k: top_k,
+        max_tokens: max_tokens,
+        boundary: boundary,
+        explain: explain,
+        current_trace_id: current_trace_id,
+        **opts
+      )
+      compliant = generative_invoke_delta(invoke_before).zero?
+      result.metrics[:zero_mem_compliant] = compliant if zero_mem_strict?
+      result
+    end
+
+    def calibrate_answer(answer, evidence_result:)
+      ZeroMem::AnswerCalibrator.new.calibrate(answer, evidence_result: evidence_result)
+    end
+
+    def forget_traces!(trace_ids, reason: nil)
+      return false unless @trace_store
+
+      ids = Array(trace_ids).map(&:to_s)
+      ids.each { |id| @trace_store.archive_trace(@user_id, id) }
+      forget_log.record(
+        @user_id,
+        memory_type: ZeroMem::MEMORY_TYPE,
+        ids: ids,
+        reason: reason
+      )
+      true
+    end
+
+    attr_reader :trace_store
 
     def messages
       state = @checkpoint.restore_state
@@ -125,6 +255,21 @@ module Llmemory
     end
 
     def retrieve(query, max_tokens: nil)
+      if zero_mem_enabled? && @trace_store
+        invoke_before = generative_invoke_calls
+        msgs = pruned_messages
+        short_context = format_short_term_context(msgs)
+        evidence_context = zero_mem_engine.to_context(query, max_tokens: max_tokens)
+        combined = combine_contexts(short_context, evidence_context)
+        compliant = generative_invoke_delta(invoke_before).zero?
+        Llmemory::Instrumentation.instrument(
+          :retrieve,
+          query_chars: query.to_s.length,
+          zero_mem_compliant: zero_mem_strict? ? compliant : false
+        )
+        return combined
+      end
+
       msgs = pruned_messages
       short_context = format_short_term_context(msgs)
       long_context = @retrieval_engine.retrieve_for_inference(query, user_id: @user_id, max_tokens: max_tokens)
@@ -162,6 +307,7 @@ module Llmemory
     end
 
     def consolidate!
+      deny_generative!(:consolidate!) if zero_mem_strict?
       msgs = messages
       return true if msgs.empty?
       conversation_text = msgs.map { |m| format_message(m) }.join("\n")
@@ -177,6 +323,8 @@ module Llmemory
 
     def compact!(max_bytes: nil)
       max = max_bytes || Llmemory.configuration.compact_max_bytes
+      return compact_trace_deterministic!(max) if trace_backed? || zero_mem_strict?
+
       msgs = messages
       current_bytes = messages_byte_size(msgs)
       return false if current_bytes <= max
@@ -195,6 +343,7 @@ module Llmemory
     end
 
     def maybe_flush_memory!
+      return false if zero_mem_strict?
       return false unless Llmemory.configuration.memory_flush_enabled
       msgs = messages
       return false if msgs.empty?
@@ -241,6 +390,11 @@ module Llmemory
     def check_context_window!
       return false if messages.empty?
 
+      if zero_mem_strict?
+        return compact! if should_compact?
+        return false
+      end
+
       flushed = false
       if should_auto_consolidate? && Llmemory.configuration.memory_flush_enabled
         consolidate!
@@ -255,6 +409,50 @@ module Llmemory
       flushed || compacted
     end
 
+    def zero_mem_status(session_id: @session_id)
+      raise ConfigurationError, "trace_store is not configured" unless @trace_store
+
+      wm = @trace_store.get_watermark(@user_id, session_id)
+      traces = @trace_store.list_traces(@user_id, session_id: session_id)
+      last_seq = traces.map(&:sequence).max.to_i
+      lag = [last_seq - wm[:last_sequence].to_i, 0].max
+      {
+        memory_mode: @memory_mode,
+        session_id: session_id.to_s,
+        trace_count: traces.size,
+        last_sequence: last_seq,
+        watermark_sequence: wm[:last_sequence].to_i,
+        index_version: wm[:index_version].to_i,
+        index_lag: lag
+      }
+    end
+
+    def reindex_traces!(session_id: @session_id)
+      raise ConfigurationError, "trace_store is not configured" unless @trace_store
+
+      traces = @trace_store.list_traces(@user_id, session_id: session_id)
+      traces.each do |trace|
+        @trace_indexer.after_trace_write(trace: trace)
+      end
+      zero_mem_status(session_id: session_id)
+    end
+
+    def memory_mode
+      @memory_mode
+    end
+
+    def zero_mem_enabled?
+      ZeroMem::Mode.zero_mem_enabled?(@memory_mode)
+    end
+
+    def zero_mem_strict?
+      ZeroMem::Mode.zero_mem_strict?(@memory_mode)
+    end
+
+    def shadow_write_enabled?
+      @memory_mode == :classic && Llmemory.configuration.zero_mem_shadow_write
+    end
+
     def user_id
       @user_id
     end
@@ -264,6 +462,43 @@ module Llmemory
     end
 
     private
+
+    def forget_log
+      @forget_log ||= ForgetLog.new(store: @short_term_store)
+    end
+
+    def zero_mem_engine
+      @zero_mem_engine ||= ZeroMem::Engine.new(trace_store: @trace_store, user_id: @user_id)
+    end
+
+    def trace_backed?
+      !@trace_store.nil?
+    end
+
+    def compact_trace_deterministic!(max_bytes)
+      msgs = messages
+      current_bytes = messages_byte_size(msgs)
+      return false if current_bytes <= max_bytes
+
+      old_msgs, recent_msgs = split_messages_by_bytes(msgs, max_bytes)
+      return false if old_msgs.empty?
+
+      state = restore_state_for_save
+      flush_ts = state[:last_flush_at] || state["last_flush_at"]
+      save_state(messages: recent_msgs, last_compact_at: Time.now, last_flush_at: flush_ts)
+      true
+    end
+
+    def append_message_to_checkpoint(role:, content:)
+      @short_term_store.update(@user_id, @session_id) do |state|
+        state = normalize_state_hash(state)
+        list = state[STATE_KEY_MESSAGES]
+        list = list.is_a?(Array) ? list.dup : []
+        list << { role: role.to_sym, content: content.to_s }
+        list = sanitize_messages(list) if Llmemory.configuration.message_sanitizer_enabled
+        state.merge(STATE_KEY_MESSAGES => list, last_activity_at: Time.now, **preserved_flush_state_from(state))
+      end
+    end
 
     def summarize_messages(msgs)
       conversation = msgs.map { |m| format_message(m) }.join("\n")
@@ -293,7 +528,20 @@ module Llmemory
       )
     end
 
+    def deny_generative!(operation)
+      raise GenerativeOperationDisabled, "#{operation} is disabled when memory_mode is :zero_mem"
+    end
+
+    def generative_invoke_calls
+      llm_usage.dig(:invoke, :calls).to_i
+    end
+
+    def generative_invoke_delta(before)
+      generative_invoke_calls - before.to_i
+    end
+
     def flush_memory_before_compaction!(msgs)
+      return false if zero_mem_strict?
       return false unless Llmemory.configuration.memory_flush_enabled
       return false if msgs.empty?
       return false if estimated_tokens(msgs) < Llmemory.configuration.memory_flush_threshold_tokens

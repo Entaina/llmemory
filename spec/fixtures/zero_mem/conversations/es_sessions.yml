@@ -1,0 +1,40 @@
+---
+id: es_sessions_01
+language: es
+workload_class: multi_hop
+roles:
+- user
+- assistant
+session_count: 2
+has_revision: false
+sessions:
+- id: s1
+  turns:
+  - id: t1
+    role: user
+    content: Mi ID de cliente es CL-902.
+    occurred_at: '2026-01-01T10:00:01Z'
+  - id: t2
+    role: assistant
+    content: Cliente CL-902 registrado.
+    occurred_at: '2026-01-02T10:00:02Z'
+- id: s2
+  turns:
+  - id: t3
+    role: user
+    content: "¿Recuerdas mi ID de cliente?"
+    occurred_at: '2026-01-01T10:00:01Z'
+  - id: t4
+    role: assistant
+    content: Tu ID es CL-902.
+    occurred_at: '2026-01-02T10:00:02Z'
+queries:
+- id: q1
+  text: "¿Cuál es mi ID de cliente?"
+  answer_type: text
+  gold_trace_ids:
+  - t1
+  gold_answer: CL-902
+  evidence_gap: 1
+  session_count: 2
+  has_revision: false

@@ -7,11 +7,11 @@ RSpec.describe Llmemory::VectorStore::OpenAIEmbeddings do
     stub_request(:post, "https://api.openai.com/v1/embeddings")
       .with(
         headers: { "Authorization" => "Bearer test-key", "Content-Type" => "application/json" },
-        body: "{\"input\":\"hello\",\"model\":\"text-embedding-3-small\"}"
+        body: "{\"input\":[\"hello\"],\"model\":\"text-embedding-3-small\"}"
       )
       .to_return(
         status: 200,
-        body: { data: [{ embedding: [0.1] * 1536 }] }.to_json,
+        body: { data: [{ index: 0, embedding: [0.1] * 1536 }] }.to_json,
         headers: { "Content-Type" => "application/json" }
       )
   end
@@ -51,7 +51,7 @@ RSpec.describe Llmemory::VectorStore::OpenAIEmbeddings do
       result2 = client.embed("hello")
 
       expect(result1).to eq(result2)
-      expect(a_request(:post, %r{embeddings}).with(body: hash_including("input" => "hello"))).to have_been_made.times(1)
+      expect(a_request(:post, %r{embeddings}).with(body: hash_including("input" => ["hello"]))).to have_been_made.times(1)
     end
 
     it "makes API call on each request when cache disabled" do
@@ -67,10 +67,10 @@ RSpec.describe Llmemory::VectorStore::OpenAIEmbeddings do
       allow(Llmemory.configuration).to receive(:embedding_cache_enabled).and_return(true)
 
       stub_request(:post, "https://api.openai.com/v1/embeddings")
-        .with(body: hash_including("input" => "world"))
+        .with(body: hash_including("input" => ["world"]))
         .to_return(
           status: 200,
-          body: { data: [{ embedding: [0.2] * 1536 }] }.to_json,
+          body: { data: [{ index: 0, embedding: [0.2] * 1536 }] }.to_json,
           headers: { "Content-Type" => "application/json" }
         )
 

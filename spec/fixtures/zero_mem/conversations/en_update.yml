@@ -1,0 +1,39 @@
+---
+id: en_update_01
+language: en
+workload_class: current_state
+roles:
+- user
+- assistant
+session_count: 1
+has_revision: true
+sessions:
+- id: s1
+  turns:
+  - id: t1
+    role: user
+    content: Shipping address is Main Street 1.
+    occurred_at: '2026-01-01T10:00:01Z'
+  - id: t2
+    role: assistant
+    content: Updated to Main Street 1.
+    occurred_at: '2026-01-02T10:00:02Z'
+  - id: t3
+    role: user
+    content: 'Correction: address is Central Avenue 9.'
+    occurred_at: '2026-01-03T10:00:03Z'
+  - id: t4
+    role: assistant
+    content: Address corrected to Central Avenue 9.
+    occurred_at: '2026-01-04T10:00:04Z'
+queries:
+- id: q1
+  text: What is the shipping address?
+  answer_type: text
+  gold_trace_ids:
+  - t3
+  - t4
+  gold_answer: Central Avenue 9
+  evidence_gap: 0
+  session_count: 1
+  has_revision: true

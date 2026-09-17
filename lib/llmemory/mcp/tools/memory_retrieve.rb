@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative "../store_helpers"
+
 module Llmemory
   module MCP
     module Tools
@@ -25,7 +27,7 @@ module Llmemory
             include_timeline = include_timeline_context == true
             window = timeline_window || 3
 
-            memory = Llmemory::Memory.new(user_id: user_id, session_id: session)
+            memory = StoreHelpers.build_memory(user_id: user_id, session_id: session)
             context = memory.retrieve(query, max_tokens: tokens)
 
             # Add timeline context if requested

@@ -1,0 +1,9 @@
+queries:
+  - id: answer_en_single_hop_q1
+    conversation_id: en_single_hop_01
+    text: "What is my favorite color?"
+    gold_answer: teal
+    gold_trace_ids: [t1]
+    evidence_gap: 0
+    session_count: 1
+    has_revision: false

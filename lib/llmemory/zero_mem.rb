@@ -1,0 +1,42 @@
+# frozen_string_literal: true
+
+require_relative "zero_mem/mode"
+require_relative "zero_mem/errors"
+require_relative "zero_mem/trace"
+require_relative "zero_mem/trace_state_link"
+require_relative "zero_mem/storage"
+require_relative "zero_mem/storages"
+require_relative "zero_mem/indexer"
+require_relative "zero_mem/repair"
+require_relative "zero_mem/backfill"
+require_relative "zero_mem/trace_unit"
+require_relative "zero_mem/hierarchy_builder"
+require_relative "zero_mem/query_profile"
+require_relative "zero_mem/query_profiler"
+require_relative "zero_mem/hierarchy_retriever"
+require_relative "zero_mem/evidence"
+require_relative "zero_mem/evidence_set"
+require_relative "zero_mem/evidence_calibrator"
+require_relative "zero_mem/budget_assembler"
+require_relative "zero_mem/router"
+require_relative "zero_mem/evidence_fusion"
+require_relative "zero_mem/evidence_closure"
+require_relative "zero_mem/answer_calibrator"
+require_relative "zero_mem/engine"
+require_relative "zero_mem/embedding_provider"
+require_relative "zero_mem/entity_extractor"
+require_relative "zero_mem/extractors/heuristic"
+require_relative "zero_mem/extractors/http"
+require_relative "zero_mem/entity"
+require_relative "zero_mem/entity_mention"
+require_relative "zero_mem/entity_index"
+require_relative "zero_mem/pagerank"
+require_relative "zero_mem/graph_retriever"
+require_relative "zero_mem/circuit_breaker"
+require_relative "zero_mem/sidecar_client"
+
+module Llmemory
+  module ZeroMem
+    MEMORY_TYPE = "zero_mem_trace"
+  end
+end

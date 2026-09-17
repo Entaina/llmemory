@@ -1,0 +1,40 @@
+---
+id: en_multi_hop_01
+language: en
+workload_class: multi_hop
+roles:
+- user
+- assistant
+session_count: 2
+has_revision: false
+sessions:
+- id: s1
+  turns:
+  - id: t1
+    role: user
+    content: Project Atlas uses the Nimbus database.
+    occurred_at: '2026-01-01T10:00:01Z'
+  - id: t2
+    role: assistant
+    content: Recorded Atlas and Nimbus.
+    occurred_at: '2026-01-02T10:00:02Z'
+- id: s2
+  turns:
+  - id: t3
+    role: user
+    content: Which database does Atlas use?
+    occurred_at: '2026-01-01T10:00:01Z'
+  - id: t4
+    role: assistant
+    content: Atlas uses Nimbus from the earlier session.
+    occurred_at: '2026-01-02T10:00:02Z'
+queries:
+- id: q1
+  text: Which database does Project Atlas use?
+  answer_type: text
+  gold_trace_ids:
+  - t1
+  gold_answer: Nimbus
+  evidence_gap: 1
+  session_count: 2
+  has_revision: false

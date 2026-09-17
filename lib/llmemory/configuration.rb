@@ -59,7 +59,26 @@ module Llmemory
                   :dashboard_auth,
                   :dashboard_require_auth,
                   :consolidation_policy,
-                  :retrieval_label_volatile
+                  :retrieval_label_volatile,
+                  :zero_mem_index_mode,
+                  :zero_mem_trace_store,
+                  :zero_mem_top_k,
+                  :zero_mem_max_top_k,
+                  :zero_mem_local_span,
+                  :zero_mem_window_size,
+                  :zero_mem_window_overlap,
+                  :zero_mem_episode_gap_seconds,
+                  :zero_mem_entity_extractor,
+                  :zero_mem_embedding_provider,
+                  :zero_mem_require_local_encoders,
+                  :zero_mem_pagerank_damping,
+                  :zero_mem_graph_weight,
+                  :zero_mem_ner_http_url,
+                  :memory_mode,
+                  :zero_mem_ttl_days,
+                  :zero_mem_sidecar_timeout_seconds,
+                  :zero_mem_sidecar_failure_threshold,
+                  :zero_mem_shadow_write
 
     def initialize
       @llm_provider = :openai
@@ -120,6 +139,44 @@ module Llmemory
       @dashboard_require_auth = nil
       @consolidation_policy = nil
       @retrieval_label_volatile = false
+      @zero_mem_index_mode = :sync
+      @zero_mem_trace_store = :memory
+      @zero_mem_top_k = 5
+      @zero_mem_max_top_k = 10
+      @zero_mem_local_span = 2
+      @zero_mem_window_size = 8
+      @zero_mem_window_overlap = 2
+      @zero_mem_episode_gap_seconds = 86_400
+      @zero_mem_entity_extractor = :heuristic
+      @zero_mem_embedding_provider = nil
+      @zero_mem_require_local_encoders = false
+      @zero_mem_pagerank_damping = 0.6
+      @zero_mem_graph_weight = 0.6
+      @zero_mem_ner_http_url = "http://127.0.0.1:8765"
+      @memory_mode = :classic
+      @zero_mem_ttl_days = nil
+      @zero_mem_sidecar_timeout_seconds = 5
+      @zero_mem_sidecar_failure_threshold = 3
+      @zero_mem_shadow_write = false
+    end
+
+    def validate!
+      mode = @memory_mode.to_sym
+      unless ZeroMem::Mode.valid?(mode)
+        raise ConfigurationError, "memory_mode must be :classic, :zero_mem, or :hybrid (got #{@memory_mode.inspect})"
+      end
+
+      rho = zero_mem_graph_weight.to_f
+      gamma = zero_mem_pagerank_damping.to_f
+      raise ConfigurationError, "zero_mem_graph_weight must be in [0, 1]" unless rho.between?(0.0, 1.0)
+      raise ConfigurationError, "zero_mem_pagerank_damping must be in [0, 1]" unless gamma.between?(0.0, 1.0)
+      raise ConfigurationError, "zero_mem_top_k must be positive" unless zero_mem_top_k.to_i.positive?
+      raise ConfigurationError, "zero_mem_max_top_k must be >= zero_mem_top_k" if zero_mem_max_top_k.to_i < zero_mem_top_k.to_i
+
+      extractor = zero_mem_entity_extractor.to_sym
+      unless %i[heuristic http].include?(extractor)
+        raise ConfigurationError, "zero_mem_entity_extractor must be :heuristic or :http"
+      end
     end
 
     def consolidation_policy
@@ -146,6 +203,7 @@ module Llmemory
 
     def configure
       yield configuration
+      configuration.validate!
     end
 
     def reset_configuration!

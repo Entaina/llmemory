@@ -11,6 +11,11 @@ module Llmemory
         @b = b
       end
 
+      # Score arbitrary documents `{ id:, text: }` (or candidates with :text).
+      def score_documents(query, documents)
+        score_candidates(query, documents)
+      end
+
       def score_candidates(query, candidates)
         return [] if candidates.empty?
 

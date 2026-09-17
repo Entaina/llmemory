@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative "../store_helpers"
+
 module Llmemory
   module MCP
     module Tools
@@ -26,7 +28,8 @@ module Llmemory
             opts[:reflection_window] = reflection_window.to_i unless reflection_window.nil?
             opts[:mining_window] = mining_window.to_i unless mining_window.nil?
 
-            report = Llmemory::Maintenance::CognitivePass.run!(user_id, **opts)
+            memory = StoreHelpers.build_memory(user_id: user_id)
+            report = Llmemory::Maintenance::CognitivePass.run!(user_id, memory: memory, **opts)
             ::MCP::Tool::Response.new([{ type: "text", text: format_report(user_id, report) }])
           rescue => e
             ::MCP::Tool::Response.new([{ type: "text", text: "Error running maintenance pass: #{e.message}" }], error: true)
@@ -42,6 +45,8 @@ module Llmemory
               "  skills mined: #{Array(report[:mined]).size}",
               "  expired: episodic=#{expired[:episodic] || 0} procedural=#{expired[:procedural] || 0}"
             ]
+            disabled = Array(report[:disabled])
+            lines << "  disabled: #{disabled.join(', ')}" if disabled.any?
             errors = report[:errors] || {}
             lines << "  errors: #{errors.map { |k, v| "#{k}: #{v}" }.join('; ')}" unless errors.empty?
             lines.join("\n")

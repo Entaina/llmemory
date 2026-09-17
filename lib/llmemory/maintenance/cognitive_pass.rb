@@ -43,7 +43,22 @@ module Llmemory
       end
 
       def run!
-        report = { consolidated: nil, insights: [], mined: [], expired: { episodic: 0, procedural: 0 }, errors: {} }
+        report = {
+          consolidated: nil,
+          insights: [],
+          mined: [],
+          expired: { episodic: 0, procedural: 0 },
+          errors: {},
+          disabled: []
+        }
+
+        if @memory&.zero_mem_strict?
+          report[:disabled] = %i[consolidate reflect mine]
+          report[:consolidated] = false
+          step(report, :zero_mem_repair) { report[:zero_mem] = zero_mem_repair } if @memory.trace_store
+          step(report, :expire) { report[:expired] = expire } if @expire
+          return report
+        end
 
         step(report, :consolidate) { report[:consolidated] = consolidate } if @memory
         step(report, :reflect)     { report[:insights] = reflect } if @reflect
@@ -77,6 +92,19 @@ module Llmemory
 
       def expire
         TTLExpiry.run!(@user_id, episodic: episodic, procedural: procedural)
+      end
+
+      def zero_mem_repair
+        store = @memory.trace_store
+        repair = ZeroMem::Repair.new(storage: store)
+        sessions = store.list_traces(@user_id).map(&:session_id).uniq
+        sessions.map do |sid|
+          repair.run!(
+            user_id: @user_id,
+            session_id: sid,
+            checkpoint_messages: @memory.messages
+          )
+        end
       end
 
       def episodic

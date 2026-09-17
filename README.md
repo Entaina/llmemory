@@ -153,6 +153,29 @@ Llmemory.configure do |config|
 end
 ```
 
+### Zero-Mem (experimental, opt-in)
+
+Zero-Mem keeps **immutable traces** as the source of truth and retrieves evidence with deterministic profiling, hierarchy, and entity-graph ranking — **without generative LLM calls** in memory operations (`memory_mode: :zero_mem`). Default remains `:classic`. This is experimental: it does not reproduce published benchmark numbers.
+
+```ruby
+Llmemory.configure do |config|
+  config.memory_mode = :zero_mem   # or :hybrid (traces + classic long-term; not zero-token)
+  config.zero_mem_trace_store = :memory  # or :active_record in Rails apps
+end
+
+memory = Llmemory::Memory.new(user_id: "u1", session_id: "s1")
+memory.add_message(role: :user, content: "Project Atlas uses Nimbus")
+context = memory.retrieve("Which database does Atlas use?")
+evidence = memory.retrieve_evidence("Which database does Atlas use?", explain: true)
+
+# Explicit generative ops raise in :zero_mem
+# memory.consolidate!  # => Llmemory::GenerativeOperationDisabled
+```
+
+CLI: `llmemory zero-mem traces USER`, `status`, `reindex`, `search USER "query"`. MCP: `memory_retrieve` (text, same as before) and `memory_retrieve_evidence` (structured JSON + context).
+
+Rollout: enable `zero_mem_shadow_write` while staying on `:classic` for reads; see [docs/zero_mem_limitations.md](docs/zero_mem_limitations.md). Benchmarks: [benchmarks/zero_mem/README.md](benchmarks/zero_mem/README.md).
+
 ## Consolidation policy
 
 By default, llmemory consolidates every extracted fact into long-term memory. For agents with **authoritative live data** (tools, DB snapshots), configure a `Consolidation::Policy` to **drop** or **mark volatile** facts that should not be treated as stable memory (e.g. current job, plan status, task lists).

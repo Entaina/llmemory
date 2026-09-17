@@ -1,0 +1,30 @@
+---
+id: es_single_hop_01
+language: es
+workload_class: local_fact
+roles:
+- user
+- assistant
+session_count: 1
+has_revision: false
+sessions:
+- id: s1
+  turns:
+  - id: t1
+    role: user
+    content: Mi color favorito es el verde azulado.
+    occurred_at: '2026-01-01T10:00:01Z'
+  - id: t2
+    role: assistant
+    content: 'Anotado: verde azulado.'
+    occurred_at: '2026-01-02T10:00:02Z'
+queries:
+- id: q1
+  text: "¿Cuál es mi color favorito?"
+  answer_type: text
+  gold_trace_ids:
+  - t1
+  gold_answer: verde azulado
+  evidence_gap: 0
+  session_count: 1
+  has_revision: false

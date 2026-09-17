@@ -16,10 +16,19 @@ module Llmemory
   #                             output_tokens:, total_tokens:
   #   memory_write.llmemory     memory_type:, user_id:
   #   memory_forget.llmemory    memory_type:, user_id:, count:
-  #   retrieve.llmemory         query_chars:, candidates:, results:
+  #   retrieve.llmemory         query_chars:, candidates:, results:, zero_mem_compliant:
   #   iterative_retrieve.llmemory  hops:, total_results:
   #   reflect.llmemory          window:, insights:
   #   mine_skills.llmemory      window:, auto_register:
+  #   trace_write.llmemory      user_id:, session_id:, trace_id:, sequence:, maintenance_fanout:
+  #   zero_mem_state_update.llmemory  user_id:, state_key:, trace_id:, supersedes_trace_id:
+  #   zero_mem_profile.llmemory       user_id:, query_chars:
+  #   zero_mem_hierarchy_retrieve.llmemory  user_id:, workload:
+  #   zero_mem_retrieve.llmemory      user_id:, evidence_count:, degraded:
+  #   zero_mem_graph_retrieve.llmemory user_id:
+  #   zero_mem_closure.llmemory       user_id:, seeds:
+  #   zero_mem_calibrate.llmemory     user_id:, trace_count:
+  #   encoder_embed.llmemory          user_id:, trace_id:, model:, dimensions:, duration_ms:
   module Instrumentation
     module_function
 

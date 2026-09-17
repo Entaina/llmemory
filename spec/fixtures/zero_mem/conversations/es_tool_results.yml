@@ -1,0 +1,36 @@
+---
+id: es_tool_results_01
+language: es
+workload_class: local_fact
+roles:
+- user
+- assistant
+- tool
+session_count: 1
+has_revision: false
+sessions:
+- id: s1
+  turns:
+  - id: t1
+    role: user
+    content: Consulta el saldo.
+    occurred_at: '2026-01-01T10:00:01Z'
+  - id: t2
+    role: tool
+    content: '{"balance_eur": 1250.5}'
+    occurred_at: '2026-01-02T10:00:02Z'
+  - id: t3
+    role: assistant
+    content: El saldo es 1250.5 euros.
+    occurred_at: '2026-01-03T10:00:03Z'
+queries:
+- id: q1
+  text: "¿Cuál es el saldo?"
+  answer_type: text
+  gold_trace_ids:
+  - t2
+  - t3
+  gold_answer: '1250.5'
+  evidence_gap: 0
+  session_count: 1
+  has_revision: false

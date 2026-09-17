@@ -26,7 +26,14 @@ module Llmemory
   class ConfigurationError < Error; end
   class StoreError < Error; end
   class LLMError < Error; end
+  class GenerativeOperationDisabled < Error
+    def initialize(message = "Generative memory operation is disabled in this memory mode")
+      super
+    end
+  end
 end
+
+require_relative "llmemory/zero_mem"
 
 require_relative "llmemory/crypto/cipher"
 require_relative "llmemory/railtie" if defined?(Rails::Railtie)

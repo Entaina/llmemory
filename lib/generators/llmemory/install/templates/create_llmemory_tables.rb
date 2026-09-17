@@ -94,9 +94,80 @@ class CreateLlmemoryTables < ActiveRecord::Migration[7.0]
       t.string :source_type, null: false
       t.string :source_id, null: false
       t.vector :embedding, limit: 1536
+      t.string :embedding_model
+      t.integer :embedding_dimensions
       t.text :text_content
       t.timestamps
     end
     add_index :llmemory_embeddings, [:user_id, :source_type, :source_id], unique: true
+
+    create_table :llmemory_traces, id: false do |t|
+      t.string :id, null: false, primary_key: true
+      t.string :user_id, null: false
+      t.string :session_id, null: false
+      t.string :boundary_id
+      t.bigint :sequence, null: false
+      t.string :role, null: false
+      t.text :content, null: false
+      t.text :search_tokens
+      t.string :content_sha256, null: false
+      t.datetime :occurred_at, null: false
+      t.datetime :ingested_at, null: false
+      t.jsonb :metadata, null: false, default: {}
+      t.string :idempotency_key
+      t.datetime :archived_at
+      t.timestamps
+    end
+    add_index :llmemory_traces, [:user_id, :session_id, :sequence], unique: true
+    add_index :llmemory_traces, [:user_id, :idempotency_key], unique: true, where: "idempotency_key IS NOT NULL"
+    add_index :llmemory_traces, [:user_id, :session_id, :occurred_at]
+    add_index :llmemory_traces, [:user_id, :boundary_id]
+    add_index :llmemory_traces, [:user_id, :archived_at]
+
+    create_table :llmemory_trace_state_links do |t|
+      t.string :user_id, null: false
+      t.string :state_key, null: false
+      t.string :trace_id, null: false
+      t.datetime :valid_from, null: false
+      t.datetime :valid_to
+      t.string :supersedes_trace_id
+      t.string :source, null: false, default: "explicit"
+      t.datetime :created_at, null: false
+    end
+    add_index :llmemory_trace_state_links, [:user_id, :state_key, :valid_from, :valid_to]
+    add_index :llmemory_trace_state_links, :trace_id
+
+    create_table :llmemory_trace_units, id: false do |t|
+      t.string :id, null: false, primary_key: true
+      t.string :user_id, null: false
+      t.string :trace_id, null: false
+      t.string :unit_type, null: false
+      t.jsonb :data, null: false, default: {}
+      t.datetime :archived_at
+      t.timestamps
+    end
+    add_index :llmemory_trace_units, [:user_id, :trace_id]
+
+    create_table :llmemory_trace_entities, id: false do |t|
+      t.string :id, null: false, primary_key: true
+      t.string :user_id, null: false
+      t.string :name, null: false
+      t.string :entity_type
+      t.datetime :archived_at
+      t.timestamps
+    end
+    add_index :llmemory_trace_entities, [:user_id, :name]
+
+    create_table :llmemory_entity_mentions, id: false do |t|
+      t.string :id, null: false, primary_key: true
+      t.string :user_id, null: false
+      t.string :trace_id, null: false
+      t.string :entity_id, null: false
+      t.integer :offset_start
+      t.integer :offset_end
+      t.datetime :archived_at
+      t.timestamps
+    end
+    add_index :llmemory_entity_mentions, [:user_id, :trace_id]
   end
 end

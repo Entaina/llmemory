@@ -12,8 +12,12 @@ module Llmemory
       end
 
       def embed(text)
-        return Array.new(1536, 0.0) unless @embedding_provider&.respond_to?(:embed)
+        return Array.new(default_dimensions, 0.0) unless @embedding_provider&.respond_to?(:embed)
         @embedding_provider.embed(text)
+      end
+
+      def embedding_dimensions
+        default_dimensions
       end
 
       def last_usage
@@ -23,6 +27,7 @@ module Llmemory
       end
 
       def store(id:, embedding:, metadata: {}, user_id: nil)
+        validate_dimensions!(embedding)
         key = user_id ? "#{user_id}:#{id}" : id.to_s
         meta = (metadata || {}).dup
         if meta["text"] && @cipher.enabled?
@@ -40,6 +45,7 @@ module Llmemory
 
       def search(query_embedding, top_k: 10, user_id: nil)
         query = query_embedding.to_a.map(&:to_f)
+        validate_dimensions!(query)
         return [] if query.empty?
         entries = user_id ? @entries.select { |k, _| k.to_s.start_with?("#{user_id}:") } : @entries
         scores = entries.map do |_key, data|
@@ -77,6 +83,22 @@ module Llmemory
           out[:text] = decrypted
         end
         out
+      end
+
+      def default_dimensions
+        if @embedding_provider.respond_to?(:dimensions)
+          @embedding_provider.dimensions
+        else
+          1536
+        end
+      end
+
+      def validate_dimensions!(vector)
+        dims = default_dimensions
+        size = vector.to_a.size
+        return if size == dims
+
+        raise ConfigurationError, "embedding dimension mismatch: expected #{dims}, got #{size}"
       end
 
       def cosine_similarity(a, b)

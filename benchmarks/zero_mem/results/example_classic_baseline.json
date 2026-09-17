@@ -1,0 +1,15 @@
+{
+  "variant": "classic",
+  "queries": 16,
+  "means": {
+    "localization": {
+      "mrr": 0.85,
+      "ndcg_at_10": 0.9,
+      "recall@1": 0.7,
+      "recall@5": 0.95,
+      "recall@10": 1.0
+    },
+    "latency_ms": 12.5
+  },
+  "note": "Redacted example shape only — regenerate with runners/classic_baseline.rb"
+}

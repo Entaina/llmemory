@@ -29,3 +29,8 @@ Thumbs.db
 .claude
 
 /docs
+
+# Zero-Mem benchmark artifacts (keep examples / .gitkeep)
+/benchmarks/zero_mem/results/*
+!/benchmarks/zero_mem/results/.gitkeep
+!/benchmarks/zero_mem/results/example_*

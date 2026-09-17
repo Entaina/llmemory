@@ -1,0 +1,45 @@
+# Experimental profile for Zero-Mem benchmarks (ZM0).
+# These defaults are NOT product configuration and are NOT paper reproduction claims.
+
+version: 1
+llmemory:
+  note: "Pin commit when running external baselines"
+  commit: "working_tree"
+  recorded_at: "2026-09-17"
+
+unspecified_by_paper:
+  window_size: TBD
+  window_overlap: TBD
+  episode_gap: TBD
+  ner_model: TBD
+  hierarchical_lexical_boost: TBD
+
+provisional:
+  top_k: 5
+  max_top_k: 10
+  rho: 0.6
+  gamma: 0.6
+  fusion_equal_score_normalized: 0.5
+  sweep_note: "Update after benchmarks/zero_mem/runners/sweep.rb on fixtures; mirror in Llmemory.configure"
+  local_span: 2
+  window_size: 8
+  window_overlap: 2
+  episode_gap_seconds: 86400
+
+acceptance_budgets:
+  p95_retrieve_ms: TBD
+  p95_write_ms: TBD
+  max_storage_growth: TBD
+
+memory_data:
+  commit: null
+  dataset_root: ""
+  note: "Optional local checkout; CI uses spec/fixtures/zero_mem only"
+
+fixtures:
+  root: spec/fixtures/zero_mem
+  note: "SHA256 hashes computed at runtime via ZeroMem::FixtureLoader.fixture_content_hashes"
+
+disclaimer: >
+  Metrics from this harness measure llmemory :classic behavior with local fixtures.
+  They are not comparable to published Zero-Mem / LoCoMo numbers without the full pipeline.

@@ -1,0 +1,40 @@
+---
+id: en_temporal_01
+language: en
+workload_class: temporal
+roles:
+- user
+- assistant
+session_count: 2
+has_revision: false
+sessions:
+- id: s1
+  turns:
+  - id: t1
+    role: user
+    content: On January 3 I booked a table at 8pm.
+    occurred_at: '2026-01-01T10:00:01Z'
+  - id: t2
+    role: assistant
+    content: Booking saved for January 3 at 8pm.
+    occurred_at: '2026-01-02T10:00:02Z'
+- id: s2
+  turns:
+  - id: t3
+    role: user
+    content: Remind me of the January booking time.
+    occurred_at: '2026-01-01T10:00:01Z'
+  - id: t4
+    role: assistant
+    content: It was at 8pm.
+    occurred_at: '2026-01-02T10:00:02Z'
+queries:
+- id: q1
+  text: What time was the January booking?
+  answer_type: text
+  gold_trace_ids:
+  - t1
+  gold_answer: 8pm
+  evidence_gap: 1
+  session_count: 2
+  has_revision: false

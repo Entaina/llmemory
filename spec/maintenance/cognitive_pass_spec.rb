@@ -76,6 +76,7 @@ RSpec.describe Llmemory::Maintenance::CognitivePass do
 
     it "runs consolidate! when a memory is supplied" do
       memory = instance_double(Llmemory::Memory)
+      allow(memory).to receive(:zero_mem_strict?).and_return(false)
       allow(memory).to receive(:consolidate!).and_return(true)
 
       report = described_class.run!(

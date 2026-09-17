@@ -1,0 +1,8 @@
+queries:
+  - id: retrieval_es_single_hop_q1
+    conversation_id: es_single_hop_01
+    text: "¿Cuál es mi color favorito?"
+    gold_trace_ids: [t1]
+    evidence_gap: 0
+    session_count: 1
+    has_revision: false

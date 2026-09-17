@@ -1,6 +1,58 @@
 # frozen_string_literal: true
 
 namespace :llmemory do
+  namespace :zero_mem do
+    desc "Repair Zero-Mem trace watermarks vs checkpoint (requires trace_store configured in app)"
+    task :repair, %i[user_id session_id] do |_t, args|
+      require "llmemory"
+      user_id = args[:user_id] || ENV["USER_ID"] || abort("USER_ID or user_id argument required")
+      session_id = args[:session_id] || ENV["SESSION_ID"] || Llmemory::Memory::DEFAULT_SESSION_ID
+      store = Llmemory::ZeroMem::Storages.build
+      memory = Llmemory::Memory.new(user_id: user_id, session_id: session_id, trace_store: store, memory_mode: :zero_mem)
+      report = Llmemory::ZeroMem::Repair.new(storage: store).run!(
+        user_id: user_id,
+        session_id: session_id,
+        checkpoint_messages: memory.messages
+      )
+      puts "Zero-Mem repair user_id=#{user_id} session_id=#{session_id}: #{report.inspect}"
+    end
+
+    desc "Reindex Zero-Mem traces for a user session (ENV: USER_ID, SESSION_ID)"
+    task :reindex, %i[user_id session_id] do |_t, args|
+      require "llmemory"
+      user_id = args[:user_id] || ENV["USER_ID"] || abort("USER_ID or user_id argument required")
+      session_id = args[:session_id] || ENV["SESSION_ID"] || Llmemory::Memory::DEFAULT_SESSION_ID
+      store = Llmemory::ZeroMem::Storages.build
+      memory = Llmemory::Memory.new(user_id: user_id, session_id: session_id, trace_store: store, memory_mode: :zero_mem)
+      status = memory.reindex_traces!(session_id: session_id)
+      puts "Zero-Mem reindex: #{status.inspect}"
+    end
+
+    desc "Backfill checkpoint messages into traces (ENV: USER_ID, SESSION_ID)"
+    task :backfill, %i[user_id session_id] do |_t, args|
+      require "llmemory"
+      user_id = args[:user_id] || ENV["USER_ID"] || abort("USER_ID required")
+      session_id = args[:session_id] || ENV["SESSION_ID"] || Llmemory::Memory::DEFAULT_SESSION_ID
+      store = Llmemory::ZeroMem::Storages.build
+      memory = Llmemory::Memory.new(user_id: user_id, session_id: session_id, trace_store: store, memory_mode: :zero_mem)
+      report = Llmemory::ZeroMem::Backfill.new(storage: store).run!(
+        user_id: user_id,
+        session_id: session_id,
+        messages: memory.messages
+      )
+      puts "Zero-Mem backfill: #{report.inspect}"
+    end
+
+    desc "Archive Zero-Mem traces past TTL (ENV: USER_ID, DRY_RUN=1)"
+    task :expire, [:user_id] do |_t, args|
+      require "llmemory"
+      user_id = args[:user_id] || ENV["USER_ID"] || abort("USER_ID required")
+      store = Llmemory::ZeroMem::Storages.build
+      dry_run = ENV["DRY_RUN"].to_s == "1"
+      report = Llmemory::Maintenance::ZeroMemTTL.new(storage: store).run!(user_id: user_id, dry_run: dry_run)
+      puts "Zero-Mem expire: #{report.inspect}"
+    end
+  end
   desc "Backfill search_tokens blind index (and name_det on skills) for encrypted keyword search. " \
        "Env: FORCE=1 (re-backfill all rows), DRY_RUN=1 (count only), STORE=active_record|postgres"
   task :backfill_search_tokens, [:user_id] do |_t, args|

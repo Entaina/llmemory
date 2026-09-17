@@ -30,6 +30,22 @@ module Llmemory
       def graph_based?
         Llmemory.configuration.long_term_type.to_sym == :graph_based
       end
+
+      def trace_store_instance
+        @trace_store_instance ||= ZeroMem::Storages.build
+      end
+
+      def build_memory(user_id:, session_id: "default", trace_store: nil, memory_mode: nil)
+        mode = memory_mode || Llmemory.configuration.memory_mode
+        store = trace_store
+        store = trace_store_instance if store.nil? && ZeroMem::Mode.zero_mem_enabled?(mode)
+        Llmemory::Memory.new(
+          user_id: user_id,
+          session_id: session_id,
+          trace_store: store,
+          memory_mode: mode
+        )
+      end
     end
   end
 end

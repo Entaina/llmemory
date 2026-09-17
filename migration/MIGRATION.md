@@ -2,6 +2,8 @@
 
 This guide covers the critical bug-fix release (P0) introduced **after 0.2.4**. If you are upgrading from 0.2.4 or earlier, follow the steps that apply to your setup.
 
+For the experimental **Zero-Mem** trace pipeline (`memory_mode: :zero_mem`), see [ZERO_MEM.md](ZERO_MEM.md).
+
 ## Summary of changes
 
 | Area | Before | After | Action in your app |

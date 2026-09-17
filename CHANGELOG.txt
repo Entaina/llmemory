@@ -1,5 +1,15 @@
 # Changelog
 
+## [Unreleased]
+
+### Added (experimental)
+
+- **Zero-Mem trace pipeline** (opt-in `memory_mode: :zero_mem` / `:hybrid`): append-only traces,
+  lexical hierarchy + entity graph retrieval, fusion/closure/calibration, MCP `memory_retrieve_evidence`,
+  CLI `llmemory zero-mem`, shadow write (`zero_mem_shadow_write`), file/postgres snapshot stores.
+- **Evaluation harness**: ablation/sweep/cost_frontier runners on local fixtures; CI gates in
+  `spec/zero_mem/gates_spec.rb`. See `docs/zero_mem_limitations.md` — not paper reproduction claims.
+
 ## [0.2.11] - 2026-09-07
 
 ### Added
