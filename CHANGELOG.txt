@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.3.0] - 2026-09-17
+
+### Added
+
+- **Zero-Mem (experimental).** Opt-in `memory_mode: :zero_mem` or `:hybrid`: append-only
+  conversation traces, derived lexical hierarchy and entity graph, fusion/closure/calibration,
+  and token-budget assembly. Default remains `:classic`; generative paths (`consolidate!`,
+  `reflect!`, `mine_skills!`) raise in strict `:zero_mem`.
+- **`Memory#retrieve_evidence`.** Structured evidence set plus `to_context`; optional `explain`
+  trace for debugging retrieval.
+- **MCP.** `memory_retrieve_evidence` tool; stats include Zero-Mem lag and compliance hints.
+- **CLI.** `llmemory zero-mem traces|status|reindex|search`.
+- **Storage and ops.** Trace stores `:memory`, `:file`, `:postgres`, `:active_record`;
+  `rails g llmemory:upgrade_zero_mem`; rake `llmemory:zero_mem:repair|reindex|backfill|expire`;
+  optional HTTP entity extractor with circuit breaker; TTL cascade maintenance. See
+  `migration/ZERO_MEM.md`.
+- **Rollout.** `zero_mem_shadow_write` indexes traces while reads stay on `:classic`.
+- **Benchmark harness** under `benchmarks/zero_mem/` (local fixtures, ablations, sweep,
+  cost frontier); CI gates in `spec/zero_mem/gates_spec.rb`.
+
+### Notes
+
+- Zero-Mem is **experimental**: benchmark numbers are not claims of reproducing the Zero-Mem paper.
+- `:hybrid` combines trace retrieval with classic long-term memory; it is not a zero-token mode.
 ## [Unreleased]
 
 ### Added (experimental)
