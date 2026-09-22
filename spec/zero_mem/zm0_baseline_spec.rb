@@ -43,7 +43,7 @@ RSpec.describe "ZM0 baseline harness" do
     it "runs :classic over fixtures without HTTP" do
       report = described_class.new(variant: :classic).run!
       expect(report[:queries]).to be >= 16
-      expect(report[:means][:localization][:"recall@5"]).to be_a(Numeric)
+      expect(report[:means][:localization]).to eq({})
       expect(report[:rows].first[:cost][:latency_ms]).to be_a(Numeric)
     end
 

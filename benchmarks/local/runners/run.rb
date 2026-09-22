@@ -10,6 +10,9 @@ require_relative "../reader_llm"
 require_relative "../harness"
 require_relative "../registry"
 require_relative "../report"
+require_relative "../sampler"
+require_relative "../caching_client"
+require_relative "../bench_trace"
 
 module LocalBenchmark
   module Runners
@@ -31,7 +34,11 @@ module LocalBenchmark
           out: ENV.fetch("LLMEMORY_BENCH_OUT", DEFAULT_OUT),
           skip_health: false,
           reader: :deterministic,
-          use_judge: false
+          use_judge: false,
+          conversations: nil,
+          per_conversation: nil,
+          seed: ENV["LLMEMORY_BENCH_SEED"],
+          stratify: nil
         }
         parse!(argv)
       end
@@ -46,9 +53,29 @@ module LocalBenchmark
 
         LmStudio.health_check! unless @options[:skip_health] || @options[:reader] == :deterministic
 
-        conversations = adapter.conversations(limit: @options[:limit])
+        raw = adapter.conversations(limit: nil)
+        sampled = Sampler.sample(
+          raw,
+          bench: @options[:bench],
+          limit: @options[:limit],
+          conversations_limit: @options[:conversations],
+          per_conversation: @options[:per_conversation],
+          seed: @options[:seed],
+          stratify: @options[:stratify]
+        )
+        conversations = sampled[:conversations]
+        if BenchTrace.enabled?
+          BenchTrace.log(
+            "run bench=#{@options[:bench]} variant=#{@options[:variant]} " \
+            "conversations=#{conversations.size} sampling=#{sampled[:sampling]&.inspect}"
+          )
+        end
         reader = build_reader
-        llm = @options[:reader] == :deterministic ? nil : Llmemory::LLM.client
+        llm = if @options[:reader] == :deterministic
+                nil
+              else
+                LocalBenchmark::CachingClient.wrap!(cache_reader: false)
+              end
 
         harness = LocalBenchmark::Harness.new(
           variant: @options[:variant],
@@ -59,6 +86,7 @@ module LocalBenchmark
         report = Report.enrich(report, bench: @options[:bench], use_judge: @options[:use_judge])
         report[:lm_studio] = profile_meta if profile_meta
         report[:generated_at] = Time.now.utc.iso8601
+        report[:sampling] = sampled[:sampling]
 
         FileUtils.mkdir_p(File.dirname(@options[:out]))
         File.write(@options[:out], JSON.pretty_generate(report))
@@ -74,6 +102,10 @@ module LocalBenchmark
           opts.on("--bench NAME", "Benchmark id (#{Registry::BENCHES.keys.join(', ')})") { |v| @options[:bench] = v }
           opts.on("--variant NAME", "classic|zero_mem_full|...") { |v| @options[:variant] = v.to_sym }
           opts.on("--limit N", Integer, "Max queries (smoke)") { |v| @options[:limit] = v }
+          opts.on("--conversations N", Integer, "Stratified sample: number of conversations") { |v| @options[:conversations] = v }
+          opts.on("--per-conversation Q", Integer, "Stratified sample: queries per conversation") { |v| @options[:per_conversation] = v }
+          opts.on("--seed S", "Deterministic sampling seed") { |v| @options[:seed] = v }
+          opts.on("--stratify FIELD", "category|question_type") { |v| @options[:stratify] = v }
           opts.on("--out PATH", "Output JSON path") { |v| @options[:out] = v }
           opts.on("--reader MODE", "deterministic|llm") { |v| @options[:reader] = v.to_sym }
           opts.on("--use-judge", "Run local LLM judge (extra tokens)") { @options[:use_judge] = true }

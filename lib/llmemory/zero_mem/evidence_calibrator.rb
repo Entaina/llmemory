@@ -33,7 +33,7 @@ module Llmemory
         excluded.concat(dup_excluded)
 
         conflict_ids = detect_conflicts(deduped)
-        ordered = sort_traces(deduped, profile, as_of)
+        ordered = sort_traces(deduped, profile, as_of, fusion_rows: fusion_rows)
 
         {
           traces: ordered,
@@ -142,11 +142,19 @@ module Llmemory
         conflict_ids.uniq
       end
 
-      def sort_traces(traces, profile, as_of)
+      def sort_traces(traces, profile, as_of, fusion_rows: nil)
+        scores = Array(fusion_rows).each_with_object({}) do |r, acc|
+          acc[r[:trace_id].to_s] = r[:final].to_f
+        end
+
         if profile.freshness_requirement || profile.workload_class == :current_state
-          traces.sort_by { |t| [-t.occurred_at.to_f, subject_rank(t, profile)] }
+          traces.sort_by do |t|
+            [-t.occurred_at.to_f, -scores.fetch(t.id, 0.0), subject_rank(t, profile)]
+          end
         else
-          traces.sort_by { |t| [subject_rank(t, profile), -t.occurred_at.to_f] }
+          traces.sort_by do |t|
+            [-scores.fetch(t.id, 0.0), subject_rank(t, profile), -t.occurred_at.to_f]
+          end
         end
       end
 

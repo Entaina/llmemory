@@ -43,8 +43,10 @@ module Llmemory
         { graph: rho.to_f, hierarchy: 1.0 - rho.to_f }
       end
 
-      def local_weights(_config)
-        { graph: 0.4, hierarchy: 0.6 }
+      def local_weights(config)
+        h = (config.zero_mem_local_hierarchy_weight || 0.6).to_f
+        h = 0.6 unless h.positive? && h < 1.0
+        { graph: 1.0 - h, hierarchy: h }
       end
 
       def resolve_tie(default_weights, hierarchy_scores, graph_scores, profile)

@@ -23,18 +23,22 @@ module Llmemory
           end
 
           def save_item(user_id, category:, content:, source_resource_id:, importance: 0.7, provenance: nil,
-                        occurred_at: nil)
+                        occurred_at: nil, event_date: nil, subject: nil, predicate: nil)
             @item_id_seq += 1
             id = "item_#{@item_id_seq}"
-            @items[user_id] << {
+            row = {
               id: id,
               category: category,
               content: content,
               source_resource_id: source_resource_id,
               importance: importance,
               provenance: provenance,
-              created_at: coerce_timestamp(occurred_at)
+              created_at: coerce_timestamp(occurred_at),
+              event_date: event_date ? coerce_timestamp(event_date) : nil
             }
+            row[:subject] = subject if subject && !subject.to_s.strip.empty?
+            row[:predicate] = predicate if predicate && !predicate.to_s.strip.empty?
+            @items[user_id] << row
             id
           end
 

@@ -30,13 +30,14 @@ module Llmemory
           end
 
           def save_item(user_id, category:, content:, source_resource_id:, importance: 0.7, provenance: nil,
-                        occurred_at: nil)
+                        occurred_at: nil, event_date: nil, subject: nil, predicate: nil)
             ensure_tables!
             id = "item_#{SecureRandom.hex(8)}"
             ts = (Llmemory.parse_occurred_at(occurred_at) || Time.now).utc.iso8601
+            ev_ts = event_date ? Llmemory.parse_occurred_at(event_date)&.utc&.iso8601 : nil
             conn.exec_params(
-              "INSERT INTO llmemory_items (id, user_id, category, content, source_resource_id, importance, provenance, search_tokens, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9)",
-              [id, user_id, category, enc(content), source_resource_id, importance.to_f, provenance_json(provenance), search_tokens_for(content), ts]
+              "INSERT INTO llmemory_items (id, user_id, category, content, source_resource_id, importance, provenance, search_tokens, created_at, event_date) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $10)",
+              [id, user_id, category, enc(content), source_resource_id, importance.to_f, provenance_json(provenance), search_tokens_for(content), ts, ev_ts]
             )
             id
           end
@@ -292,6 +293,7 @@ module Llmemory
             conn.exec("ALTER TABLE llmemory_items ADD COLUMN IF NOT EXISTS importance REAL DEFAULT 0.7") rescue nil
             conn.exec("ALTER TABLE llmemory_items ADD COLUMN IF NOT EXISTS provenance JSONB") rescue nil
             conn.exec("ALTER TABLE llmemory_items ADD COLUMN IF NOT EXISTS search_tokens TEXT") rescue nil
+            conn.exec("ALTER TABLE llmemory_items ADD COLUMN IF NOT EXISTS event_date TIMESTAMPTZ") rescue nil
             conn.exec("ALTER TABLE llmemory_resources ADD COLUMN IF NOT EXISTS search_tokens TEXT") rescue nil
             conn.exec(<<~SQL)
               CREATE TABLE IF NOT EXISTS llmemory_categories (

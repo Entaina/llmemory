@@ -38,9 +38,17 @@ module Llmemory
 
       def format_context(memories)
         lines = ["=== RELEVANT MEMORIES ===", ""]
+        if memories.any?
+          top = memories.first
+          conf = top[:confidence]
+          if conf.is_a?(Numeric) && conf.positive?
+            lines << "Most relevant (conf=#{format('%.2f', conf)}):"
+            lines << ""
+          end
+        end
         memories.each do |mem|
           ts = mem[:timestamp]
-          ts_str = ts.respond_to?(:iso8601) ? ts.iso8601 : ts.to_s
+          ts_str = format_timestamp(ts)
           conf = mem[:confidence]
           conf_str = conf.is_a?(Numeric) ? format("%.2f", conf) : conf.to_s
           lines << "[#{ts_str}] (confidence: #{conf_str})"
@@ -63,6 +71,15 @@ module Llmemory
         return text unless label_volatile_enabled?
 
         "[verify live] #{text}"
+      end
+
+      def format_timestamp(ts)
+        return ts.to_s if ts.nil?
+
+        time = ts.is_a?(Time) ? ts : Llmemory.parse_occurred_at(ts)
+        return ts.to_s unless time
+
+        time.utc.strftime("%-d %b %Y")
       end
     end
   end

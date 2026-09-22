@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative "../temporal/snippet_enricher"
+
 module Llmemory
   module ZeroMem
     class EvidenceSet
@@ -40,14 +42,103 @@ module Llmemory
       def to_context
         return "" if evidence.empty?
 
+        items = evidence.dup
+        items.sort_by! { |ev| ev.occurred_at.to_f } if temporal_intent?
+
         lines = ["=== ZERO-MEM EVIDENCE ===", ""]
-        evidence.each do |ev|
-          ts = ev.occurred_at.is_a?(Time) ? ev.occurred_at.utc.iso8601 : ev.occurred_at.to_s
-          lines << "[#{ev.trace_id}] #{ts} #{ev.session_id} #{ev.role}: #{ev.content}"
+        if items.any?
+          top = items.max_by(&:score)
+          lines << "Most relevant: #{top.trace_id} (conf=#{format('%.2f', top.confidence)})"
+          lines << ""
         end
+
+        day_counts = evidence_day_counts(items)
+        items.each do |ev|
+          ts_label = format_evidence_time(ev, day_counts: day_counts)
+          body = snippet(enriched_content(ev))
+          lines << "[#{ev.trace_id}] #{ts_label} #{ev.session_id} #{ev.role} (conf=#{format('%.2f', ev.confidence)}): #{body}"
+        end
+
+        if temporal_intent? && items.size > 1
+          lines << ""
+          lines << "Timeline:"
+          dated = items.reject(&:occurred_at_inferred).filter_map do |ev|
+            time = ev.occurred_at.is_a?(Time) ? ev.occurred_at : Llmemory.parse_occurred_at(ev.occurred_at)
+            next unless time
+
+            { time: time, text: enriched_content(ev), trace_id: ev.trace_id }
+          end
+          Temporal::SnippetEnricher.timeline_deltas(dated).each { |line| lines << line }
+        end
+
         lines << ""
         lines << "=== END ZERO-MEM EVIDENCE ==="
         lines.join("\n")
+      end
+
+      private
+
+      def temporal_intent?
+        return false unless profile
+
+        workload = profile.workload_class || profile[:workload_class]
+        freshness = profile.freshness_requirement
+        freshness = profile[:freshness_requirement] if freshness.nil? && profile.is_a?(Hash)
+        answer = profile.answer_type || profile[:answer_type]
+        workload == :temporal || freshness == true || answer == :datetime
+      end
+
+      def evidence_day_counts(items)
+        items.each_with_object(Hash.new(0)) do |ev, acc|
+          next if ev.occurred_at_inferred
+
+          time = ev.occurred_at.is_a?(Time) ? ev.occurred_at : Llmemory.parse_occurred_at(ev.occurred_at)
+          next unless time
+
+          acc[time.utc.to_date] += 1
+        end
+      end
+
+      def enriched_content(ev)
+        Temporal::SnippetEnricher.enrich(
+          ev.content,
+          reference_time: ev.occurred_at,
+          occurred_at_inferred: ev.occurred_at_inferred
+        )
+      end
+
+      def format_evidence_time(ev, day_counts: nil)
+        return "(undated)" if ev.occurred_at_inferred
+
+        time = ev.occurred_at.is_a?(Time) ? ev.occurred_at : Llmemory.parse_occurred_at(ev.occurred_at)
+        return ev.occurred_at.to_s unless time
+
+        label = time.utc.strftime("%a %-d %b %Y")
+        if day_counts && day_counts[time.utc.to_date].to_i > 1
+          label = "#{label} #{time.utc.strftime('%H:%M')}"
+        end
+        label
+      end
+
+      def snippet(text, limit = nil)
+        limit ||= Llmemory.configuration.zero_mem_snippet_chars.to_i
+        limit = 600 if limit <= 0
+        str = text.to_s
+        return str if str.length <= limit
+
+        terms = Array(profile&.keywords).map(&:downcase).select { |t| t.length >= 3 }
+        down = str.downcase
+        anchor = terms.find { |t| down.include?(t) }
+        if anchor
+          idx = down.index(anchor)
+          start = [idx - (limit / 3), 0].max
+          excerpt = str[start, limit]
+          prefix = start.positive? ? "..." : ""
+          suffix = (start + limit) < str.length ? "..." : ""
+          return "#{prefix}#{excerpt}#{suffix}"
+        end
+
+        "#{str[0, limit]}..."
       end
     end
   end

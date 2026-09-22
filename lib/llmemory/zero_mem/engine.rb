@@ -41,35 +41,47 @@ module Llmemory
 
         profile = nil
         Llmemory::Instrumentation.instrument(:zero_mem_profile, user_id: @user_id, query_chars: query.to_s.length) do
-          profile = @profiler.profile(query, boundary: boundary)
+          profile = zm_bench_trace("profile") { @profiler.profile(query, boundary: boundary) }
         end
         effective_k = effective_top_k(top_k, profile)
 
         retrieval = nil
         Llmemory::Instrumentation.instrument(:zero_mem_hierarchy_retrieve, user_id: @user_id, workload: profile.workload_class) do
-          retrieval = @retriever.retrieve(user_id: @user_id, query: query, profile: profile, top_k: effective_k)
+          retrieval = zm_bench_trace("hierarchy_retrieve") do
+            @retriever.retrieve(user_id: @user_id, query: query, profile: profile, top_k: effective_k)
+          end
         end
 
         graph = nil
         Llmemory::Instrumentation.instrument(:zero_mem_graph_retrieve, user_id: @user_id) do
-          graph = @graph_retriever.retrieve(user_id: @user_id, query: query, profile: profile, top_k: effective_k)
+          graph = zm_bench_trace("graph_retrieve") do
+            @graph_retriever.retrieve(user_id: @user_id, query: query, profile: profile, top_k: effective_k)
+          end
         end
 
         degraded = (retrieval[:degraded] + graph[:degraded]).uniq
         degraded << :dense unless @embedding_provider
         degraded.uniq!
 
-        hierarchy_scores = hierarchy_trace_scores(query, retrieval[:traces])
+        seed_traces = seed_hierarchy_traces(retrieval)
+        hierarchy_scores = hierarchy_trace_scores(query, seed_traces)
         graph_scores = graph[:trace_scores] || {}
         routing = @router.route(profile, hierarchy_scores: hierarchy_scores, graph_scores: graph_scores, config: @config)
         weights = fusion_weights || routing[:weights]
 
         fused = @fusion.fuse(graph_scores: graph_scores, hierarchy_scores: hierarchy_scores, weights: weights)
+        fused = boost_fusion_rows(fused, query: query, profile: profile)
         seed_rows = fused.first(effective_k)
         seed_ids = seed_rows.map { |r| r[:trace_id] }
 
+        neighbor_ids = Array(retrieval[:neighbor_trace_ids]).map(&:to_s)
         closure_result = if skip_closure
-                           { seed_trace_ids: seed_ids, closure_trace_ids: [], bridges: [], atomic_groups: [] }
+                           {
+                             seed_trace_ids: seed_ids,
+                             closure_trace_ids: neighbor_ids,
+                             bridges: [],
+                             atomic_groups: []
+                           }
                          else
                            Llmemory::Instrumentation.instrument(:zero_mem_closure, user_id: @user_id, seeds: seed_ids.size) do
                              @closure.expand(
@@ -80,6 +92,7 @@ module Llmemory
                              )
                            end
                          end
+        closure_result[:closure_trace_ids] = (neighbor_ids + closure_result[:closure_trace_ids]).uniq
 
         ordered_ids = (seed_ids + closure_result[:closure_trace_ids]).uniq
         traces = ordered_ids.map { |id| @storage.get_trace(@user_id, id) }.compact
@@ -89,15 +102,17 @@ module Llmemory
                           closure_ids: closure_result[:closure_trace_ids] }
                       else
                         Llmemory::Instrumentation.instrument(:zero_mem_calibrate, user_id: @user_id, trace_count: traces.size) do
-                          @calibrator.calibrate(
-                            user_id: @user_id,
-                            traces: traces,
-                            profile: profile,
-                            current_trace_id: current_trace_id,
-                            fusion_rows: fused,
-                            seed_ids: seed_ids,
-                            closure_ids: closure_result[:closure_trace_ids]
-                          )
+                          zm_bench_trace("calibrate(#{traces.size})") do
+                            @calibrator.calibrate(
+                              user_id: @user_id,
+                              traces: traces,
+                              profile: profile,
+                              current_trace_id: current_trace_id,
+                              fusion_rows: fused,
+                              seed_ids: seed_ids,
+                              closure_ids: closure_result[:closure_trace_ids]
+                            )
+                          end
                         end
                       end
 
@@ -118,8 +133,9 @@ module Llmemory
             sources: row ? row[:sources] : [],
             conflict: conflict_ids[trace.id] == true,
             seed: seed_ids.include?(trace.id),
-            closure: closure_result[:closure_trace_ids].include?(trace.id),
-            content_sha256: trace.content_sha256
+            closure: closure_result[:closure_trace_ids].include?(trace.id) || neighbor_ids.include?(trace.id.to_s),
+            content_sha256: trace.content_sha256,
+            occurred_at_inferred: trace.metadata[:occurred_at_inferred] == true
           )
         end
 
@@ -185,10 +201,54 @@ module Llmemory
 
       private
 
+      def zm_bench_trace(label)
+        return yield unless ENV["LLMEMORY_BENCH_TRACE"] == "1"
+
+        t0 = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+        result = yield
+        ms = (Process.clock_gettime(Process::CLOCK_MONOTONIC) - t0) * 1000.0
+        line = "[bench-trace zero_mem] #{label} #{ms.round(1)}ms"
+        warn line
+        path = ENV["LLMEMORY_BENCH_TRACE_FILE"].to_s
+        File.open(path, "a") { |f| f.puts line } unless path.empty?
+        result
+      end
+
       def effective_top_k(explicit, profile)
         base = explicit || @config.zero_mem_top_k
         need = profile ? [base, profile.expected_evidence_count].max : base
         [need, @config.zero_mem_max_top_k].min
+      end
+
+      def seed_hierarchy_traces(retrieval)
+        seed_ids = Array(retrieval[:seed_trace_ids]).map(&:to_s).to_set
+        return retrieval[:traces] if seed_ids.empty?
+
+        retrieval[:traces].select { |t| seed_ids.include?(t.id.to_s) }
+      end
+
+      def boost_fusion_rows(fused, query:, profile:)
+        q_tokens = Llmemory::Tokenizer.tokenize(query.to_s).reject { |t| t.length < 3 }.to_set
+        temporal = profile.workload_class == :temporal || profile.freshness_requirement
+        boosted = fused.map do |row|
+          trace = @storage.get_trace(@user_id, row[:trace_id])
+          next row unless trace
+
+          down = trace.content.downcase
+          bonus = 0.0
+          profile.subject_entities.each do |entity|
+            bonus += 0.06 if down.include?(entity.downcase)
+          end
+          bonus += 0.04 * q_tokens.count { |t| down.include?(t) } if q_tokens.any?
+          if q_tokens.any? && q_tokens.none? { |t| down.include?(t) }
+            bonus -= 0.07
+          end
+          if temporal && down.match?(/\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday|\d{4}-\d{2}-\d{2}|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\b/i)
+            bonus += 0.08
+          end
+          row.merge(final: (row[:final].to_f + bonus).clamp(0.0, 1.5))
+        end
+        boosted.sort_by { |row| [-row[:final], row[:trace_id]] }
       end
 
       def hierarchy_trace_scores(query, traces)

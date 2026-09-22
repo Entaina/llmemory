@@ -29,7 +29,7 @@ module Llmemory
           end
 
           def save_item(user_id, category:, content:, source_resource_id:, importance: 0.7, provenance: nil,
-                        occurred_at: nil)
+                        occurred_at: nil, event_date: nil, subject: nil, predicate: nil)
             ensure_user_dir(user_id)
             seq = next_seq(user_id, "item_id_seq")
             id = "item_#{seq}"
@@ -41,8 +41,11 @@ module Llmemory
               source_resource_id: source_resource_id,
               importance: importance,
               provenance: provenance ? enc_json(provenance) : nil,
-              created_at: storage_timestamp(occurred_at).iso8601
+              created_at: storage_timestamp(occurred_at).iso8601,
+              event_date: event_date ? storage_timestamp(event_date).iso8601 : nil
             }
+            data[:subject] = subject if subject && !subject.to_s.strip.empty?
+            data[:predicate] = predicate if predicate && !predicate.to_s.strip.empty?
             write_encrypted_file(path, data)
             id
           end

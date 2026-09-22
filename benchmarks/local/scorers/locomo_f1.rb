@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative "date_normalizer"
+
 module LocalBenchmark
   module Scorers
     # LoCoMo task_eval/evaluation.py F1 (token overlap + Porter-style stem).
@@ -77,7 +79,8 @@ module LocalBenchmark
       end
 
       def normalize_answer(text)
-        s = text.to_s.gsub(",", "")
+        s = DateNormalizer.normalize_text(text)
+        s = s.gsub(",", "")
         s = s.gsub(/\b(a|an|the|and)\b/i, " ")
         s.downcase.strip.gsub(/\s+/, " ")
       end

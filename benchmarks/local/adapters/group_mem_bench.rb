@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "json"
+require "llmemory"
 require_relative "base"
 
 module LocalBenchmark
@@ -28,7 +29,7 @@ module LocalBenchmark
 
         conv_data = JSON.parse(File.read(conversation_path))
         channel_id = conv_data["channel_id"] || "#{@domain}_channel"
-        turns = normalize_channel_turns(conv_data)
+        turns = cap_turns(normalize_channel_turns(conv_data))
 
         File.foreach(questions_path).with_index do |line, idx|
           next if line.strip.empty?
@@ -38,7 +39,7 @@ module LocalBenchmark
             "id" => "#{channel_id}_#{@qtype}_#{idx}",
             "language" => "en",
             "workload_class" => "groupmembench",
-            "consolidate_after_hydrate" => true,
+            "consolidate_mode" => "per_session",
             "sessions" => [{ "id" => channel_id, "turns" => turns }],
             "queries" => [
               {
@@ -50,13 +51,16 @@ module LocalBenchmark
               }
             ]
           })
-          end
+        end
       end
 
       private
 
       def conversation_path
         @conversation_path ||= begin
+          direct = File.join(@root, "data", "final", @domain, "synthetic_domain_channels_rolevariants_#{@domain}.json")
+          return direct if File.file?(direct)
+
           direct = File.join(@root, "data", @domain, "synthetic_domain_channels_rolevariants_#{@domain}.json")
           return direct if File.file?(direct)
 
@@ -77,16 +81,36 @@ module LocalBenchmark
 
       def normalize_channel_turns(conv_data)
         messages = conv_data["messages"] || conv_data["turns"] || conv_data["posts"] || []
+        if messages.empty? && conv_data.is_a?(Hash)
+          arrays = conv_data.values.select { |v| v.is_a?(Array) && !v.empty? }
+          messages = arrays.max_by(&:size) || []
+        end
+
         Array(messages).each_with_index.map do |msg, idx|
           speaker = msg["speaker"] || msg["user"] || msg["author"] || "user"
           body = msg["content"] || msg["text"] || msg["message"]
           {
-            "id" => msg["id"] || "t#{idx + 1}",
+            "id" => msg["msg_node"] || msg["id"] || "t#{idx + 1}",
             "role" => "user",
             "speaker" => speaker,
-            "content" => "#{speaker}: #{body}"
+            "content" => "#{speaker}: #{body}",
+            "occurred_at" => normalize_occurred_at(msg["timestamp"])
           }
         end
+      end
+
+      def normalize_occurred_at(raw)
+        return nil if raw.nil?
+
+        Llmemory.parse_occurred_at(raw)
+      end
+
+      def cap_turns(turns)
+        max = ENV["GROUPMEMBENCH_MAX_TURNS"].to_i
+        return turns if max <= 0 || turns.size <= max
+
+        # Keep the most recent channel turns (questions usually reference late context).
+        turns.last(max)
       end
     end
   end

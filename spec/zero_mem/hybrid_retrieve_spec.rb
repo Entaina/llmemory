@@ -42,9 +42,20 @@ RSpec.describe "Hybrid memory_mode retrieve" do
     memory.consolidate!
 
     ctx = memory.retrieve("Nimbus kayak")
-    expect(ctx).to include("ZERO-MEM EVIDENCE")
+    expect(ctx).to include("=== MEMORY ===")
     expect(ctx).to match(/Nimbus|kayak/i)
     expect(storage.get_all_items(user_id).size).to be >= 1
+
+    item = storage.get_all_items(user_id).first
+    sources = (item[:provenance] || item["provenance"])[:sources] || (item[:provenance] || item["provenance"])["sources"]
+    expect(sources.map { |s| s[:type] || s["type"] }).to include("trace")
+  end
+
+  it "retrieve_fused exposes ranked_trace_ids" do
+    memory = hybrid_memory
+    memory.add_message(role: :user, content: "Secret project Atlas database migration")
+    fused = memory.retrieve_fused("Atlas database")
+    expect(fused.ranked_trace_ids).not_to be_empty
   end
 
   it "routes strict zero_mem through evidence only" do
@@ -80,10 +91,12 @@ RSpec.describe "Hybrid memory_mode retrieve" do
     expect(ctx).to match(/emerald|Secret/i)
   end
 
-  it "splits max_tokens using hybrid_classic_token_ratio" do
+  it "uses hybrid_classic_token_ratio as fact token ceiling in fused retrieve" do
     Llmemory.configure { |c| c.hybrid_classic_token_ratio = 0.5 }
     memory = hybrid_memory
-    expect(memory.send(:split_hybrid_token_budget, 2000)).to eq([1000, 1000])
-    expect(memory.send(:split_hybrid_token_budget, nil)).to eq([nil, nil])
+    memory.add_message(role: :user, content: "The code phrase is emerald-42 for vault access.")
+    memory.consolidate!
+    fused = memory.retrieve_fused("emerald", max_tokens: 400)
+    expect(fused.items).not_to be_empty
   end
 end

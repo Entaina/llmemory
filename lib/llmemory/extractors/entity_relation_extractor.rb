@@ -35,7 +35,8 @@ module Llmemory
                 properties: {
                   subject: { type: "string", description: "Subject entity (use 'User' when the user talks about themselves or their family)" },
                   predicate: { type: "string", description: "Relation inferred from context, snake_case (e.g. has_son, works_at, likes, spouse)" },
-                  object: { type: "string", description: "Object entity (person name, place, concept)" }
+                  object: { type: "string", description: "Object entity (person name, place, concept)" },
+                  occurred_at: { type: ["string", "null"], description: "Optional ISO8601 date when the relation/event occurred" }
                 },
                 required: ["subject", "predicate", "object"],
                 additionalProperties: false
@@ -52,10 +53,13 @@ module Llmemory
         @llm = llm || Llmemory::LLM.client
       end
 
-      def extract(conversation_text)
+      def extract(conversation_text, reference_time: nil)
         text = truncate_conversation(conversation_text.to_s.strip)
+        anchor = reference_time ? Llmemory::TimeCoercion.iso8601_or_string(reference_time) : nil
+        anchor_line = anchor ? "Conversation anchor time (latest message): #{anchor}\n" : ""
         prompt = <<~PROMPT
           Infer entities and relations from this user-assistant conversation. Build a knowledge graph from what the user says, even when they don't state facts in formal language.
+          #{anchor_line}For time-specific facts, include optional "occurred_at" (ISO8601 date) on each relation when you can resolve relative dates from the anchor.
           - Entities: people, places, companies, concepts (type and name).
           - Relations: infer subject-predicate-object from context. Use "User" as subject when the user talks about themselves or people close to them.
           Examples of inference: "mi hijo se llama Luis" → User has_son Luis; "trabajo en Acme" → User works_at Acme; "no me gustan las macros" → User prefers (or dislikes) Excel macros. Infer family (has_son, has_daughter, spouse), work (works_at, current_job), preferences (likes, prefers), and any other relation that clearly follows from the conversation. Use snake_case predicates.
@@ -136,10 +140,12 @@ module Llmemory
       end
 
       def normalize_relation(r)
+        occurred = r["occurred_at"] || r[:occurred_at]
         {
           subject: (r["subject"] || r[:subject]).to_s.strip,
           predicate: (r["predicate"] || r[:predicate]).to_s.strip.downcase.gsub(/\s+/, "_"),
-          object: (r["object"] || r[:object]).to_s.strip
+          object: (r["object"] || r[:object]).to_s.strip,
+          occurred_at: occurred.to_s.strip.empty? ? nil : occurred
         }
       end
     end

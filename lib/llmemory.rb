@@ -20,6 +20,7 @@ require_relative "llmemory/reflection"
 require_relative "llmemory/skill_mining"
 require_relative "llmemory/actions"
 require_relative "llmemory/time_coercion"
+require_relative "llmemory/temporal/relative_date_resolver"
 require_relative "llmemory/memory"
 
 module Llmemory

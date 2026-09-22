@@ -47,7 +47,7 @@ module Llmemory
             user_id: user_id,
             session_id: @session_id || "default",
             trace_store: trace_store,
-            memory_mode: :zero_mem
+            memory_mode: Llmemory.configuration.memory_mode
           )
         end
 

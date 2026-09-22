@@ -8,7 +8,8 @@ namespace :llmemory do
       user_id = args[:user_id] || ENV["USER_ID"] || abort("USER_ID or user_id argument required")
       session_id = args[:session_id] || ENV["SESSION_ID"] || Llmemory::Memory::DEFAULT_SESSION_ID
       store = Llmemory::ZeroMem::Storages.build
-      memory = Llmemory::Memory.new(user_id: user_id, session_id: session_id, trace_store: store, memory_mode: :zero_mem)
+      memory = Llmemory::Memory.new(user_id: user_id, session_id: session_id, trace_store: store,
+                                   memory_mode: Llmemory.configuration.memory_mode)
       report = Llmemory::ZeroMem::Repair.new(storage: store).run!(
         user_id: user_id,
         session_id: session_id,
@@ -23,7 +24,8 @@ namespace :llmemory do
       user_id = args[:user_id] || ENV["USER_ID"] || abort("USER_ID or user_id argument required")
       session_id = args[:session_id] || ENV["SESSION_ID"] || Llmemory::Memory::DEFAULT_SESSION_ID
       store = Llmemory::ZeroMem::Storages.build
-      memory = Llmemory::Memory.new(user_id: user_id, session_id: session_id, trace_store: store, memory_mode: :zero_mem)
+      memory = Llmemory::Memory.new(user_id: user_id, session_id: session_id, trace_store: store,
+                                   memory_mode: Llmemory.configuration.memory_mode)
       status = memory.reindex_traces!(session_id: session_id)
       puts "Zero-Mem reindex: #{status.inspect}"
     end
@@ -34,7 +36,8 @@ namespace :llmemory do
       user_id = args[:user_id] || ENV["USER_ID"] || abort("USER_ID required")
       session_id = args[:session_id] || ENV["SESSION_ID"] || Llmemory::Memory::DEFAULT_SESSION_ID
       store = Llmemory::ZeroMem::Storages.build
-      memory = Llmemory::Memory.new(user_id: user_id, session_id: session_id, trace_store: store, memory_mode: :zero_mem)
+      memory = Llmemory::Memory.new(user_id: user_id, session_id: session_id, trace_store: store,
+                                   memory_mode: Llmemory.configuration.memory_mode)
       report = Llmemory::ZeroMem::Backfill.new(storage: store).run!(
         user_id: user_id,
         session_id: session_id,

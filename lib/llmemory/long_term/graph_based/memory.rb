@@ -28,15 +28,18 @@ module Llmemory
           @extractor = extractor || Llmemory::Extractors::EntityRelationExtractor.new(llm: @llm)
         end
 
-        def memorize(conversation_text)
+        def memorize(conversation_text, reference_time: nil, source_trace_ids: nil, source_traces: nil)
           text = Llmemory.configuration.noise_filter_enabled ? NoiseFilter.filter?(conversation_text) : conversation_text.to_s
           return true if text.strip.empty?
 
-          entities, relations = extract_graph(text)
+          entities, relations = extract_graph(text, reference_time: reference_time)
           relations = Consolidation::Filter.apply_relations(relations)
           return true if entities.empty? && relations.empty?
 
           provenance = Llmemory::Provenance.from_text_fingerprint(text, method: "entity_relation_extraction")
+          traces = normalize_source_traces(source_traces, source_trace_ids)
+          trace_ids = Consolidation::TraceAttribution.trace_ids_for_fact(text, traces)
+          provenance = Consolidation::TraceAttribution.merge_trace_sources(provenance, trace_ids) if trace_ids.any?
           ingest(entities, relations, provenance)
           true
         end
@@ -57,7 +60,9 @@ module Llmemory
               timestamp: r[:created_at] || r[:timestamp],
               score: r[:score] || 1.0,
               importance: r[:importance],
-              volatile: r[:volatile]
+              volatile: r[:volatile],
+              provenance: r[:provenance],
+              kind: :fact
             }
           end
         end
@@ -118,12 +123,21 @@ module Llmemory
 
         private
 
+        def normalize_source_traces(source_traces, source_trace_ids)
+          traces = Array(source_traces).map do |t|
+            { id: (t[:id] || t["id"]).to_s, content: (t[:content] || t["content"]).to_s }
+          end.reject { |t| t[:id].empty? }
+          return traces if traces.any?
+
+          Array(source_trace_ids).map { |id| { id: id.to_s, content: "" } }.reject { |t| t[:id].empty? }
+        end
+
         def build_vector_store
           Llmemory::VectorStore.build(source_type: "edge", cipher: @cipher)
         end
 
-        def extract_graph(text)
-          data = @extractor.extract(text) rescue { entities: [], relations: [] }
+        def extract_graph(text, reference_time: nil)
+          data = @extractor.extract(text, reference_time: reference_time) rescue { entities: [], relations: [] }
           data = { entities: [], relations: [] } unless data.is_a?(Hash)
           [Array(data[:entities] || data["entities"]), Array(data[:relations] || data["relations"])]
         end
@@ -152,7 +166,9 @@ module Llmemory
 
             volatile = r[:volatile] == true
             relation_provenance = volatile ? Consolidation::Filter.volatile_provenance(provenance) : provenance
-            edge_properties = volatile ? Consolidation::Filter.volatile_properties("provenance" => relation_provenance) : {"provenance" => relation_provenance}
+            edge_properties = volatile ? Consolidation::Filter.volatile_properties("provenance" => relation_provenance) : { "provenance" => relation_provenance }
+            occurred = r[:occurred_at] || r["occurred_at"]
+            edge_properties["occurred_at"] = occurred if occurred && !occurred.to_s.strip.empty?
 
             subject_id = name_to_id[subject] || @kg.add_node(entity_type: "concept", name: subject, properties: { "provenance" => relation_provenance })
             object_id = name_to_id[object] || @kg.add_node(entity_type: "concept", name: object, properties: { "provenance" => relation_provenance })
@@ -204,12 +220,16 @@ module Llmemory
             next unless active_edge?(id)
 
             meta = v[:metadata] || v["metadata"] || {}
+            props = edge_properties(id)
+            occurred = props && (props["occurred_at"] || props[:occurred_at])
             {
               id: id,
               text: meta["text"] || meta[:text] || id.to_s,
               score: v[:score] || v["score"] || 1.0,
               created_at: meta["created_at"] || meta[:created_at],
-              volatile: volatile_candidate?(edge_properties(id))
+              occurred_at: occurred,
+              volatile: volatile_candidate?(props),
+              provenance: props && (props["provenance"] || props[:provenance])
             }
           end
 
@@ -222,7 +242,11 @@ module Llmemory
               subj = @kg.find_node_by_id(e.subject_id)
               obj = @kg.find_node_by_id(e.target_id)
               edge_text = "#{subj&.name} #{e.predicate} #{obj&.name}"
-              out << { id: e.id, text: edge_text, score: 0.85, created_at: e.created_at, volatile: volatile_candidate?(e.properties) } unless out.any? { |o| o[:text] == edge_text }
+              occurred = e.properties["occurred_at"] || e.properties[:occurred_at]
+              out << {
+                id: e.id, text: edge_text, score: 0.85, created_at: e.created_at,
+                occurred_at: occurred, volatile: volatile_candidate?(e.properties)
+              } unless out.any? { |o| o[:text] == edge_text }
             end
           end
 
@@ -235,7 +259,11 @@ module Llmemory
               obj = @kg.find_node_by_id(e.target_id)
               next unless subj && obj
               edge_text = "#{subj.name} #{e.predicate} #{obj.name}"
-              out << { id: e.id, text: edge_text, score: 0.7, created_at: e.created_at, volatile: volatile_candidate?(e.properties) }
+              occurred = e.properties["occurred_at"] || e.properties[:occurred_at]
+              out << {
+                id: e.id, text: edge_text, score: 0.7, created_at: e.created_at,
+                occurred_at: occurred, volatile: volatile_candidate?(e.properties)
+              }
             end
           end
 
@@ -256,11 +284,31 @@ module Llmemory
           ids
         end
 
+        def prepend_conversation_anchor(text, reference_time)
+          return text unless reference_time
+
+          anchor = Llmemory::TimeCoercion.iso8601_or_string(reference_time)
+          "# Conversation anchor time (latest message): #{anchor}\n\n#{text}"
+        end
+
         def format_as_context(results)
           return "" if results.empty?
           lines = ["=== RELEVANT MEMORIES (GRAPH) ===", ""]
-          results.each do |r|
-            lines << "- #{r[:text]}"
+          grouped = results.group_by { |r| graph_edge_predicate(r[:text]) }
+          grouped.each do |pred, rows|
+            if rows.size > 1 && pred
+              date = rows.first[:occurred_at] || rows.first["occurred_at"]
+              prefix = date ? "[#{date}] " : ""
+              objects = rows.map { |r| r[:text].to_s.split.drop(2).join(" ") }.reject(&:empty?)
+              subject = rows.first[:text].to_s.split.first
+              lines << "- #{prefix}#{subject} #{pred}: #{objects.join(', ')}"
+            else
+              rows.each do |r|
+                date = r[:occurred_at] || r["occurred_at"]
+                prefix = date ? "[#{date}] " : ""
+                lines << "- #{prefix}#{r[:text]}"
+              end
+            end
           end
           lines << ""
           lines << "=== END MEMORIES ==="
@@ -300,6 +348,13 @@ module Llmemory
           @kg.find_edges(subject: nil, predicate: nil, object: nil, include_archived: false)
             .find { |edge| edge.id.to_s == edge_id.to_s }
             &.properties
+        end
+
+        def graph_edge_predicate(text)
+          parts = text.to_s.split
+          return nil if parts.size < 3
+
+          parts[1]
         end
       end
     end

@@ -20,6 +20,7 @@ class CreateLlmemoryTables < ActiveRecord::Migration[7.0]
       t.float :importance, default: 0.7
       t.jsonb :provenance
       t.text :search_tokens
+      t.datetime :event_date
       t.timestamps
     end
     add_index :llmemory_items, :user_id

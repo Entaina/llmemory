@@ -153,22 +153,32 @@ Llmemory.configure do |config|
 end
 ```
 
-### Zero-Mem (experimental, opt-in)
+### Hybrid memory (default) and Zero-Mem modes
 
-Zero-Mem keeps **immutable traces** as the source of truth and retrieves evidence with deterministic profiling, hierarchy, and entity-graph ranking — **without generative LLM calls** in memory operations (`memory_mode: :zero_mem`). Default remains `:classic`. This is experimental: it does not reproduce published benchmark numbers.
+**Default `memory_mode` is `:hybrid`:** immutable **traces** (Zero-Mem) plus **classic** long-term facts from
+`consolidate!`, merged into a single ranked context (`=== MEMORY ===`) via reciprocal-rank fusion.
+Facts link back to source traces through provenance for corroboration and deduplication.
+`hybrid_classic_token_ratio` is the **ceiling** on tokens spent on facts/summaries (not a fixed 50/50 split).
+
+Legacy modes: `:classic` (facts only, no auto trace store) and strict `:zero_mem` (traces only; generative
+ops raise). Experimental — does not reproduce published Zero-Mem paper numbers.
 
 ```ruby
 Llmemory.configure do |config|
-  config.memory_mode = :zero_mem   # or :hybrid (traces + classic long-term; not zero-token)
-  config.zero_mem_trace_store = :memory  # or :active_record in Rails apps
+  config.memory_mode = :hybrid          # default; or :classic / :zero_mem
+  config.hybrid_classic_token_ratio = 0.5  # max share of retrieve budget for facts
+  config.zero_mem_trace_store = :memory    # or :active_record in Rails apps
 end
 
 memory = Llmemory::Memory.new(user_id: "u1", session_id: "s1")
 memory.add_message(role: :user, content: "Project Atlas uses Nimbus")
+memory.consolidate!
 context = memory.retrieve("Which database does Atlas use?")
+fused = memory.retrieve_fused("Which database does Atlas use?")  # HybridResult + ranked_trace_ids
 evidence = memory.retrieve_evidence("Which database does Atlas use?", explain: true)
 
-# Explicit generative ops raise in :zero_mem
+# Explicit generative ops raise in strict :zero_mem
+# Llmemory.configure { |c| c.memory_mode = :zero_mem }
 # memory.consolidate!  # => Llmemory::GenerativeOperationDisabled
 ```
 

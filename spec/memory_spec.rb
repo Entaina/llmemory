@@ -4,8 +4,12 @@ RSpec.describe Llmemory::Memory do
   let(:user_id) { "user_123" }
   let(:session_id) { "conv_456" }
 
+  def classic_memory(**opts)
+    described_class.new(user_id: user_id, session_id: session_id, memory_mode: :classic, **opts)
+  end
+
   describe "#add_message and #messages" do
-    let(:memory) { described_class.new(user_id: user_id, session_id: session_id) }
+    let(:memory) { classic_memory }
 
     it "adds user and assistant messages and returns them" do
       expect(memory.messages).to eq([])
@@ -28,7 +32,7 @@ RSpec.describe Llmemory::Memory do
   end
 
   describe "#retrieve" do
-    let(:memory) { described_class.new(user_id: user_id, session_id: session_id) }
+    let(:memory) { classic_memory }
 
     it "returns short-term conversation context when no long-term memories" do
       memory.add_message(role: :user, content: "¿Qué tal?")
@@ -48,7 +52,7 @@ RSpec.describe Llmemory::Memory do
         allow(lt).to receive(:user_id).and_return(user_id)
       end
       retrieval_engine = Llmemory::Retrieval::Engine.new(long_term_double)
-      memory = described_class.new(user_id: user_id, session_id: session_id, retrieval_engine: retrieval_engine)
+      memory = classic_memory(retrieval_engine: retrieval_engine)
       memory.add_message(role: :user, content: "Hola")
       context = memory.retrieve("preferencias", max_tokens: 500)
       expect(context).to include("RECENT CONVERSATION")
@@ -62,7 +66,7 @@ RSpec.describe Llmemory::Memory do
       episodic = Llmemory::LongTerm::Episodic::Memory.new(user_id: user_id)
       episodic.record_episode(steps: [{ action: "rolled back deploy" }], outcome: "service restored")
 
-      memory = described_class.new(user_id: user_id, session_id: session_id, long_term: long_term, episodic: episodic)
+      memory = classic_memory(long_term: long_term, episodic: episodic)
       context = memory.retrieve("rolled back")
       expect(context).to include("rolled back")
     end
@@ -71,9 +75,9 @@ RSpec.describe Llmemory::Memory do
   describe "#consolidate!" do
     it "calls long-term memorize with conversation text" do
       long_term_double = double("LongTerm").tap do |lt|
-        expect(lt).to receive(:memorize).with("user: Soy vegano\nassistant: Ok", reference_time: nil)
+        expect(lt).to receive(:memorize).with("user: Soy vegano\nassistant: Ok", hash_including(reference_time: nil, source_traces: []))
       end
-      memory = described_class.new(user_id: user_id, session_id: session_id, long_term: long_term_double)
+      memory = classic_memory(long_term: long_term_double)
       memory.add_message(role: :user, content: "Soy vegano")
       memory.add_message(role: :assistant, content: "Ok")
       memory.consolidate!
@@ -82,7 +86,7 @@ RSpec.describe Llmemory::Memory do
     it "returns true and does not call long_term when messages are empty" do
       long_term_double = double("LongTerm")
       allow(long_term_double).to receive(:memorize)
-      memory = described_class.new(user_id: user_id, session_id: session_id, long_term: long_term_double)
+      memory = classic_memory(long_term: long_term_double)
       expect(memory.consolidate!).to be true
       expect(long_term_double).not_to have_received(:memorize)
     end
@@ -354,7 +358,7 @@ RSpec.describe Llmemory::Memory do
 
       long_term_double = double("LongTerm")
       allow(long_term_double).to receive(:memorize)
-      memory = described_class.new(user_id: user_id, session_id: session_id, long_term: long_term_double)
+      memory = classic_memory(long_term: long_term_double)
       memory.add_message(role: :user, content: "Hi")
       memory.add_message(role: :assistant, content: "Hello")
 
@@ -367,8 +371,8 @@ RSpec.describe Llmemory::Memory do
       allow(Llmemory.configuration).to receive(:memory_flush_threshold_tokens).and_return(10)
 
       long_term_double = double("LongTerm")
-      expect(long_term_double).to receive(:memorize).with(/\Auser:.*assistant:/m, reference_time: nil)
-      memory = described_class.new(user_id: user_id, session_id: session_id, long_term: long_term_double)
+      expect(long_term_double).to receive(:memorize).with(/\Auser:.*assistant:/m, hash_including(reference_time: nil))
+      memory = classic_memory(long_term: long_term_double)
       memory.add_message(role: :user, content: "This is a long message that exceeds the token threshold for flush")
       memory.add_message(role: :assistant, content: "Another long response to ensure we pass the threshold")
 
@@ -381,7 +385,7 @@ RSpec.describe Llmemory::Memory do
 
       long_term_double = double("LongTerm")
       allow(long_term_double).to receive(:memorize)
-      memory = described_class.new(user_id: user_id, session_id: session_id, long_term: long_term_double)
+      memory = classic_memory(long_term: long_term_double)
       memory.add_message(role: :user, content: "Long message " * 50)
 
       expect(memory.maybe_flush_memory!).to be false
@@ -390,7 +394,7 @@ RSpec.describe Llmemory::Memory do
   end
 
   describe "#compact!" do
-    let(:memory) { described_class.new(user_id: user_id, session_id: session_id) }
+    let(:memory) { classic_memory }
 
     it "returns false when messages byte size is within max" do
       memory.add_message(role: :user, content: "Hello")
@@ -424,13 +428,13 @@ RSpec.describe Llmemory::Memory do
       allow(Llmemory.configuration).to receive(:memory_flush_threshold_tokens).and_return(50)
 
       long_term_double = double("LongTerm")
-      expect(long_term_double).to receive(:memorize).with(include("Message number 0"), reference_time: nil)
+      expect(long_term_double).to receive(:memorize).with(include("Message number 0"), hash_including(reference_time: nil))
 
       llm_double = double("LLM")
       allow(llm_double).to receive(:invoke).and_return("Summary of old conversation")
       allow(Llmemory::LLM).to receive(:client).and_return(llm_double)
 
-      memory = described_class.new(user_id: user_id, session_id: session_id, long_term: long_term_double)
+      memory = classic_memory(long_term: long_term_double)
       10.times { |i| memory.add_message(role: :user, content: "Message number #{i} with extra content to exceed threshold") }
 
       result = memory.compact!(max_bytes: 200)
@@ -478,7 +482,7 @@ RSpec.describe Llmemory::Memory do
       allow(llm_double).to receive(:invoke).and_return("Summary")
       allow(Llmemory::LLM).to receive(:client).and_return(llm_double)
 
-      memory = described_class.new(user_id: user_id, session_id: session_id, long_term: long_term_double)
+      memory = classic_memory(long_term: long_term_double)
       10.times { |i| memory.add_message(role: :user, content: "Message #{i} with extra content to exceed threshold") }
       memory.compact!(max_bytes: 200)
 
@@ -492,7 +496,7 @@ RSpec.describe Llmemory::Memory do
       allow(Llmemory.configuration).to receive(:message_sanitizer_enabled).and_return(true)
       allow(Llmemory.configuration).to receive(:max_message_chars).and_return(50)
 
-      memory = described_class.new(user_id: user_id, session_id: session_id)
+      memory = classic_memory
       memory.add_message(role: :user, content: "Hi")
       memory.add_message(role: :assistant, content: "   ")
       memory.add_message(role: :user, content: "Bye")
@@ -505,7 +509,7 @@ RSpec.describe Llmemory::Memory do
     it "returns unsanitized messages when message_sanitizer_enabled is false" do
       allow(Llmemory.configuration).to receive(:message_sanitizer_enabled).and_return(false)
 
-      memory = described_class.new(user_id: user_id, session_id: session_id)
+      memory = classic_memory
       memory.add_message(role: :user, content: "Hi")
       memory.add_message(role: :assistant, content: "   ")
 

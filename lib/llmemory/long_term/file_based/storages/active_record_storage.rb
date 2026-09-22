@@ -39,7 +39,7 @@ module Llmemory
           end
 
           def save_item(user_id, category:, content:, source_resource_id:, importance: 0.7, provenance: nil,
-                        occurred_at: nil)
+                        occurred_at: nil, event_date: nil, subject: nil, predicate: nil)
             id = "item_#{SecureRandom.hex(8)}"
             attrs = {
               id: id,
@@ -49,6 +49,9 @@ module Llmemory
               source_resource_id: source_resource_id,
               created_at: Llmemory.parse_occurred_at(occurred_at) || Time.current
             }
+            if event_date && LlmemoryItem.column_names.include?("event_date")
+              attrs[:event_date] = Llmemory.parse_occurred_at(event_date)
+            end
             attrs[:importance] = importance if LlmemoryItem.column_names.include?("importance")
             if provenance && LlmemoryItem.column_names.include?("provenance")
               attrs[:provenance] = cipher.enabled? ? enc_json(provenance) : provenance

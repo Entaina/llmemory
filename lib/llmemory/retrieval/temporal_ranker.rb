@@ -8,19 +8,25 @@ module Llmemory
         @importance_weight = importance_weight || Llmemory.configuration.importance_weight
       end
 
-      def rank(candidates, now: Time.now)
+      def rank(candidates, now: nil, temporal_query: false)
+        reference_now = if temporal_query
+                          now || corpus_reference_time(candidates) || Time.now
+                        else
+                          now || Time.now
+                        end
         half_life = @half_life_days.to_f
         half_life = 30.0 if half_life <= 0
         lambda_val = Math.log(2) / half_life
         weight = [@importance_weight.to_f, 0.0].max
+        skip_decay = temporal_query
 
         candidates.map do |c|
           score = (c[:score] || c["score"] || 1.0).to_f
           timestamp = c[:timestamp] || c["timestamp"]
           timestamp = Time.parse(timestamp.to_s) if timestamp.is_a?(String)
-          age_days = timestamp ? [(now - timestamp) / 86_400.0, 0.0].max : 0.0
+          age_days = timestamp ? [(reference_now - timestamp) / 86_400.0, 0.0].max : 0.0
 
-          time_decay = if c[:evergreen] || c["evergreen"]
+          time_decay = if skip_decay || c[:evergreen] || c["evergreen"]
             1.0
           else
             Math.exp(-lambda_val * age_days.to_f)
@@ -35,6 +41,15 @@ module Llmemory
       end
 
       private
+
+      def corpus_reference_time(candidates)
+        times = candidates.filter_map do |c|
+          ts = c[:timestamp] || c["timestamp"]
+          ts = Time.parse(ts.to_s) if ts.is_a?(String)
+          ts
+        end
+        times.max
+      end
 
       # Missing importance is neutral (1.0) so candidates that carry no
       # importance signal (resources, graph edges) are never penalised.

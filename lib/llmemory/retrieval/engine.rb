@@ -33,6 +33,12 @@ module Llmemory
         result
       end
 
+      def ranked_for(user_message, user_id: nil)
+        user_id ||= @memory.respond_to?(:user_id) ? @memory.user_id : nil
+        search_query = generate_query(user_message)
+        ranked_candidates(search_query, user_id, user_message)
+      end
+
       # Multi-hop retrieval (CoALA: integrating retrieval and reasoning). After
       # each hop, a reasoner inspects what has been retrieved and proposes a
       # follow-up query for the missing piece, enabling multi-hop questions a
@@ -88,9 +94,13 @@ module Llmemory
         candidates = fetch_candidates(search_query, user_id)
         candidates = apply_hybrid_scoring(candidates, search_query) if Llmemory.configuration.hybrid_search_enabled
         relevant = filter_by_relevance(candidates, relevance_text)
-        ranked = @ranker.rank(relevant)
+        ranked = @ranker.rank(relevant, temporal_query: temporal_query?(relevance_text))
         ranked = apply_feedback(ranked, user_id)
         Llmemory.configuration.mmr_enabled ? @mmr_reranker.rerank(ranked) : ranked
+      end
+
+      def temporal_query?(text)
+        text.to_s.match?(/\b(when|cuándo|cuando|what date|what time|fecha|hora)\b/i)
       end
 
       def live_query?(query)
@@ -173,7 +183,12 @@ module Llmemory
             timestamp: parse_timestamp(c[:timestamp] || c["timestamp"] || c[:created_at] || c["created_at"]),
             score: (c[:score] || c["score"] || 1.0).to_f,
             importance: c[:importance] || c["importance"],
-            evergreen: c[:evergreen] || c["evergreen"]
+            evergreen: c[:evergreen] || c["evergreen"],
+            volatile: c[:volatile] || c["volatile"],
+            provenance: c[:provenance] || c["provenance"],
+            kind: c[:kind] || c["kind"],
+            event_date: c[:event_date] || c["event_date"],
+            temporal_score: c[:temporal_score] || c["temporal_score"]
           }
         end
       end

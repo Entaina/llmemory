@@ -35,6 +35,12 @@ module LocalBenchmark
         c.llm_model = ENV.fetch("LLMEMORY_LLM_MODEL", prof["llm_model"])
         c.llm_timeout_seconds = ENV.fetch("LLMEMORY_LLM_TIMEOUT", "600").to_i
         c.llm_http_retries = ENV.fetch("LLMEMORY_LLM_HTTP_RETRIES", "4").to_i
+        c.llm_temperature = ENV.fetch("LLMEMORY_LLM_TEMPERATURE", "0").to_f
+        seed = ENV["LLMEMORY_LLM_SEED"]
+        c.llm_seed = seed if seed && !seed.empty?
+        c.summary_refresh_every = ENV.fetch("LLMEMORY_SUMMARY_REFRESH_EVERY", "1").to_i
+        max_out = ENV["LLMEMORY_LLM_MAX_OUTPUT_TOKENS"] || ENV["LLMEMORY_BENCH_MAX_OUTPUT_TOKENS"]
+        c.llm_max_output_tokens = max_out.to_i if max_out && !max_out.to_s.empty?
         c.long_term_type = :file_based
         c.episodic_vector_enabled = false
         c.procedural_vector_enabled = false
@@ -62,10 +68,43 @@ module LocalBenchmark
 
       body = JSON.parse(response.body)
       ids = Array(body["data"]).map { |m| m["id"].to_s }
-      return if expected.to_s.empty?
-      return if ids.any? { |id| id == expected.to_s || id.include?(expected.to_s) }
+      if expected.to_s.empty?
+        puts "OK models (#{ids.size} loaded)"
+        return
+      end
+      unless ids.any? { |id| id == expected.to_s || id.include?(expected.to_s) }
+        raise "LM Studio model #{expected.inspect} not loaded. Available: #{ids.join(', ')}"
+      end
 
-      raise "LM Studio model #{expected.inspect} not loaded. Available: #{ids.join(', ')}"
+      puts "OK model listed: #{expected}"
+      ping_chat_completion!
+    end
+
+    def ping_chat_completion!
+      return if ENV["LLMEMORY_SKIP_CHAT_HEALTH_CHECK"] == "1"
+
+      ping_timeout = ENV.fetch("LLMEMORY_CHAT_HEALTH_TIMEOUT", "60").to_i
+      saved_timeout = Llmemory.configuration.llm_timeout_seconds
+      saved_retries = Llmemory.configuration.llm_http_retries
+      Llmemory.configuration.llm_timeout_seconds = ping_timeout
+      Llmemory.configuration.llm_http_retries = 0
+
+      start = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      client = Llmemory::LLM.client
+      response = client.invoke("Reply with exactly: OK")
+      elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - start
+      content = response.respond_to?(:content) ? response.content.to_s.strip : response.to_s.strip
+      if content.empty?
+        raise "LM Studio chat completion returned empty body (model may be stuck loading)"
+      end
+
+      puts "OK chat completion in #{elapsed.round(2)}s (#{content[0, 40]})"
+    rescue Llmemory::LLMError => e
+      raise "LM Studio chat completion failed (consolidation uses this API): #{e.message}. " \
+            "Restart LM Studio, confirm the model is loaded and not busy with another request."
+    ensure
+      Llmemory.configuration.llm_timeout_seconds = saved_timeout unless saved_timeout.nil?
+      Llmemory.configuration.llm_http_retries = saved_retries unless saved_retries.nil?
     end
 
     def metadata

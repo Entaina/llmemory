@@ -14,6 +14,12 @@ RSpec.describe Llmemory::ZeroMem::QueryProfiler do
     expect(profile.workload_class).to eq(:current_state)
   end
 
+  it "classifies identity or research questions as local_fact" do
+    profile = profiler.profile("What did Caroline research?")
+    expect(profile.workload_class).to eq(:local_fact)
+    expect(profile.rule_ids).to include("attribute_fact_cue")
+  end
+
   it "prefers explicit boundary over text inference" do
     profile = profiler.profile("anything", boundary: { session_id: "sess-x" })
     expect(profile.boundary[:session_id]).to eq("sess-x")

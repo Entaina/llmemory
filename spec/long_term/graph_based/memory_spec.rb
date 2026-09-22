@@ -5,16 +5,21 @@ RSpec.describe Llmemory::LongTerm::GraphBased::Memory do
   let(:storage) { Llmemory::LongTerm::GraphBased::Storages::MemoryStorage.new }
   let(:extractor_double) do
     double("EntityRelationExtractor").tap do |d|
-      allow(d).to receive(:extract).with(anything).and_return(entities: [], relations: [])
-      allow(d).to receive(:extract).with("I work at Acme.").and_return(
-        entities: [
-          { type: "person", name: "User" },
-          { type: "company", name: "Acme" }
-        ],
-        relations: [
-          { subject: "User", predicate: "works_at", object: "Acme" }
-        ]
-      )
+      allow(d).to receive(:extract) do |text, reference_time: nil|
+        if text == "I work at Acme."
+          {
+            entities: [
+              { type: "person", name: "User" },
+              { type: "company", name: "Acme" }
+            ],
+            relations: [
+              { subject: "User", predicate: "works_at", object: "Acme" }
+            ]
+          }
+        else
+          { entities: [], relations: [] }
+        end
+      end
     end
   end
   let(:vector_store_double) do

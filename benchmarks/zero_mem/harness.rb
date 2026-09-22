@@ -5,6 +5,8 @@ require_relative "metrics"
 require_relative "reader"
 require_relative "variants"
 require "json"
+require File.expand_path("../local/scorers/date_normalizer", __dir__)
+require File.expand_path("../local/bench_trace", __dir__)
 
 # Load fixture helpers from spec support (benchmark-only; not part of the gem).
 require File.expand_path("../../spec/support/zero_mem/fixture_loader", __dir__)
@@ -32,6 +34,7 @@ module ZeroMemBenchmark
 
     def run_conversation(conversation)
       memory = build_memory(conversation)
+      assert_variant_memory_mode!(memory)
       hydrate!(memory, conversation)
       consolidate_if_needed!(memory, conversation)
 
@@ -83,10 +86,19 @@ module ZeroMemBenchmark
         Llmemory::Memory.new(
           user_id: user_id,
           session_id: "zm0_session",
+          memory_mode: :classic,
           long_term: long_term,
           retrieval_engine: Llmemory::Retrieval::Engine.new(long_term, llm: llm)
         )
       end
+    end
+
+    def assert_variant_memory_mode!(memory)
+      expected = @variant_opts[:mode]
+      actual = memory.memory_mode
+      return if actual == expected
+
+      raise ArgumentError, "variant #{@variant} expected memory_mode #{expected.inspect}, got #{actual.inspect}"
     end
 
     def zero_mem_variant?
@@ -157,37 +169,60 @@ module ZeroMemBenchmark
 
     def evaluate_query(memory, conversation, query, turns)
       query_text = query["text"].to_s
+      qid = query["id"]
       usage_before = memory.llm_usage
 
       start = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      retrieve_label = if zero_mem_variant?
+                         "retrieve_evidence"
+                       elsif @variant_opts[:mode] == :hybrid
+                         "retrieve_fused"
+                       else
+                         "retrieve_classic"
+                       end
       if zero_mem_variant?
         evidence = memory.retrieve_evidence(query_text, max_tokens: 2000, **retrieve_kwargs)
         @last_evidence = evidence
+        @last_fused = nil
         @last_context = evidence.to_context
+      elsif @variant_opts[:mode] == :hybrid
+        @last_evidence = nil
+        @last_fused = memory.retrieve_fused(query_text, max_tokens: 2000)
+        @last_context = @last_fused.to_context
       else
         @last_evidence = nil
+        @last_fused = nil
         @last_context = memory.retrieve(query_text, max_tokens: 2000)
       end
-      elapsed_ms = (Process.clock_gettime(Process::CLOCK_MONOTONIC) - start) * 1000.0
+      retrieve_ms = (Process.clock_gettime(Process::CLOCK_MONOTONIC) - start) * 1000.0
+      usage_after_retrieve = memory.llm_usage
 
-      usage_after = memory.llm_usage
-      ranked_ids = if zero_mem_variant?
-                     rank_fixture_turn_ids(@last_evidence, query)
-                   else
-                     rank_trace_ids_in_context(@last_context, turns, query)
-                   end
       gold_ids = Array(query["gold_trace_ids"])
+      loc = compute_localization(query, turns, gold_ids)
 
-      loc = {
-        mrr: Metrics.mrr(ranked_ids, gold_ids),
-        ndcg_at_10: Metrics.ndcg_at_k(ranked_ids, gold_ids, 10)
-      }.merge(Metrics.recall_at(RECALL_KS, ranked_ids, gold_ids))
-
+      reader_start = Process.clock_gettime(Process::CLOCK_MONOTONIC)
       answer_text = @reader.answer(
         question: query_text,
         context: @last_context,
-        gold_answer: query["gold_answer"]
+        gold_answer: query["gold_answer"],
+        question_type: query["question_type"]
       )
+      reader_ms = (Process.clock_gettime(Process::CLOCK_MONOTONIC) - reader_start) * 1000.0
+
+      usage_after = memory.llm_usage
+      if LocalBenchmark::BenchTrace.enabled?
+        LocalBenchmark::BenchTrace.log(
+          "query #{qid} #{retrieve_label} #{retrieve_ms.round(1)}ms " \
+          "llm+#{LocalBenchmark::BenchTrace.invoke_calls_delta(usage_before, usage_after_retrieve)} " \
+          "embed+#{LocalBenchmark::BenchTrace.embed_calls_delta(usage_before, usage_after_retrieve)}"
+        )
+        LocalBenchmark::BenchTrace.log(
+          "query #{qid} reader #{reader_ms.round(1)}ms " \
+          "llm+#{LocalBenchmark::BenchTrace.invoke_calls_delta(usage_after_retrieve, usage_after)}"
+        )
+      end
+
+      elapsed_ms = retrieve_ms + reader_ms
 
       answer_metrics = {}
       if query["gold_answer"]
@@ -198,11 +233,17 @@ module ZeroMemBenchmark
       end
       answer_metrics[:task_success] = query["task_success"] if query.key?("task_success")
 
+      max_sess = conversation["step_max_sessions"].to_i
+      ev_sess = evidence_max_session(query)
+      evidence_in_range = max_sess <= 0 || ev_sess <= max_sess
+
       {
         variant: @variant,
         conversation_id: conversation["id"],
         query_id: query["id"],
         query_text: query_text,
+        evidence_max_session: ev_sess,
+        evidence_in_range: evidence_in_range,
         language: conversation["language"],
         workload_class: conversation["workload_class"],
         evidence_gap: query["evidence_gap"],
@@ -233,14 +274,35 @@ module ZeroMemBenchmark
       opts.merge(@retrieve_opts)
     end
 
-    def rank_fixture_turn_ids(evidence, query)
+    def compute_localization(query, turns, gold_ids)
+      return nil if gold_ids.empty?
+      return nil if @variant_opts[:mode] == :classic
+
+      ranked_ids = if zero_mem_variant?
+                     rank_fixture_turn_ids(@last_evidence, query)
+                   elsif @variant_opts[:mode] == :hybrid && @last_fused
+                     rank_fused_turn_ids(@last_fused)
+                   else
+                     rank_trace_ids_in_context(@last_context, turns, query)
+                   end
+
+      {
+        mrr: Metrics.mrr(ranked_ids, gold_ids),
+        ndcg_at_10: Metrics.ndcg_at_k(ranked_ids, gold_ids, 10)
+      }.merge(Metrics.recall_at(RECALL_KS, ranked_ids, gold_ids))
+    end
+
+    def rank_fixture_turn_ids(evidence, _query)
       return [] unless evidence
 
       trace_to_turn = @turn_to_trace.invert
       ranked_trace_ids = evidence.evidence.map(&:trace_id)
-      ranked_turn_ids = ranked_trace_ids.filter_map { |tid| trace_to_turn[tid] }
-      gold = Array(query["gold_trace_ids"])
-      (ranked_turn_ids + gold).uniq
+      ranked_trace_ids.filter_map { |tid| trace_to_turn[tid] }
+    end
+
+    def rank_fused_turn_ids(fused)
+      trace_to_turn = @turn_to_trace.invert
+      fused.ranked_trace_ids.filter_map { |tid| trace_to_turn[tid] }
     end
 
     def invoke_delta(before, after)
@@ -263,13 +325,20 @@ module ZeroMemBenchmark
         (before_bucket[:total_tokens] || before_bucket["total_tokens"] || 0).to_i
     end
 
+    def evidence_max_session(query)
+      Array(query["gold_trace_ids"]).map do |tid|
+        m = tid.to_s.match(/\A[Dd](\d+)/)
+        m ? m[1].to_i : 999
+      end.max || 999
+    end
+
     def retrieval_hit?(context, query, turns)
-      ctx = context.to_s.downcase
-      gold = query["gold_answer"].to_s.downcase.strip
+      ctx = LocalBenchmark::Scorers::DateNormalizer.normalize_text(context)
+      gold = LocalBenchmark::Scorers::DateNormalizer.normalize_text(query["gold_answer"])
       return true if !gold.empty? && ctx.include?(gold)
 
       Array(query["gold_trace_ids"]).any? do |tid|
-        content = turns[tid]&.dig("content").to_s.downcase.strip
+        content = LocalBenchmark::Scorers::DateNormalizer.normalize_text(turns[tid]&.dig("content"))
         !content.empty? && ctx.include?(content)
       end
     end
@@ -294,11 +363,16 @@ module ZeroMemBenchmark
     def aggregate
       return { queries: 0, means: {} } if @results.empty?
 
-      keys = @results.first[:localization].keys
-      loc_means = keys.to_h do |key|
-        mean = @results.sum { |r| r[:localization][key].to_f } / @results.size
-        [key, mean]
-      end
+      loc_rows = @results.filter_map { |r| r[:localization] }
+      loc_means = if loc_rows.empty?
+                    {}
+                  else
+                    keys = loc_rows.first.keys
+                    keys.to_h do |key|
+                      mean = loc_rows.sum { |r| r[key].to_f } / loc_rows.size
+                      [key, mean]
+                    end
+                  end
 
       {
         variant: @variant,
@@ -315,7 +389,8 @@ module ZeroMemBenchmark
     def bin_aggregates
       bins = Hash.new { |h, k| h[k] = [] }
       @results.each do |row|
-        bins[[row[:evidence_gap], row[:has_revision]]] << row[:localization][:"recall@5"]
+        recall = row[:localization]&.[](:"recall@5")
+      bins[[row[:evidence_gap], row[:has_revision]]] << recall unless recall.nil?
       end
       bins.transform_values do |vals|
         { recall_at_5_mean: vals.sum / vals.size }

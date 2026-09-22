@@ -24,11 +24,17 @@ module Llmemory
         payload = { provider: :openai, model: @model, prompt_chars: prompt.to_s.length }
         Llmemory::Instrumentation.instrument(:llm_invoke, payload) do
           response = post_with_resilience(connection, "chat/completions") do |req|
-            req.body = {
+            body = {
               model: @model,
               messages: [{ role: "user", content: prompt }],
-              temperature: 0.3
-            }.to_json
+              temperature: config.llm_temperature.to_f
+            }
+            max_out = config.llm_max_output_tokens
+            max_out = ENV["LLMEMORY_BENCH_MAX_OUTPUT_TOKENS"].to_i if max_out.nil? && ENV["LLMEMORY_BENCH_MAX_OUTPUT_TOKENS"]
+            body[:max_tokens] = max_out.to_i if max_out.to_i.positive?
+            seed = config.llm_seed
+            body[:seed] = seed.to_i if !seed.nil? && seed.to_s.match?(/\A-?\d+\z/)
+            req.body = body.to_json
             req.headers["Content-Type"] = "application/json"
             req.headers["Authorization"] = "Bearer #{@api_key}"
           end
@@ -52,7 +58,7 @@ module Llmemory
         payload = {
           model: @model,
           messages: [{ role: "user", content: prompt }],
-          temperature: 0,
+          temperature: config.llm_temperature.to_f,
           response_format: {
             type: "json_schema",
             json_schema: {

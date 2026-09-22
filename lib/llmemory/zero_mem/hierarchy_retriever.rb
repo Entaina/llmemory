@@ -35,12 +35,15 @@ module Llmemory
         ranked_turns = rank_units(query, profile, turns.uniq { |u| u.id })
         top_turns = ranked_turns.first([k, ranked_turns.size].min)
 
-        trace_ids = top_turns.flat_map(&:member_trace_ids)
-        trace_ids = expand_local_neighbors(user_id, trace_ids, top_turns)
-        traces = trace_ids.map { |id| @storage.get_trace(user_id, id) }.compact
+        seed_trace_ids = top_turns.flat_map(&:member_trace_ids).uniq
+        neighbor_trace_ids = expand_local_neighbors(user_id, seed_trace_ids, top_turns) - seed_trace_ids
+        ordered_ids = (seed_trace_ids + neighbor_trace_ids).uniq
+        traces = ordered_ids.map { |id| @storage.get_trace(user_id, id) }.compact
 
         {
           traces: traces,
+          seed_trace_ids: seed_trace_ids,
+          neighbor_trace_ids: neighbor_trace_ids,
           degraded: [:dense],
           stage_scores: {
             episodes: ranked_episodes.first(3).map { |u| score_unit(query, profile, u) },
@@ -82,7 +85,8 @@ module Llmemory
         temporal = temporal_boost(profile, unit)
         boundary = profile.boundary ? 0.1 : 0.0
         answer = 0.05
-        bm25 + phrase + subject + temporal + boundary + answer
+        short_penalty = Llmemory::Tokenizer.tokenize(doc[:text]).size < 4 ? -0.15 : 0.0
+        bm25 + phrase + subject + temporal + boundary + answer + short_penalty
       end
 
       def score_unit(query, profile, unit)

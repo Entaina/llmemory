@@ -7,10 +7,18 @@ module ZeroMemBenchmark
       @client = client
     end
 
-    def answer(question:, context:, gold_answer: nil)
-      return @client.call(question: question, context: context, gold_answer: gold_answer) if @client
+    def answer(question:, context:, gold_answer: nil, question_type: nil, **kwargs)
+      if @client
+        return @client.call(
+          question: question,
+          context: context,
+          gold_answer: gold_answer,
+          question_type: question_type,
+          **kwargs
+        )
+      end
 
-      DeterministicStub.answer(question: question, context: context, gold_answer: gold_answer)
+      DeterministicStub.answer(question: question, context: context, gold_answer: gold_answer, **kwargs)
     end
 
     module DeterministicStub

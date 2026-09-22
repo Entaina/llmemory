@@ -8,6 +8,8 @@ module LocalBenchmark
     # Loads exported MemoryAgentBench JSON/JSONL (Accurate Retrieval, FactConsolidation).
     class MemoryAgentBench < Base
       SUBSETS = %w[Accurate_Retrieval FactConsolidation].freeze
+      CHUNK_SIZE = 1200
+      CHUNKS_PER_SESSION = 5
 
       def initialize(root: ENV["MEMORYAGENTBENCH_DATASET_ROOT"],
                      subset: ENV.fetch("MEMORYAGENTBENCH_SUBSET", "Accurate_Retrieval"))
@@ -23,6 +25,14 @@ module LocalBenchmark
         "Set MEMORYAGENTBENCH_DATASET_ROOT with JSON/JSONL for #{SUBSETS.join(', ')}"
       end
 
+      def conversations(limit: nil)
+        max_sessions = ENV.fetch("MEMORYAGENTBENCH_MAX_SESSIONS", "40").to_i
+        list = each_conversation.to_a
+        list = Canonical.limit_conversations(list, limit: limit) if limit
+        list.each { |c| Canonical.validate!(c) }
+        list.map { |conv| cap_sessions(conv, max_sessions) }
+      end
+
       def each_conversation
         return enum_for(:each_conversation) unless block_given?
         return unless available?
@@ -32,6 +42,15 @@ module LocalBenchmark
             yield normalize_record(record, file_idx, rec_idx)
           end
         end
+      end
+
+      def cap_sessions(conv, max_sessions)
+        sessions = Array(conv["sessions"])
+        return conv if sessions.size <= max_sessions
+
+        dup = conv.dup
+        dup["sessions"] = sessions.first(max_sessions)
+        dup
       end
 
       private
@@ -68,16 +87,7 @@ module LocalBenchmark
 
       def normalize_record(record, file_idx, rec_idx)
         chunks = extract_chunks(record)
-        sessions = [{
-          "id" => "ingest",
-          "turns" => chunks.each_with_index.map do |chunk, idx|
-            {
-              "id" => "c#{idx + 1}",
-              "role" => "user",
-              "content" => chunk.to_s
-            }
-          end
-        }]
+        sessions = build_chunk_sessions(chunks)
 
         questions = Array(record["questions"] || record["qa_pairs"] || [record])
         queries = questions.filter_map.with_index do |qa, qidx|
@@ -89,7 +99,7 @@ module LocalBenchmark
             "id" => qa["qa_pair_id"] || qa["id"] || "q#{qidx + 1}",
             "text" => qtext.to_s,
             "gold_answer" => ans.to_s,
-            "gold_trace_ids" => chunks.each_index.map { |i| "c#{i + 1}" },
+            "gold_trace_ids" => [],
             "question_type" => @subset
           }
         end
@@ -100,10 +110,25 @@ module LocalBenchmark
           "workload_class" => "memoryagentbench",
           "session_count" => 1,
           "has_revision" => @subset == "FactConsolidation",
-          "consolidate_after_hydrate" => true,
+          "consolidate_mode" => "per_session",
           "sessions" => sessions,
           "queries" => queries
         }
+      end
+
+      def build_chunk_sessions(chunks)
+        chunks.each_slice(CHUNKS_PER_SESSION).with_index.map do |group, sidx|
+          {
+            "id" => "s#{sidx + 1}",
+            "turns" => group.each_with_index.map do |chunk, tidx|
+              {
+                "id" => "s#{sidx + 1}t#{tidx + 1}",
+                "role" => "user",
+                "content" => chunk.to_s
+              }
+            end
+          }
+        end
       end
 
       def extract_chunks(record)
@@ -114,13 +139,14 @@ module LocalBenchmark
           return record["context_chunks"].map { |c| c["text"] || c["content"] || c }
         end
         if record["source_text"].is_a?(String)
-          return record["source_text"].scan(/.{1,1200}/m)
+          return record["source_text"].scan(/.{1,#{CHUNK_SIZE}}/m)
         end
         if record["messages"].is_a?(Array)
           return record["messages"].map { |m| "#{m['role']}: #{m['content']}" }
         end
 
-        [record["context"] || record["text"] || record.to_json]
+        text = record["context"] || record["text"] || record.to_json
+        text.to_s.scan(/.{1,#{CHUNK_SIZE}}/m)
       end
     end
   end

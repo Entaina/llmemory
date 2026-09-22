@@ -29,8 +29,9 @@ RSpec.describe "Memory consolidation timestamps" do
     memory.consolidate!
 
     resource = storage.get_all_resources(user_id).first
-    expect(resource[:text]).to include("Conversation anchor time")
-    expect(resource[:text]).to include("2023-05-08")
+    expect(resource[:text]).not_to include("Conversation anchor time")
+    expect(resource[:text]).to include("LGBTQ support group")
+    expect(llm_double).to have_received(:invoke).with(a_string_including("Conversation anchor time", "2023-05-08"))
     expect(resource[:created_at]).to eq(anchor)
 
     item = storage.get_all_items(user_id).first

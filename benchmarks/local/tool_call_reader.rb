@@ -34,7 +34,7 @@ module LocalBenchmark
       meta = query["metadata"] || {}
       reader = self
       ZeroMemBenchmark::Reader.new(
-        client: lambda { |question:, context:, gold_answer: nil|
+        client: lambda { |question:, context:, gold_answer: nil, **_kwargs|
           reader.call(question: question, context: context, gold_answer: gold_answer, metadata: meta)
         }
       )

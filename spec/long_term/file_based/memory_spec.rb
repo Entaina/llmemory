@@ -24,6 +24,13 @@ RSpec.describe Llmemory::LongTerm::FileBased::Memory do
       expect(memory.memorize("Hello")).to be true
     end
 
+    it "does not persist conversation anchor headers in saved resources" do
+      memory.memorize("Caroline attended a support group.", reference_time: Time.utc(2023, 5, 8))
+      resource = storage.get_all_resources(user_id).first
+      expect(resource[:text]).not_to include("Conversation anchor time")
+      expect(resource[:text]).to include("Caroline")
+    end
+
     it "records provenance linking each item to its source resource" do
       memory.memorize("I love Ruby and use it every day.")
       item = storage.get_all_items(user_id).first
@@ -95,6 +102,19 @@ RSpec.describe Llmemory::LongTerm::FileBased::Memory do
       candidates = memory.search_candidates("prefers", top_k: 10)
       evergreen_candidates = candidates.select { |c| c[:evergreen] }
       expect(evergreen_candidates).not_to be_empty
+    end
+
+    it "ranks substantive matches above stopword-only item hits" do
+      memory.memorize("Melanie enjoys pottery, camping, and painting.")
+      storage.save_item(
+        user_id,
+        category: "general",
+        content: "She does many things sometimes.",
+        source_resource_id: "res_decoy",
+        importance: 0.5
+      )
+      candidates = memory.search_candidates("What activities does Melanie partake in?", top_k: 5)
+      expect(candidates.first[:text].to_s).to match(/pottery|camping|painting/i)
     end
   end
 

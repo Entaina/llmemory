@@ -20,6 +20,11 @@ One conversation, temporal QA (“When did Caroline go to the LGBTQ support grou
 | zero_mem_full | yes | no | Evidence includes LGBTQ wording; ranking still misses gold turn id in top 5 |
 | hybrid | yes | no | Fused context includes `ZERO-MEM EVIDENCE` + classic block; same ranking gap as zero_mem |
 
+**Update (2026-09-21):** harness metrics no longer inflate `retrieval_hit`; classic localization is
+reported as N/A. Zero-Mem fusion applies entity/query/temporal boosts; regression spec
+`spec/benchmarks/local/diag_locomo_rank_spec.rb` expects gold `D1:3` in top-5 on a synthetic
+Caroline/LGBTQ fixture. Re-run `diag_locomo.rb` on real LoCoMo after the next `suite-diag` pass.
+
 **Layers implicated (LoCoMo sample):**
 
 - **Extract:** classic stub returns `[]` for facts → `stored items: 0`; temporal answer depends on resources/raw dialogue in retrieve, not consolidated facts.

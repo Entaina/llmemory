@@ -4,10 +4,11 @@ module Llmemory
   module ZeroMem
     class Evidence
       attr_reader :trace_id, :content, :role, :session_id, :occurred_at, :confidence, :score,
-                  :sources, :conflict, :seed, :closure, :content_sha256
+                  :sources, :conflict, :seed, :closure, :content_sha256, :occurred_at_inferred
 
       def initialize(trace_id:, content:, role:, session_id:, occurred_at:, confidence:, score:,
-                     sources: [], conflict: false, seed: true, closure: false, content_sha256: nil)
+                     sources: [], conflict: false, seed: true, closure: false, content_sha256: nil,
+                     occurred_at_inferred: false)
         @trace_id = trace_id
         @content = content
         @role = role
@@ -20,6 +21,7 @@ module Llmemory
         @seed = !!seed
         @closure = !!closure
         @content_sha256 = content_sha256
+        @occurred_at_inferred = !!occurred_at_inferred
       end
 
       def to_h

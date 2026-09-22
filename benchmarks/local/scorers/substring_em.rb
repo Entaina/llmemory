@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative "date_normalizer"
+
 module LocalBenchmark
   module Scorers
     module SubstringEM
@@ -10,6 +12,8 @@ module LocalBenchmark
         ref = normalize(reference)
         return true if pred == ref
         return false if ref.empty?
+
+        return true if DateNormalizer.numeric_days_match?(prediction, reference)
 
         pred.include?(ref) || ref.include?(pred)
       end
@@ -22,7 +26,7 @@ module LocalBenchmark
       end
 
       def normalize(text)
-        text.to_s.downcase.strip.gsub(/\s+/, " ")
+        DateNormalizer.normalize_text(text).downcase.strip.gsub(/\s+/, " ")
       end
 
       def aggregate(rows)

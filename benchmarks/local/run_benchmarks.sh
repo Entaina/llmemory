@@ -32,7 +32,14 @@ BENCHES=(
   memory_arena
 )
 
-SUITE_DIAG_VARIANTS=(classic zero_mem_full hybrid)
+# Override: SUITE_DIAG_VARIANTS="hybrid" (space-separated)
+if [[ -n "${SUITE_DIAG_VARIANTS:-}" ]]; then
+  read -ra SUITE_DIAG_VARIANTS <<< "${SUITE_DIAG_VARIANTS}"
+else
+  SUITE_DIAG_VARIANTS=(classic zero_mem_full hybrid)
+fi
+# Default suite excludes memory_arena (needs arena_match scorer, not substring EM on JSON gold).
+SUITE_DIAG_BENCHES="${SUITE_DIAG_BENCHES:-fixtures locomo longmemeval memoryagentbench locomo_plus memsyco groupmembench mem2act}"
 
 load_env() {
   if [[ -f "$ENV_FILE" ]]; then
@@ -75,14 +82,15 @@ apply_lmstudio_defaults() {
 
 check_lmstudio() {
   apply_lmstudio_defaults
-  local base="${LLMEMORY_LLM_BASE_URL%/}"
-  local url="${base}/models"
-  echo "Checking LM Studio at $url ..."
-  if ! curl -sf "$url" >/dev/null; then
-    echo "ERROR: cannot reach LM Studio. Start the local server in LM Studio (Developer → Local Server)." >&2
+  echo "Checking LM Studio (models + chat completion) ..."
+  bundle exec ruby -e '
+    require_relative "benchmarks/local/lm_studio"
+    LocalBenchmark::LmStudio.apply_profile!
+    LocalBenchmark::LmStudio.health_check!
+  ' || {
+    echo "ERROR: LM Studio check failed. Restart server, load ${LLMEMORY_LLM_MODEL}, then retry." >&2
     exit 1
-  fi
-  echo "OK. Model: ${LLMEMORY_LLM_MODEL} (profile: ${LLMEMORY_BENCH_PROFILE})"
+  }
 }
 
 run_ruby() {
@@ -99,7 +107,10 @@ Commands:
   smoke             Fixtures only, no LM Studio (deterministic reader)
   run BENCH [OPTS]  One benchmark with LM Studio (--reader llm)
   suite-smoke       Run smoke limits on every bench that has dataset env set
-  suite-diag        Diagnostic limits × classic, zero_mem_full, hybrid (needs LM Studio)
+  suite-diag        Diagnostic limits × variants (needs LM Studio; prefer step)
+  step BENCH        Hybrid mini slice (fix issues before scaling up)
+  step-cycle        smoke + all hybrid steps + summarize_cycle.rb
+  step-plan         Print recommended step order (hybrid only)
 
 Environment (see benchmarks/local/benchmarks.env.example):
   LLMEMORY_BENCH_PROFILE   smoke | default | quality
@@ -146,11 +157,20 @@ cmd_run() {
   apply_lmstudio_defaults
   mkdir -p "$RESULTS_DIR"
   local out="${LLMEMORY_BENCH_OUT:-$RESULTS_DIR/${bench}_${TIMESTAMP}.json}"
-  run_ruby \
+  local timeout_secs="${SUITE_DIAG_BENCH_TIMEOUT:-3600}"
+  timeout "$timeout_secs" "${RUNNER[@]}" \
     --bench "$bench" \
     --reader llm \
     --out "$out" \
-    "$@"
+    "$@" \
+    || {
+      ec=$?
+      if [[ $ec -eq 124 ]]; then
+        echo "WARN: bench $bench timed out after ${timeout_secs}s" >&2
+        exit 124
+      fi
+      exit "$ec"
+    }
 }
 
 bench_dataset_ready() {
@@ -201,14 +221,157 @@ cmd_suite_smoke() {
   echo "Done. Results in $RESULTS_DIR/"
 }
 
+suite_diag_use_judge() {
+  local bench="$1"
+  [[ "${SUITE_DIAG_JUDGE:-1}" == "1" ]] || return 1
+  case "$bench" in
+    longmemeval|memsyco|locomo_plus) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+bench_in_suite_diag() {
+  local bench="$1"
+  [[ " $SUITE_DIAG_BENCHES " == *" $bench "* ]]
+}
+
+apply_hybrid_step_env() {
+  export LLMEMORY_BENCH_CACHE="${LLMEMORY_BENCH_CACHE:-1}"
+  export LLMEMORY_LLM_TEMPERATURE="${LLMEMORY_LLM_TEMPERATURE:-0}"
+  export LLMEMORY_BENCH_SEED="${LLMEMORY_BENCH_SEED:-step}"
+  export MEMORYAGENTBENCH_MAX_SESSIONS="${MEMORYAGENTBENCH_MAX_SESSIONS:-40}"
+  export GROUPMEMBENCH_MAX_TURNS="${GROUPMEMBENCH_MAX_TURNS:-120}"
+  export STEP_MAX_SESSIONS="${STEP_MAX_SESSIONS:-2}"
+  export LOCOMO_MAX_SESSIONS="${LOCOMO_MAX_SESSIONS:-$STEP_MAX_SESSIONS}"
+  export LLMEMORY_SUMMARY_REFRESH_EVERY="${LLMEMORY_SUMMARY_REFRESH_EVERY:-9999}"
+  export LLMEMORY_BENCH_FAST="${LLMEMORY_BENCH_FAST:-1}"
+  export LLMEMORY_BENCH_TRACE="${LLMEMORY_BENCH_TRACE:-1}"
+  export LLMEMORY_BENCH_EXTRACT_MAX_CHARS="${LLMEMORY_BENCH_EXTRACT_MAX_CHARS:-1200}"
+  export LLMEMORY_LLM_TIMEOUT="${LLMEMORY_BENCH_LLM_TIMEOUT:-300}"
+  export LLMEMORY_BENCH_MAX_OUTPUT_TOKENS="${LLMEMORY_BENCH_MAX_OUTPUT_TOKENS:-512}"
+  # Optional: LLMEMORY_BENCH_SKIP_CONSOLIDATE=1 to debug retrieve-only (not valid hybrid quality).
+  export LLMEMORY_BENCH_SKIP_CONSOLIDATE="${LLMEMORY_BENCH_SKIP_CONSOLIDATE:-0}"
+  export SUITE_DIAG_BENCH_TIMEOUT="${STEP_BENCH_TIMEOUT:-900}"
+}
+
+cmd_step_plan() {
+  cat <<EOF
+Hybrid iterative plan (run one step, summarize, fix product/harness, repeat):
+
+  1. ./benchmarks/local/run_benchmarks.sh smoke
+  2. ./benchmarks/local/run_benchmarks.sh step locomo
+  3. ./benchmarks/local/run_benchmarks.sh step longmemeval
+  4. ./benchmarks/local/run_benchmarks.sh step mem2act
+  5. ./benchmarks/local/run_benchmarks.sh step memoryagentbench
+  6. ./benchmarks/local/run_benchmarks.sh step locomo_plus
+  7. ./benchmarks/local/run_benchmarks.sh step memsyco
+  8. ./benchmarks/local/run_benchmarks.sh step groupmembench
+
+Tune slice size: STEP_CONVERSATIONS STEP_PER_CONV STEP_LIMIT STEP_BENCH_TIMEOUT
+After each JSON: bundle exec ruby benchmarks/local/scripts/summarize_run.rb PATH
+Full cycle: ./benchmarks/local/run_benchmarks.sh step-cycle
+EOF
+}
+
+cmd_step_cycle() {
+  load_env
+  cmd_smoke 5
+  local bench failed=0
+  for bench in locomo longmemeval mem2act memoryagentbench locomo_plus memsyco groupmembench; do
+    if bench_dataset_ready "$bench"; then
+      cmd_step "$bench" || failed=$((failed + 1))
+    else
+      echo "Skip $bench (dataset env not set)"
+    fi
+  done
+  bundle exec ruby benchmarks/local/scripts/summarize_cycle.rb "$RESULTS_DIR" || true
+  return "$failed"
+}
+
+cmd_step() {
+  local bench="${1:-}"
+  shift || true
+  if [[ -z "$bench" ]]; then
+    echo "Usage: $0 step BENCH [extra run.rb options]" >&2
+    echo "       $0 step-plan" >&2
+    exit 1
+  fi
+  apply_lmstudio_defaults
+  check_lmstudio
+  if ! bench_dataset_ready "$bench"; then
+    echo "Skip $bench (dataset env not set)" >&2
+    exit 1
+  fi
+
+  apply_hybrid_step_env
+  mkdir -p "$RESULTS_DIR"
+  local out="${LLMEMORY_BENCH_OUT:-$RESULTS_DIR/${bench}__hybrid__step_${TIMESTAMP}.json}"
+  local extra=(--variant hybrid)
+  case "$bench" in
+    locomo)
+      export SUITE_DIAG_BENCH_TIMEOUT="${STEP_BENCH_TIMEOUT:-1800}"
+      extra+=(
+        --stratify category
+        --conversations "${STEP_CONVERSATIONS:-1}"
+        --per-conversation "${STEP_PER_CONV:-4}"
+        --seed "${LLMEMORY_BENCH_SEED}"
+      )
+      if [[ "${LLMEMORY_BENCH_SKIP_CONSOLIDATE}" == "1" ]]; then
+        echo "LoCoMo step: ${LOCOMO_MAX_SESSIONS} sessions, ${STEP_PER_CONV:-4} queries (traces only, skip consolidate LLM)"
+      else
+        echo "LoCoMo step: ${LOCOMO_MAX_SESSIONS} sessions, ${STEP_PER_CONV:-4} queries (consolidate per session)"
+      fi
+      ;;
+    longmemeval)
+      extra+=(
+        --stratify question_type
+        --limit "${STEP_LIMIT:-3}"
+        --use-judge
+        --seed "${LLMEMORY_BENCH_SEED}"
+      )
+      ;;
+    locomo_plus)
+      export STEP_MAX_SESSIONS="${LOCOMO_PLUS_MAX_SESSIONS:-4}"
+      export LOCOMO_MAX_SESSIONS="$STEP_MAX_SESSIONS"
+      extra+=(--limit "${STEP_LIMIT:-5}" --use-judge)
+      ;;
+    memsyco)
+      extra+=(--limit "${STEP_LIMIT:-5}" --use-judge)
+      ;;
+    groupmembench)
+      export SUITE_DIAG_BENCH_TIMEOUT="${STEP_BENCH_TIMEOUT:-2400}"
+      export GROUPMEMBENCH_MAX_TURNS="${GROUPMEMBENCH_MAX_TURNS:-120}"
+      extra+=(--limit "${STEP_LIMIT:-3}")
+      ;;
+    *)
+      extra+=(--limit "${STEP_LIMIT:-5}")
+      ;;
+  esac
+
+  local trace_log="$RESULTS_DIR/step_trace_${TIMESTAMP}.log"
+  export LLMEMORY_BENCH_TRACE_FILE="$trace_log"
+  echo "=== step: $bench hybrid (out=$out) trace=$trace_log ==="
+  export LLMEMORY_BENCH_OUT="$out"
+  if cmd_run "$bench" "${extra[@]}" "$@"; then
+    unset LLMEMORY_BENCH_OUT LLMEMORY_BENCH_TRACE_FILE
+    echo "Summarize: bundle exec ruby benchmarks/local/scripts/summarize_run.rb $out"
+    bundle exec ruby benchmarks/local/scripts/summarize_run.rb "$out" || true
+  else
+    unset LLMEMORY_BENCH_OUT LLMEMORY_BENCH_TRACE_FILE
+    echo "Trace log (even on timeout): $trace_log" >&2
+    [[ -f "$trace_log" ]] && tail -30 "$trace_log" >&2
+    return 1
+  fi
+}
+
 cmd_suite_diag() {
   load_env
   cmd_smoke 5
   apply_lmstudio_defaults
   check_lmstudio
-  local bench limit variant run_ts
+  local bench limit variant run_ts extra_args
   run_ts="${TIMESTAMP}"
-  for bench in "${BENCHES[@]}"; do
+  for bench in $SUITE_DIAG_BENCHES; do
     [[ "$bench" == "fixtures" ]] && continue
     if ! bench_dataset_ready "$bench"; then
       echo "Skip $bench (dataset env not set)"
@@ -218,8 +381,26 @@ cmd_suite_diag() {
     for variant in "${SUITE_DIAG_VARIANTS[@]}"; do
       echo "=== suite-diag: $bench variant=$variant (limit=$limit) ==="
       export LLMEMORY_BENCH_OUT="$RESULTS_DIR/${bench}__${variant}__${run_ts}.json"
-      cmd_run "$bench" --limit "$limit" --variant "$variant" \
-        || echo "WARN: $bench $variant run failed"
+      export LLMEMORY_BENCH_CACHE="${LLMEMORY_BENCH_CACHE:-1}"
+      export LLMEMORY_LLM_TEMPERATURE="${LLMEMORY_LLM_TEMPERATURE:-0}"
+      export LLMEMORY_BENCH_SEED="${LLMEMORY_BENCH_SEED:-suite-diag}"
+      extra_args=()
+      if suite_diag_use_judge "$bench"; then
+        extra_args+=(--use-judge)
+      fi
+      case "$bench" in
+        locomo)
+          extra_args+=(--stratify category --conversations 3 --per-conversation 8 --seed "${LLMEMORY_BENCH_SEED}")
+          ;;
+        longmemeval)
+          extra_args+=(--stratify question_type --limit 10 --seed "${LLMEMORY_BENCH_SEED}")
+          ;;
+        *)
+          extra_args+=(--limit "$limit")
+          ;;
+      esac
+      cmd_run "$bench" --variant "$variant" "${extra_args[@]}" \
+        || echo "WARN: $bench $variant run failed (timeout or error)"
       unset LLMEMORY_BENCH_OUT
     done
   done
@@ -239,6 +420,9 @@ main() {
     run) cmd_run "$@" ;;
     suite-smoke) cmd_suite_smoke ;;
     suite-diag) cmd_suite_diag ;;
+    step-plan) cmd_step_plan ;;
+    step-cycle) cmd_step_cycle ;;
+    step) cmd_step "$@" ;;
     *)
       echo "Unknown command: $cmd" >&2
       cmd_help

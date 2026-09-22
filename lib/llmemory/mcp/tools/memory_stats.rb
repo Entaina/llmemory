@@ -55,12 +55,14 @@ module Llmemory
             end
 
             stats[:llm_usage] = Llmemory::LLM::UsageLedger.new(store: store).totals(user_id)
-            stats[:memory_mode] = Llmemory.configuration.memory_mode
-            if ZeroMem::Mode.zero_mem_enabled?(Llmemory.configuration.memory_mode)
+            mode = Llmemory.configuration.memory_mode
+            stats[:memory_mode] = mode
+            stats[:fused] = mode.to_sym == :hybrid
+            if ZeroMem::Mode.zero_mem_enabled?(mode)
               memory = StoreHelpers.build_memory(user_id: user_id)
               stats[:zero_mem] = memory.zero_mem_status
               invoke_calls = stats[:llm_usage].dig(:invoke, :calls).to_i
-              stats[:zero_mem_compliant] = ZeroMem::Mode.zero_mem_strict?(Llmemory.configuration.memory_mode) &&
+              stats[:zero_mem_compliant] = ZeroMem::Mode.zero_mem_strict?(mode) &&
                                            invoke_calls.zero?
             else
               stats[:zero_mem_compliant] = false

@@ -140,6 +140,20 @@ module Llmemory
                      add_to_checkpoint: true)
       raise ConfigurationError, "trace_store is not configured" unless @trace_store
 
+      parts = split_trace_parts(content)
+      if parts.size > 1
+        return parts.each_with_index.map do |part, idx|
+          part_key = idempotency_key ? "#{idempotency_key}#p#{idx + 1}" : nil
+          part_meta = (metadata || {}).merge(part_of: idempotency_key, part_index: idx + 1, part_count: parts.size)
+          record_trace(
+            role: role, content: part, occurred_at: occurred_at, boundary_id: boundary_id,
+            metadata: part_meta, idempotency_key: part_key, state_key: state_key,
+            valid_from: valid_from, valid_to: valid_to, supersedes_trace_id: supersedes_trace_id,
+            source: source, add_to_checkpoint: add_to_checkpoint && idx.zero?
+          )
+        end.last
+      end
+
       if idempotency_key && (existing = @trace_store.find_by_idempotency_key(@user_id, idempotency_key))
         return existing.id
       end
@@ -203,7 +217,12 @@ module Llmemory
       end
 
       if add_to_checkpoint
-        append_message_to_checkpoint(role: trace.role, content: trace.content, occurred_at: trace.occurred_at)
+        append_message_to_checkpoint(
+          role: trace.role,
+          content: trace.content,
+          occurred_at: trace.occurred_at,
+          trace_id: trace.id
+        )
       end
       trace.id
     end
@@ -315,9 +334,29 @@ module Llmemory
       deny_generative!(:consolidate!) if zero_mem_strict?
       msgs = messages
       return true if msgs.empty?
-      conversation_text = msgs.map { |m| format_message(m) }.join("\n")
-      reference_time = consolidation_reference_time(msgs)
-      @long_term.memorize(conversation_text, reference_time: reference_time)
+
+      chunk_limit = Llmemory.configuration.consolidation_chunk_tokens.to_i
+      if chunk_limit.positive? && message_batch_tokens(msgs) > chunk_limit
+        message_chunks(msgs, chunk_limit).each do |chunk|
+          conversation_text = chunk.map { |m| format_message(m) }.join("\n")
+          reference_time = consolidation_reference_time(chunk)
+          @long_term.memorize(
+            conversation_text,
+            reference_time: reference_time,
+            source_traces: consolidation_source_traces(chunk),
+            known_facts: consolidation_known_facts(conversation_text)
+          )
+        end
+      else
+        conversation_text = msgs.map { |m| format_message(m) }.join("\n")
+        reference_time = consolidation_reference_time(msgs)
+        @long_term.memorize(
+          conversation_text,
+          reference_time: reference_time,
+          source_traces: consolidation_source_traces(msgs),
+          known_facts: consolidation_known_facts(conversation_text)
+        )
+      end
       true
     end
 
@@ -329,7 +368,12 @@ module Llmemory
 
     def compact!(max_bytes: nil)
       max = max_bytes || Llmemory.configuration.compact_max_bytes
-      return compact_trace_deterministic!(max) if trace_backed? || zero_mem_strict?
+      if trace_backed? || zero_mem_strict?
+        if hybrid? && !zero_mem_strict?
+          flush_memory_before_compaction!(messages)
+        end
+        return compact_trace_deterministic!(max)
+      end
 
       msgs = messages
       current_bytes = messages_byte_size(msgs)
@@ -471,6 +515,21 @@ module Llmemory
       Llmemory::LLM::UsageLedger.new(store: @short_term_store).totals(@user_id)
     end
 
+    def retrieve_fused(query, max_tokens: nil)
+      raise ConfigurationError, "retrieve_fused requires memory_mode :hybrid" unless hybrid?
+      raise ConfigurationError, "trace_store is not configured" unless @trace_store
+
+      classic = @retrieval_engine.ranked_for(query, user_id: @user_id)
+      evidence = zero_mem_engine.retrieve_evidence(query, max_tokens: max_tokens)
+      skip_resources = evidence.profile&.workload_class != :procedural
+      hybrid_fusion.fuse(
+        classic_candidates: classic,
+        evidence_set: evidence,
+        max_tokens: max_tokens,
+        skip_resources: skip_resources
+      )
+    end
+
     private
 
     def forget_log
@@ -499,13 +558,14 @@ module Llmemory
       true
     end
 
-    def append_message_to_checkpoint(role:, content:, occurred_at: nil)
+    def append_message_to_checkpoint(role:, content:, occurred_at: nil, trace_id: nil)
       @short_term_store.update(@user_id, @session_id) do |state|
         state = normalize_state_hash(state)
         list = state[STATE_KEY_MESSAGES]
         list = list.is_a?(Array) ? list.dup : []
         entry = { role: role.to_sym, content: content.to_s }
         entry[:occurred_at] = occurred_at if occurred_at
+        entry[:trace_id] = trace_id.to_s if trace_id
         list << entry
         list = sanitize_messages(list) if Llmemory.configuration.message_sanitizer_enabled
         state.merge(STATE_KEY_MESSAGES => list, last_activity_at: Time.now, **preserved_flush_state_from(state))
@@ -703,6 +763,24 @@ module Llmemory
       times.max
     end
 
+    def consolidation_source_traces(msgs)
+      Array(msgs).filter_map do |m|
+        tid = m[:trace_id] || m["trace_id"]
+        next if tid.to_s.strip.empty?
+
+        {
+          id: tid.to_s,
+          content: (m[:content] || m["content"]).to_s
+        }
+      end
+    end
+
+    def consolidation_known_facts(conversation_text)
+      return [] unless @long_term.respond_to?(:known_facts_for)
+
+      @long_term.known_facts_for(conversation_text)
+    end
+
     def combine_contexts(short_context, long_context)
       parts = []
       parts << short_context if short_context.to_s.strip.length.positive?
@@ -711,22 +789,71 @@ module Llmemory
     end
 
     def retrieve_hybrid(query, short_context, max_tokens)
-      evidence_max, classic_max = split_hybrid_token_budget(max_tokens)
-      evidence_context = zero_mem_engine.to_context(query, max_tokens: evidence_max)
-      long_context = @retrieval_engine.retrieve_for_inference(
-        query,
-        user_id: @user_id,
-        max_tokens: classic_max
-      )
-      memory_context = combine_contexts(evidence_context, long_context)
+      fused = retrieve_fused(query, max_tokens: max_tokens)
+      memory_context = fused.to_context
       combined = combine_contexts(short_context, memory_context)
       Llmemory::Instrumentation.instrument(
         :retrieve,
         query_chars: query.to_s.length,
         zero_mem_compliant: false,
-        hybrid: true
+        hybrid: true,
+        fused: true,
+        fact_count: fused.metrics[:fact_count],
+        trace_count: fused.metrics[:trace_count],
+        corroborated_count: fused.metrics[:corroborated_count]
       )
       combined
+    end
+
+    def hybrid_fusion
+      @hybrid_fusion ||= Retrieval::HybridFusion.new
+    end
+
+    def count_context_tokens(text)
+      (text.to_s.length / 4.0).ceil
+    end
+
+    def dedupe_hybrid_evidence(evidence_context, classic_context)
+      classic_norm = classic_context.to_s.downcase
+      evidence_context.to_s.lines.filter_map do |line|
+        body = line.sub(/\A\[[^\]]+\]\s*/, "").strip.downcase
+        next line if body.empty? || body.start_with?("===") || body.start_with?("Most relevant") || body.start_with?("Timeline")
+
+        next nil if classic_norm.include?(body[0, [body.length, 80].min])
+
+        line
+      end.join("\n")
+    end
+
+    def split_trace_parts(content)
+      max = Llmemory.configuration.max_message_chars.to_i
+      text = content.to_s
+      return [text] if max <= 0 || text.length <= max
+      return [ZeroMem::Trace.normalize_content!(text)] if Llmemory.configuration.long_trace_strategy.to_sym == :raise
+
+      text.chars.each_slice(max).map(&:join)
+    end
+
+    def message_batch_tokens(msgs)
+      msgs.sum { |m| (format_message(m).length / 4.0).ceil }
+    end
+
+    def message_chunks(msgs, token_limit)
+      chunks = []
+      current = []
+      current_tokens = 0
+      msgs.each do |msg|
+        t = (format_message(msg).length / 4.0).ceil
+        if current.any? && current_tokens + t > token_limit
+          chunks << current
+          current = []
+          current_tokens = 0
+        end
+        current << msg
+        current_tokens += t
+      end
+      chunks << current if current.any?
+      chunks
     end
 
     def split_hybrid_token_budget(max_tokens)

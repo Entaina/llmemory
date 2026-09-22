@@ -79,6 +79,24 @@ bundle exec ruby benchmarks/local/runners/run.rb --bench longmemeval --variant h
 ./benchmarks/local/run_benchmarks.sh suite-diag   # all configured datasets × 3 variants (diagnostic limits)
 ```
 
+**Suite-diag options** (via env):
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `SUITE_DIAG_BENCHES` | fixtures, locomo, longmemeval, … | Subset of benches to run |
+| `SUITE_DIAG_JUDGE` | `1` | Pass `--use-judge` on longmemeval, memsyco, locomo_plus |
+| `MEMORYARENA` | excluded | Add `memory_arena` to `SUITE_DIAG_BENCHES` manually if exported |
+
+Merge several run timestamps into one report:
+
+```bash
+bundle exec ruby benchmarks/local/suite_diag.rb 20260917T142649Z 20260918T103107Z
+```
+
+Regression (no LM Studio): `bundle exec rspec spec/benchmarks/local/diag_locomo_rank_spec.rb`
+(`diag_locomo.rb` probe for manual checks).
+```
+
 ### Dataset checkout (local, gitignored under `benchmarks/local/data/`)
 
 | Bench | Clone / export | Env var | Verify |

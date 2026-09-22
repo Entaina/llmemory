@@ -27,6 +27,49 @@
 
 ## [Unreleased]
 
+### Added
+
+- **Local benchmark harness reliability.** Explicit `memory_mode` per variant; stratified `Sampler`
+  (`--conversations`, `--per-conversation`, `--seed`, `--stratify`); `LLMEMORY_BENCH_CACHE` disk cache;
+  bench LLM `temperature`/`seed`; date-normalized LoCoMo F1 and retrieval hits; row debug fields
+  (`context`, `ranked_trace_ids`, `fused_items`, `memory_stats`); `explain_row.rb`; suite-diag deltas and
+  regression flags; per-bench timeouts and `MEMORYAGENTBENCH_MAX_SESSIONS`.
+- **Retrieval context enrichment.** Relative dates annotated in hybrid and Zero-Mem snippets; temporal
+  timelines with day deltas; hybrid fusion slot-filling limits for `current_state`.
+- **Consolidation.** `known_facts` prompt context; structured extraction schema with inline category;
+  deferred category summaries via `summary_refresh_every`; list-style retrieve expansion for multivalue queries.
+- **Bench step cycle.** `run_benchmarks.sh step-cycle`, `summarize_cycle.rb`; GroupMemBench `GROUPMEMBENCH_MAX_TURNS`;
+  LoCoMo+ continuation reader; row `evidence_in_range`; hybrid includes resources for procedural queries.
+
+- **Fused hybrid retrieve (default mode).** `memory_mode` defaults to `:hybrid`. `Memory#retrieve_fused` runs
+  `Retrieval::HybridFusion`: classic ranked facts and Zero-Mem evidence compete in one RRF ranking with
+  workload priors, trace provenance corroboration, resource dedupe, and a single `=== MEMORY ===` context.
+  `hybrid_classic_token_ratio` is a fact-token ceiling inside the unified budget. Benchmark hybrid
+  localization uses `ranked_trace_ids` from fused results.
+- **Fact → trace provenance.** Checkpoint messages store `trace_id`; `consolidate!` passes `source_traces`
+  into `memorize`; file/graph facts record `{type: "trace", id:}` sources with lexical attribution.
+- **Temporal extraction.** `FactExtractor#extract_items(..., reference_time:)` with optional `event_date`;
+  file-based items persist `event_date`; graph relations may carry `occurred_at` on edges.
+- **Hybrid retrieve (superseded by fused path above).** Earlier two-block concat + line dedupe replaced by
+  `HybridFusion` / `HybridResult`.
+- **Zero-Mem context.** Readable evidence timestamps, `(undated)` for inferred `occurred_at`, timeline block
+  for temporal queries, query-centered snippets (`zero_mem_snippet_chars`), confidence in output.
+- **Robust ingest.** `consolidation_chunk_tokens` splits `consolidate!`; `long_trace_strategy: :split` splits
+  oversized `record_trace` payloads.
+- **Config.** `zero_mem_local_hierarchy_weight`, `hybrid_classic_token_ratio` (documented as classic ceiling).
+
+### Changed
+
+- **Benchmark harness.** Fixed `retrieval_hit` aggregate; localization omitted for classic / empty gold;
+  LoCoMo-Plus / GroupMemBench / MemSyco / MemoryAgentBench adapters; `suite-diag` multi-timestamp merge and
+  optional `--use-judge` for judge benches.
+- **Retrieval.** Fusion ranking boosts for subject entities, query terms, and temporal markers; file/graph
+  multivalor grouping in formatted context.
+- **Bench-driven fixes (2026-09-21).** Zero-Mem `freshness_requirement` only for `:current_state`; calibrator
+  sorts by fusion score; hierarchy neighbors as closure; classic temporal rank without wall-clock decay on
+  date queries; anchor text not stored in resources; `RelativeDateResolver` on extracted facts; BM25 item
+  scoring and query stopwords; readable date formatting in context.
+
 ## [0.2.11] - 2026-09-07
 
 ### Added

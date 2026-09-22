@@ -108,6 +108,28 @@ RSpec.describe Llmemory::Retrieval::TemporalRanker do
     expect(ranked.first[:temporal_score]).to be_finite
   end
 
+  it "does not decay scores for temporal queries across old corpus dates" do
+    t1 = Time.utc(2023, 5, 8)
+    t2 = Time.utc(2023, 10, 20)
+    candidates = [
+      { text: "relevant old", timestamp: t1, score: 0.9 },
+      { text: "recent noise", timestamp: t2, score: 0.5 }
+    ]
+    ranked = ranker.rank(candidates, temporal_query: true)
+    expect(ranked.first[:text]).to eq("relevant old")
+  end
+
+  it "uses corpus max timestamp as reference when now is omitted" do
+    t_old = Time.utc(2023, 1, 1)
+    t_new = Time.utc(2023, 6, 1)
+    candidates = [
+      { text: "older", timestamp: t_old, score: 1.0 },
+      { text: "newer", timestamp: t_new, score: 1.0 }
+    ]
+    ranked = ranker.rank(candidates)
+    expect(ranked.first[:text]).to eq("newer")
+  end
+
   it "does not inflate scores for future timestamps" do
     ranker = described_class.new(half_life_days: 30)
     future = Time.now + 86_400

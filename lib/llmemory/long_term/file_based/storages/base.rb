@@ -10,7 +10,7 @@ module Llmemory
           end
 
           def save_item(user_id, category:, content:, source_resource_id:, importance: 0.7, provenance: nil,
-                        occurred_at: nil)
+                        occurred_at: nil, event_date: nil, subject: nil, predicate: nil)
             raise NotImplementedError, "#{self.class}#save_item must be implemented"
           end
 

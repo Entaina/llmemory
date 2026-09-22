@@ -3,6 +3,7 @@
 require_relative "scorers/locomo_f1"
 require_relative "scorers/substring_em"
 require_relative "scorers/tool_call"
+require_relative "scorers/arena_match"
 require_relative "judge_llm"
 
 module LocalBenchmark
@@ -26,7 +27,7 @@ module LocalBenchmark
           locomo_f1: Scorers::LoCoMoF1.aggregate(rows),
           retrieval_hit: retrieval_hit_aggregate(rows)
         }
-      when "longmemeval", "memoryagentbench", "groupmembench", "memory_arena"
+      when "longmemeval", "memoryagentbench", "groupmembench"
         scores = {
           substring_em: Scorers::SubstringEM.aggregate(rows),
           retrieval_hit: retrieval_hit_aggregate(rows)
@@ -41,6 +42,11 @@ module LocalBenchmark
         { memsyco_judge: memsyco_scores(rows, judge) }
       when "mem2act"
         mem2act_scores(rows)
+      when "memory_arena"
+        {
+          arena_match: Scorers::ArenaMatch.aggregate(rows),
+          substring_em: Scorers::SubstringEM.aggregate(rows)
+        }
       when "fixtures"
         { substring_em: Scorers::SubstringEM.aggregate(rows) }
       else
@@ -82,7 +88,12 @@ module LocalBenchmark
         constraints = meta["constraints"]
         next unless constraints
 
-        j.constraint_consistent?(question: row[:gold_answer].to_s, prediction: row[:prediction], constraints: constraints) ? 1.0 : 0.0
+        j.constraint_consistent?(
+          question: row[:query_text].to_s,
+          prediction: row[:prediction],
+          constraints: constraints,
+          reference: row[:gold_answer]
+        ) ? 1.0 : 0.0
       end
       { mean: mean(scored), count: scored.size }
     end
@@ -98,14 +109,16 @@ module LocalBenchmark
           question: row[:query_text].to_s,
           prediction: row[:prediction],
           reference: row[:gold_answer],
-          memory_context: meta["memory_context"]
+          memory_context: meta["memory_context"],
+          rubric: meta["rubric"],
+          memory_policy: meta["memory_policy"]
         ) ? 1.0 : 0.0
       end
       { mean: mean(scored), count: scored.size }
     end
 
     def retrieval_hit_aggregate(rows)
-      hits = rows.filter_map { |r| r[:retrieval_hit] }
+      hits = rows.map { |r| r[:retrieval_hit] }.compact
       return { mean: nil, count: 0 } if hits.empty?
 
       { mean: hits.count(true).to_f / hits.size, count: hits.size }

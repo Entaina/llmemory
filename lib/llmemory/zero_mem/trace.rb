@@ -17,8 +17,10 @@ module Llmemory
                      idempotency_key: nil, archived_at: nil)
         accepted = normalize_content!(content)
         ingested = ingested_at || Time.now
+        occurred_inferred = occurred_at.nil?
         occurred = occurred_at || ingested
         meta = normalize_metadata(metadata)
+        meta[:occurred_at_inferred] = true if occurred_inferred
 
         new(
           id: id || "tr_#{SecureRandom.hex(12)}",

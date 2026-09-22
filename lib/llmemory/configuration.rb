@@ -9,6 +9,10 @@ module Llmemory
                   :llm_timeout_seconds,
                   :llm_open_timeout_seconds,
                   :llm_http_retries,
+                  :llm_max_output_tokens,
+                  :llm_temperature,
+                  :llm_seed,
+                  :summary_refresh_every,
                   :redis_session_ttl_override,
                   :short_term_store,
                   :redis_url,
@@ -79,7 +83,11 @@ module Llmemory
                   :zero_mem_sidecar_timeout_seconds,
                   :zero_mem_sidecar_failure_threshold,
                   :zero_mem_shadow_write,
-                  :hybrid_classic_token_ratio
+                  :hybrid_classic_token_ratio,
+                  :zero_mem_snippet_chars,
+                  :zero_mem_local_hierarchy_weight,
+                  :consolidation_chunk_tokens,
+                  :long_trace_strategy
 
     def initialize
       @llm_provider = :openai
@@ -89,6 +97,10 @@ module Llmemory
       @llm_timeout_seconds = 60
       @llm_open_timeout_seconds = 10
       @llm_http_retries = 2
+      @llm_max_output_tokens = nil
+      @llm_temperature = 0.3
+      @llm_seed = nil
+      @summary_refresh_every = 1
       @redis_session_ttl_override = nil
       @short_term_store = :memory
       @redis_url = ENV["REDIS_URL"] || "redis://localhost:6379/0"
@@ -154,12 +166,16 @@ module Llmemory
       @zero_mem_pagerank_damping = 0.6
       @zero_mem_graph_weight = 0.6
       @zero_mem_ner_http_url = "http://127.0.0.1:8765"
-      @memory_mode = :classic
+      @memory_mode = :hybrid
       @zero_mem_ttl_days = nil
       @zero_mem_sidecar_timeout_seconds = 5
       @zero_mem_sidecar_failure_threshold = 3
       @zero_mem_shadow_write = false
       @hybrid_classic_token_ratio = 0.5
+      @zero_mem_snippet_chars = 600
+      @zero_mem_local_hierarchy_weight = 0.6
+      @consolidation_chunk_tokens = 3000
+      @long_trace_strategy = :split
     end
 
     def validate!

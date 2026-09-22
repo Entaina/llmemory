@@ -9,7 +9,8 @@ module Llmemory
       CURRENT_ES = /\b(ahora|actual|hoy|cuál es|cual es)\b/i
       MULTI_EN = /\b(between|compared to|relationship|and .+ and)\b/i
       MULTI_ES = /\b(relación|relacion|entre|comparado)\b/i
-      PROCEDURAL = /\b(export|file|balance|informe|report|saldo)\b/i
+      PROCEDURAL = /\b(export|file|balance|informe|report|saldo|api|endpoint|parameter|arguments)\b/i
+      ATTRIBUTE = /\b(identity|who is|what is .+'s|research|researched|looking into)\b/i
 
       def profile(query, boundary: nil, language: nil)
         text = query.to_s.strip
@@ -24,7 +25,7 @@ module Llmemory
 
         workload = infer_workload(text, lang, entities, temporal, rule_ids)
         answer_type = infer_answer_type(text, lang, rule_ids)
-        freshness = workload == :current_state || workload == :temporal
+        freshness = workload == :current_state
 
         boundary_h = normalize_boundary(boundary)
         rule_ids << "boundary_explicit" if boundary_h
@@ -71,6 +72,10 @@ module Llmemory
         if text.match?(PROCEDURAL)
           rule_ids << "procedural_cue"
           return :procedural
+        end
+        if text.match?(ATTRIBUTE)
+          rule_ids << "attribute_fact_cue"
+          return :local_fact
         end
         if entities.size >= 2 || text.match?(lang == :es ? MULTI_ES : MULTI_EN)
           rule_ids << "multi_entity"
