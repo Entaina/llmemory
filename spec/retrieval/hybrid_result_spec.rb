@@ -29,6 +29,21 @@ RSpec.describe Llmemory::Retrieval::HybridResult do
     expect(result.to_context).to include("Boreal")
   end
 
+  it "keeps a later sentence that adds a new claim about a name already mentioned" do
+    profile = Llmemory::ZeroMem::QueryProfiler.new.profile(
+      "Which text summarization system should I choose for quarterly finance reports where numerical claims must survive compression?"
+    )
+    filler = "The announcement provides no comparative testing for the requirement under discussion. " * 6
+    lead = "A team trialed Model Boreal and Model Atlas for quarterly finance reports where numerical claims must survive compression. "
+    finding = "An independent evaluation found that Boreal preserved figures and named entities much more reliably than Atlas."
+    result = described_class.new(
+      items: [{ kind: :trace, text: "#{filler}#{lead}#{finding}", score: 1.0, trace_id: "t1" }],
+      profile: profile
+    )
+
+    expect(result.to_context).to include("preserved figures")
+  end
+
   it "keeps the sentence that covers the question's rare terms" do
     profile = Llmemory::ZeroMem::QueryProfiler.new.profile(
       "What did Borges say about the center and circumference of the Library?"

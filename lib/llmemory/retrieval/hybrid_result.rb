@@ -256,6 +256,7 @@ module Llmemory
           end
           picked.sort_by! { |sentence| sentences.index(sentence) }
           append_named_sentence!(picked, sentences, limit)
+          append_outcome_sentence!(picked, sentences, limit)
           return picked.join(" ") if picked.any?
         end
 
@@ -279,6 +280,29 @@ module Llmemory
           picked.pop
         end
         picked << sentence if picked.empty? || (picked.join(" ").length + sentence.length + 1) <= limit
+      end
+
+      def append_outcome_sentence!(picked, sentences, limit)
+        picked_text = picked.join(" ")
+        names = picked_text.scan(/\b[A-Z][a-z]{2,}\b/).uniq
+        return if names.empty?
+
+        known = picked_text.downcase
+        sentence = sentences
+                   .reject { |candidate| picked.include?(candidate) }
+                   .select { |candidate| names.any? { |name| candidate.include?(name) } }
+                   .max_by { |candidate| novel_word_count(candidate, known) }
+        return unless sentence
+        return if novel_word_count(sentence, known) < 3
+
+        while picked.any? && (picked.join(" ").length + sentence.length + 1) > limit
+          picked.shift
+        end
+        picked << sentence if picked.empty? || (picked.join(" ").length + sentence.length + 1) <= limit
+      end
+
+      def novel_word_count(sentence, known)
+        sentence.downcase.scan(/[a-z]{5,}/).count { |word| !known.include?(word) }
       end
 
       def query_tokens
