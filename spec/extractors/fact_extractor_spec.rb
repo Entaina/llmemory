@@ -29,6 +29,17 @@ RSpec.describe Llmemory::Extractors::FactExtractor do
       expect(items.map { |i| i["importance"] }).to eq([0.9, 0.4])
     end
 
+    it "salvages objects from truncated JSON arrays" do
+      llm_trunc = double("LLM").tap do |d|
+        allow(d).to receive(:invoke).with(/Extract discrete facts/).and_return(
+          '[{"content": "User is vegan", "importance": 0.9, "category": "preferences"}, {"content": "User prefers Python", "importance": 0.8, "category": "preferences"'
+        )
+      end
+      extractor_trunc = described_class.new(llm: llm_trunc)
+      items = extractor_trunc.extract_items("conversation")
+      expect(items.map { |i| i["content"] }).to include("User is vegan")
+    end
+
     it "defaults importance to 0.7 when missing from LLM response" do
       llm_no_importance = double("LLM").tap do |d|
         allow(d).to receive(:invoke).with(/Extract discrete facts/).and_return('[{"content": "User likes coffee"}]')

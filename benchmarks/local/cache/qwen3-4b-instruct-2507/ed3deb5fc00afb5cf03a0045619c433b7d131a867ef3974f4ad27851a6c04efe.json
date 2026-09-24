@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"User_6 recommends holding the design of the accelerated first-10-minutes onboarding flow until Legal and Compliance confirm consistent capture timing and exception handling across markets in the regional consent rule set.\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"The decision regarding the accelerated onboarding flow depends on confirmation from Legal and Compliance that capture timing and exception handling are aligned across all regions as defined in http://sharepoint/customer_onboarding_optimization/requirements_definition_spec.\",\n    \"importance\": 0.8,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"The current spec at http://sharepoint/customer_onboarding_optimization/requirements_definition_spec is still valid for most areas, but the regional consent rule-set decision cannot be delayed without risking rework across Legal, Compliance, Ops, and implementation.\",\n    \"importance\": 0.7,\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"User_6 identifies a conflict between the accelerated onboarding flow and current compliance requirements, particularly around data capture timing and regional consent variants.\",\n    \"importance\": 0.8,\n    \"category\": \"behavior\"\n  }\n]",
+  "usage": {
+    "input_tokens": 1442,
+    "output_tokens": 266,
+    "total_tokens": 1708
+  }
+}

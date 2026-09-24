@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"User expresses contentment with living honestly and accepting themselves\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User agrees that the camping experience is priceless\",\n    \"importance\": 0.85,\n    \"event_date\": \"2023-10-19\",\n    \"category\": \"experiences\"\n  },\n  {\n    \"content\": \"User expresses happiness for someone else's good fortune\",\n    \"importance\": 0.7,\n    \"category\": \"emotions\"\n  },\n  {\n    \"content\": \"Assistant enjoys being present and together with family during camping trips\",\n    \"importance\": 0.8,\n    \"event_date\": \"2023-10-19\",\n    \"category\": \"preferences\"\n  }\n]",
+  "usage": {
+    "input_tokens": 555,
+    "output_tokens": 186,
+    "total_tokens": 741
+  }
+}

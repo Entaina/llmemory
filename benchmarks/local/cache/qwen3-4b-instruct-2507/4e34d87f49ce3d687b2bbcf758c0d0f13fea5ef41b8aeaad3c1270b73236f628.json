@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"User_13 has identified that ESG language in the sustainable finance strategy is inconsistent across regions and is currently mapping mismatches between regional definitions, disclosure expectations, and policy wording against the risk specification document.\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User_13 is working on a risk assessment phase that is at approximately 10% complete.\",\n    \"importance\": 0.8,\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"User_5 requests that Legal stamp all four fields — detected, owner, expiry, and clause citation — together in the SharePoint document titled 'risk: inconsistent sustainability standards spec' to prevent Compliance from triaging incomplete records.\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"The request for Legal to stamp all four fields is tied to the document located at http://sharepoint/sustainable_finance_strategy/risk:_inconsistent_sustainability_standards_spec, which was referenced on 2025-07-09.\",\n    \"importance\": 0.8,\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"User_13 is conducting research into regional inconsistencies in ESG language and disclosure standards to align policy wording with actual regional expectations.\",\n    \"importance\": 0.9,\n    \"research_target\": \"inconsistent sustainability standards across regions\",\n    \"category\": \"research\"\n  }\n]",
+  "usage": {
+    "input_tokens": 640,
+    "output_tokens": 334,
+    "total_tokens": 974
+  }
+}

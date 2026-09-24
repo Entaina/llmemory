@@ -13,6 +13,33 @@ RSpec.describe Llmemory::ZeroMem::HierarchyRetriever do
     memory.add_message(role: :assistant, content: "Noted teal.")
   end
 
+  it "keeps the newest trace even when the query matches an older turn" do
+    memory = Llmemory::Memory.new(user_id: "u_recent", session_id: "s_recent", trace_store: storage)
+    memory.add_message(role: :user, content: "I love teal notebooks.", occurred_at: Time.utc(2023, 5, 1))
+    memory.add_message(
+      role: :user,
+      content: "After learning to say no, I feel less stressed.",
+      occurred_at: Time.utc(2023, 6, 1)
+    )
+    query = "I ended up volunteering and now I'm overwhelmed."
+    profile = Llmemory::ZeroMem::QueryProfiler.new.profile(query)
+    result = retriever.retrieve(user_id: "u_recent", query: query, profile: profile, top_k: 1)
+    expect(result[:traces].map(&:content).join(" ")).to include("less stressed")
+  end
+
+  it "retrieves a long turn whose matching sentence sits after a long preamble" do
+    memory = Llmemory::Memory.new(user_id: "u_long", session_id: "s_long", trace_store: storage)
+    preamble = "The archive lists unrelated procurement notes and meeting logistics. " * 30
+    memory.add_message(role: :assistant, content: "#{preamble}Model Boreal preserved numerical claims in the quarterly finance reports.")
+    6.times do |i|
+      memory.add_message(role: :user, content: "Choose a text summarization system soon, note #{i}.")
+    end
+    query = "Which text summarization system preserved numerical claims in the quarterly finance reports?"
+    profile = Llmemory::ZeroMem::QueryProfiler.new.profile(query)
+    result = retriever.retrieve(user_id: "u_long", query: query, profile: profile, top_k: 1)
+    expect(result[:traces].map(&:content).join(" ")).to include("Boreal")
+  end
+
   it "returns traces with dense degradation flagged" do
     profile = Llmemory::ZeroMem::QueryProfiler.new.profile("favorite color teal")
     result = retriever.retrieve(user_id: user_id, query: "favorite color teal", profile: profile, top_k: 5)

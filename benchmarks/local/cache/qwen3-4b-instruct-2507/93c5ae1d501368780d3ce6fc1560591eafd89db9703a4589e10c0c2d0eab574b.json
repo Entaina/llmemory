@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"Assistant loves camping trips with family\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"Assistant finds nature peaceful and refreshing, especially the sound of birds and smell of fresh air\",\n    \"importance\": 0.85,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"Assistant values quality time with family through shared experiences like storytelling and campfires\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"The camping trip occurred yesterday, which is 2023-10-19\",\n    \"importance\": 0.7,\n    \"event_date\": \"2023-10-19\",\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"Assistant enjoys being present and together with family during camping trips\",\n    \"importance\": 0.8,\n    \"category\": \"preferences\"\n  }\n]",
+  "usage": {
+    "input_tokens": 841,
+    "output_tokens": 223,
+    "total_tokens": 1064
+  }
+}

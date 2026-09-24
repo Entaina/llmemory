@@ -111,6 +111,8 @@ Commands:
   step BENCH        Hybrid mini slice (fix issues before scaling up)
   step-cycle        smoke + all hybrid steps + summarize_cycle.rb
   step-plan         Print recommended step order (hybrid only)
+  baseline          Reference run (LoCoMo×3, LongMemEval×3, hybrid on other benches)
+  baseline-control-7b  Hybrid LoCoMo slice with LLMEMORY_LLM_MODEL_CONTROL (default qwen2.5-7b-instruct)
 
 Environment (see benchmarks/local/benchmarks.env.example):
   LLMEMORY_BENCH_PROFILE   smoke | default | quality
@@ -336,6 +338,7 @@ cmd_step() {
       extra+=(--limit "${STEP_LIMIT:-5}" --use-judge)
       ;;
     memsyco)
+      export MEMSYCO_TASK="${MEMSYCO_TASK:-all}"
       extra+=(--limit "${STEP_LIMIT:-5}" --use-judge)
       ;;
     groupmembench)
@@ -364,6 +367,66 @@ cmd_step() {
   fi
 }
 
+cmd_baseline() {
+  load_env
+  apply_lmstudio_defaults
+  check_lmstudio
+  export LLMEMORY_BENCH_CACHE="${LLMEMORY_BENCH_CACHE:-1}"
+  export LLMEMORY_LLM_TEMPERATURE="${LLMEMORY_LLM_TEMPERATURE:-0}"
+  export LLMEMORY_BENCH_SEED="${LLMEMORY_BENCH_SEED:-baseline}"
+  export MEMSYCO_TASK="${MEMSYCO_TASK:-all}"
+  local variant run_ts="${TIMESTAMP}"
+  for variant in classic zero_mem_full hybrid; do
+    echo "=== baseline: locomo variant=$variant ==="
+    export LLMEMORY_BENCH_OUT="$RESULTS_DIR/locomo__${variant}__baseline_${run_ts}.json"
+    cmd_run locomo --variant "$variant" \
+      --stratify category --conversations 3 --per-conversation 8 \
+      --seed baseline --reader llm \
+      || echo "WARN: locomo $variant baseline failed"
+    unset LLMEMORY_BENCH_OUT
+  done
+  for variant in classic zero_mem_full hybrid; do
+    echo "=== baseline: longmemeval variant=$variant ==="
+    export LLMEMORY_BENCH_OUT="$RESULTS_DIR/longmemeval__${variant}__baseline_${run_ts}.json"
+    cmd_run longmemeval --variant "$variant" \
+      --stratify question_type --limit 15 --use-judge --seed baseline \
+      || echo "WARN: longmemeval $variant baseline failed"
+    unset LLMEMORY_BENCH_OUT
+  done
+  local bench limit
+  for bench in memoryagentbench mem2act locomo_plus memsyco groupmembench; do
+    bench_dataset_ready "$bench" || continue
+    limit=10
+    [[ "$bench" == "mem2act" ]] && limit=20
+    echo "=== baseline: $bench hybrid ==="
+    export LLMEMORY_BENCH_OUT="$RESULTS_DIR/${bench}__hybrid__baseline_${run_ts}.json"
+    extra=(--variant hybrid --limit "$limit" --seed baseline)
+    [[ "$bench" == "longmemeval" || "$bench" == "memsyco" || "$bench" == "locomo_plus" ]] && extra+=(--use-judge)
+    cmd_run "$bench" "${extra[@]}" || echo "WARN: $bench baseline failed"
+    unset LLMEMORY_BENCH_OUT
+  done
+  echo "Baseline tag: baseline_${run_ts}"
+}
+
+cmd_baseline_control_7b() {
+  load_env
+  apply_lmstudio_defaults
+  check_lmstudio
+  local model="${LLMEMORY_LLM_MODEL_CONTROL:-qwen2.5-7b-instruct}"
+  export LLMEMORY_LLM_MODEL="$model"
+  export LLMEMORY_BENCH_CACHE_DIR="${LLMEMORY_BENCH_CACHE_DIR:-benchmarks/local/cache/control_7b}"
+  export LLMEMORY_BENCH_CACHE="${LLMEMORY_BENCH_CACHE:-1}"
+  export LLMEMORY_BENCH_SEED="${LLMEMORY_BENCH_SEED:-baseline-control}"
+  local run_ts="${TIMESTAMP}"
+  echo "=== baseline control (hybrid, model=$model) ==="
+  export LLMEMORY_BENCH_OUT="$RESULTS_DIR/locomo__hybrid__baseline_control_${run_ts}.json"
+  cmd_run locomo --variant hybrid \
+    --stratify category --conversations 3 --per-conversation 8 \
+    --seed baseline-control --reader llm \
+    || echo "WARN: control locomo failed"
+  unset LLMEMORY_BENCH_OUT LLMEMORY_BENCH_CACHE_DIR
+}
+
 cmd_suite_diag() {
   load_env
   cmd_smoke 5
@@ -388,12 +451,18 @@ cmd_suite_diag() {
       if suite_diag_use_judge "$bench"; then
         extra_args+=(--use-judge)
       fi
+      if [[ "$bench" == "memsyco" ]]; then
+        export MEMSYCO_TASK="${MEMSYCO_TASK:-all}"
+      fi
       case "$bench" in
         locomo)
           extra_args+=(--stratify category --conversations 3 --per-conversation 8 --seed "${LLMEMORY_BENCH_SEED}")
           ;;
         longmemeval)
           extra_args+=(--stratify question_type --limit 10 --seed "${LLMEMORY_BENCH_SEED}")
+          ;;
+        memsyco)
+          extra_args+=(--limit "${MEMSYCO_SUITE_LIMIT:-10}" --seed "${LLMEMORY_BENCH_SEED}")
           ;;
         *)
           extra_args+=(--limit "$limit")
@@ -420,6 +489,8 @@ main() {
     run) cmd_run "$@" ;;
     suite-smoke) cmd_suite_smoke ;;
     suite-diag) cmd_suite_diag ;;
+  baseline) cmd_baseline ;;
+  baseline-control-7b) cmd_baseline_control_7b ;;
     step-plan) cmd_step_plan ;;
     step-cycle) cmd_step_cycle ;;
     step) cmd_step "$@" ;;

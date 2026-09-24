@@ -1,0 +1,8 @@
+{
+  "content": "Best text summarization system for financial reports preserving numbers and key tradeoffs",
+  "usage": {
+    "input_tokens": 82,
+    "output_tokens": 15,
+    "total_tokens": 97
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "content": "[{\"content\": \"Finance shifts will be handled by holding the gate and reopening only the impacted clause, without wider changes\", \"importance\": 0.9, \"category\": \"preferences\"}, {\"content\": \"No broader revisions or remixes of clauses are allowed when Finance shifts occur\", \"importance\": 0.8, \"category\": \"behavior\"}]",
+  "usage": {
+    "input_tokens": 464,
+    "output_tokens": 76,
+    "total_tokens": 540
+  }
+}

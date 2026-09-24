@@ -107,11 +107,56 @@ RSpec.describe "LocalBenchmark adapters" do
 
         adapter = described_class.new(root: dir)
         conv = adapter.conversations(limit: 1).first
+        expect(conv["sessions"].size).to eq(1)
         expect(conv["sessions"].first["turns"].size).to eq(1)
         expect(conv["sessions"].first["turns"].first["id"]).to eq("Msg_1")
+        expect(conv["sessions"].first["turns"].first["metadata"]["project"]).to eq("Regulatory")
         expect(conv["consolidate_mode"]).to eq("per_session")
       end
     end
+
+    it "keeps the project whose turns match the question and nearby dated context" do
+        Dir.mktmpdir do |dir|
+          channel = {
+            "Regulatory Compliance Program" => [
+              { "msg_node" => "R1", "author" => "A", "content" => "Reporting definitions need a policy approval gate.", "timestamp" => "2025-07-27" }
+            ],
+            "Sustainable Finance Strategy" => [
+              { "msg_node" => "S1", "author" => "B", "content" => "Unrelated treasury note.", "timestamp" => "2025-07-10" },
+              { "msg_node" => "S2", "author" => "B", "content" => "Reporting can validate fit against the enterprise-wide ESG policy standard.", "timestamp" => "2025-07-10" },
+              { "msg_node" => "S3", "author" => "B", "content" => "Please finish before July 18.", "timestamp" => "2025-07-10" }
+            ]
+          }
+          FileUtils.mkdir_p(File.join(dir, "data", "final", "Finance"))
+          File.write(
+            File.join(dir, "data", "final", "Finance", "synthetic_domain_channels_rolevariants_Finance.json"),
+            JSON.generate(channel)
+          )
+          FileUtils.mkdir_p(File.join(dir, "questions", "Finance"))
+          File.write(
+            File.join(dir, "questions", "Finance", "multi_hop.jsonl"),
+            JSON.generate({
+              "id" => "mh1",
+              "question" => "What is the deadline for Reporting to validate fit against the enterprise-wide ESG policy standard?",
+              "answer" => "2025-07-18"
+            })
+          )
+
+          prev = ENV["GROUPMEMBENCH_MAX_CONSOLIDATE_SESSIONS"]
+          ENV["GROUPMEMBENCH_MAX_CONSOLIDATE_SESSIONS"] = "1"
+          adapter = described_class.new(root: dir)
+          conv = adapter.conversations(limit: 1).first
+          expect(conv["sessions"].map { |s| s["project"] }).to eq(["Sustainable Finance Strategy"])
+          contents = conv["sessions"].first["turns"].map { |t| t["content"] }
+          expect(contents.join("\n")).to include("July 18")
+        ensure
+          if prev
+            ENV["GROUPMEMBENCH_MAX_CONSOLIDATE_SESSIONS"] = prev
+          else
+            ENV.delete("GROUPMEMBENCH_MAX_CONSOLIDATE_SESSIONS")
+          end
+        end
+      end
   end
 
   describe LocalBenchmark::Adapters::LoCoMoPlus do
@@ -138,7 +183,8 @@ RSpec.describe "LocalBenchmark adapters" do
 
         adapter = described_class.new(root: dir)
         conv = adapter.conversations(limit: 1).first
-        expect(conv["sessions"].map { |s| s["id"] }).to include("cue", "query", "s1")
+        expect(conv["sessions"].map { |s| s["id"] }).to include("cue", "s1")
+        expect(conv["sessions"].map { |s| s["id"] }).not_to include("query")
         expect(conv["queries"].first["gold_trace_ids"]).to include("cue:1")
       end
     end
@@ -157,6 +203,54 @@ RSpec.describe "LocalBenchmark adapters" do
         expect(conv["sessions"].size).to be >= 2
         expect(conv["consolidate_mode"]).to eq("per_session")
         expect(conv["queries"].first["gold_trace_ids"]).to eq([])
+      end
+    end
+
+    it "keeps a late needle session when the session cap would drop the document prefix" do
+      Dir.mktmpdir do |dir|
+        subset = File.join(dir, "Accurate_Retrieval")
+        FileUtils.mkdir_p(subset)
+        filler = "The Mongol force invaded southern China. " * 400
+        needle = "The Norse leader was Rollo, who came from Denmark."
+        row = {
+          "context" => filler + needle + filler,
+          "questions" => ["Who was the Norse leader?"],
+          "answers" => [["Rollo"]]
+        }
+        File.write(File.join(subset, "sample.jsonl"), JSON.generate(row))
+
+        adapter = described_class.new(root: dir)
+        prev = ENV["MEMORYAGENTBENCH_MAX_SESSIONS"]
+        ENV["MEMORYAGENTBENCH_MAX_SESSIONS"] = "1"
+        begin
+          conv = adapter.conversations(limit: 1).first
+          text = conv["sessions"].flat_map { |s| s["turns"].map { |t| t["content"] } }.join(" ")
+          expect(text).to include("Rollo")
+        ensure
+          ENV["MEMORYAGENTBENCH_MAX_SESSIONS"] = prev
+        end
+      end
+    end
+
+    it "zips parallel questions and answers arrays from HF export" do
+      Dir.mktmpdir do |dir|
+        subset = File.join(dir, "Accurate_Retrieval")
+        FileUtils.mkdir_p(subset)
+        row = {
+          "context" => "Document 1:\nNormandy is in France.",
+          "questions" => ["In what country is Normandy located?", "When were the Normans in Normandy?"],
+          "answers" => [["France", "France"], ["10th century", "11th century"]],
+          "metadata" => { "qa_pair_ids" => %w[qa1 qa2] }
+        }
+        File.write(File.join(subset, "sample.jsonl"), JSON.generate(row))
+
+        adapter = described_class.new(root: dir)
+        conv = adapter.conversations(limit: 2).first
+        expect(conv["queries"].size).to eq(2)
+        expect(conv["queries"].first["text"]).to include("Normandy")
+        expect(conv["queries"].first["gold_answer"]).to eq("France")
+        expect(conv["queries"].first["gold_answers"]).to eq(["France"])
+        expect(conv["queries"].first["id"]).to eq("qa1")
       end
     end
   end

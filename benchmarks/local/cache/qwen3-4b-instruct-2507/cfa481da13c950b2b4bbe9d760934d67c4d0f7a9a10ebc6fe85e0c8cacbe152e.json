@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"User tried researching historical music trends in 2020\",\n    \"importance\": 0.9,\n    \"event_date\": \"2020-01-01\",\n    \"category\": \"behaviors\"\n  },\n  {\n    \"content\": \"User found researching historical music trends tedious and uninspiring\",\n    \"importance\": 0.8,\n    \"event_date\": null,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User felt overwhelmed by the volume of literature, videos, and academic papers during research\",\n    \"importance\": 0.9,\n    \"event_date\": null,\n    \"category\": \"behaviors\"\n  },\n  {\n    \"content\": \"User perceived the research as resembling searching for a needle in a haystack\",\n    \"importance\": 0.8,\n    \"event_date\": null,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User lost sight of what initially drew them to historical music trends due to information overload\",\n    \"importance\": 0.9,\n    \"event_date\": null,\n    \"category\": \"reflections\"\n  },\n  {\n    \"content\": \"User concluded that a less structured approach to exploration could be more fulfilling\",\n    \"importance\": 0.85,\n    \"event_date\": null,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User believes genuine interest emerges better through flexible, non-curriculum-based exploration\",\n    \"importance\": 0.9,\n    \"event_date\": null,\n    \"category\": \"preferences\"\n  }\n]",
+  "usage": {
+    "input_tokens": 657,
+    "output_tokens": 349,
+    "total_tokens": 1006
+  }
+}

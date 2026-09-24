@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"User_3 identifies a real blocker in the vendor API path impacting the onboarding risk phase at 37% complete\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User_3 requests alignment between Engineering, Compliance, and Vendor Management on retry thresholds, timeout handling, and manual-review triggers\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User_3 recommends a quick working session today to address API instability and compliance risks\",\n    \"importance\": 0.85,\n    \"event_date\": \"2025-07-22\",\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"The draft risk specification for vendor API instability is located at http://sharepoint/customer_onboarding_optimization/risk:_vendor_api_instability_spec\",\n    \"importance\": 0.8,\n    \"category\": \"important_detail\"\n  },\n  {\n    \"content\": \"Intermittent KYC/KYB failures and slow API responses are creating uncertainty in fallback behavior for onboarding workflows\",\n    \"importance\": 0.75,\n    \"category\": \"factual_context\"\n  }\n]",
+  "usage": {
+    "input_tokens": 1101,
+    "output_tokens": 275,
+    "total_tokens": 1376
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "content": "[{\"content\": \"Maria confirmed agreement to a previous statement\", \"importance\": 0.9, \"category\": \"preferences\"}, {\"content\": \"Maria expressed willingness to proceed with an action\", \"importance\": 0.8, \"category\": \"behavior\"}]",
+  "usage": {
+    "input_tokens": 475,
+    "output_tokens": 58,
+    "total_tokens": 533
+  }
+}

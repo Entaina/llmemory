@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"User is interested in cat breeds that are resistant to heat due to living in an arid environment.\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"The user's query focuses on heat resistance in cats, specifically in a hot and dry climate.\",\n    \"importance\": 0.8,\n    \"category\": \"factual_context\"\n  }\n]",
+  "usage": {
+    "input_tokens": 456,
+    "output_tokens": 96,
+    "total_tokens": 552
+  }
+}

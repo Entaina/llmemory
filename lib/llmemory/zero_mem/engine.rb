@@ -71,7 +71,7 @@ module Llmemory
 
         fused = @fusion.fuse(graph_scores: graph_scores, hierarchy_scores: hierarchy_scores, weights: weights)
         fused = boost_fusion_rows(fused, query: query, profile: profile)
-        seed_rows = fused.first(effective_k)
+        seed_rows = reserve_newest_rows(fused.first(effective_k), fused, effective_k)
         seed_ids = seed_rows.map { |r| r[:trace_id] }
 
         neighbor_ids = Array(retrieval[:neighbor_trace_ids]).map(&:to_s)
@@ -220,6 +220,22 @@ module Llmemory
         [need, @config.zero_mem_max_top_k].min
       end
 
+      def reserve_newest_rows(seed_rows, fused, effective_k)
+        dated = fused.filter_map do |row|
+          at = @storage.get_trace(@user_id, row[:trace_id])&.occurred_at
+          [row, at] if at
+        end
+        return seed_rows if dated.empty?
+
+        newest = dated.sort_by { |_, at| at }.last(2).map(&:first)
+        present = seed_rows.map { |row| row[:trace_id].to_s }.to_set
+        missing = newest.reject { |row| present.include?(row[:trace_id].to_s) }
+        return seed_rows if missing.empty?
+
+        room = [effective_k - missing.size, 0].max
+        (seed_rows.first(room) + missing).uniq { |row| row[:trace_id] }
+      end
+
       def seed_hierarchy_traces(retrieval)
         seed_ids = Array(retrieval[:seed_trace_ids]).map(&:to_s).to_set
         return retrieval[:traces] if seed_ids.empty?
@@ -227,9 +243,12 @@ module Llmemory
         retrieval[:traces].select { |t| seed_ids.include?(t.id.to_s) }
       end
 
+      GREETING_TURN = /\A(?:\w+:\s*)?(?:hi|hey|hello|good to see you|what'?s up|thanks|thank you|wow|cool|nice|great|ok|okay|yep|yeah)[!.?\s]*\z/i
+
       def boost_fusion_rows(fused, query:, profile:)
         q_tokens = Llmemory::Tokenizer.tokenize(query.to_s).reject { |t| t.length < 3 }.to_set
         temporal = profile.workload_class == :temporal || profile.freshness_requirement
+        newest = fused.filter_map { |row| @storage.get_trace(@user_id, row[:trace_id])&.occurred_at }.max
         boosted = fused.map do |row|
           trace = @storage.get_trace(@user_id, row[:trace_id])
           next row unless trace
@@ -246,9 +265,24 @@ module Llmemory
           if temporal && down.match?(/\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday|\d{4}-\d{2}-\d{2}|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\b/i)
             bonus += 0.08
           end
+          if newest && trace.occurred_at && trace.occurred_at >= newest
+            bonus += 0.35
+          end
+          bonus -= 0.12 if low_information_turn?(down)
+          project = trace.metadata[:project] || trace.metadata["project"]
+          if project && q_tokens.any? { |t| project.to_s.downcase.include?(t) }
+            bonus += 0.1
+          end
           row.merge(final: (row[:final].to_f + bonus).clamp(0.0, 1.5))
         end
         boosted.sort_by { |row| [-row[:final], row[:trace_id]] }
+      end
+
+      def low_information_turn?(down)
+        stripped = down.strip
+        return true if stripped.length < 40 && GREETING_TURN.match?(stripped)
+
+        stripped.length < 25
       end
 
       def hierarchy_trace_scores(query, traces)

@@ -7,6 +7,7 @@ require_relative "bench_trace"
 module LocalBenchmark
   class Harness < ZeroMemBenchmark::Harness
     def run_conversation(conversation)
+      @extraction_yield = { consolidate_sessions: 0, items_added: 0, empty_extractions: 0, parse_failures: 0 }
       memory = BenchTrace.measure("build_memory #{conversation['id']}") { build_memory(conversation) }
       assert_variant_memory_mode!(memory)
       mode = conversation["consolidate_mode"].to_s
@@ -42,6 +43,7 @@ module LocalBenchmark
       row = super
       @reader = reader
       row[:metadata] = query["metadata"] if query["metadata"]
+      row[:extraction_yield] = @extraction_yield.dup if @extraction_yield
       attach_debug_artifacts!(row, memory)
       row
     end
@@ -128,7 +130,9 @@ module LocalBenchmark
 
         usage_before = memory.llm_usage
         t0 = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+        items_before = long_term_item_count(memory)
         memory.consolidate!
+        track_extraction_yield!(memory, items_before, turns.size)
         consolidate_ms = (Process.clock_gettime(Process::CLOCK_MONOTONIC) - t0) * 1000.0
         usage_after = memory.llm_usage
         if BenchTrace.enabled?
@@ -144,11 +148,46 @@ module LocalBenchmark
       ENV["LLMEMORY_BENCH_SKIP_CONSOLIDATE"] == "1" && hybrid_variant?
     end
 
+    def long_term_item_count(memory)
+      lt = memory.instance_variable_get(:@long_term)
+      return 0 unless lt.respond_to?(:stats)
+
+      lt.stats[:items].to_i
+    rescue StandardError
+      0
+    end
+
+    def track_extraction_yield!(memory, items_before, turn_count)
+      return unless @extraction_yield
+
+      items_after = long_term_item_count(memory)
+      added = [items_after - items_before, 0].max
+      @extraction_yield[:consolidate_sessions] += 1
+      @extraction_yield[:items_added] += added
+      @extraction_yield[:empty_extractions] += 1 if added.zero? && turn_count.positive?
+      @extraction_yield[:parse_failures] += Llmemory::Extractors::FactExtractor.consume_parse_failures
+    end
+
     def sessions_for_hydrate(conversation)
       sessions = Array(conversation["sessions"])
+      if conversation["workload_class"].to_s == "memoryagentbench"
+        max_sessions = ENV.fetch("MEMORYAGENTBENCH_MAX_SESSIONS", "40").to_i
+        sessions = LocalBenchmark::Adapters::MemoryAgentBench.new.rank_sessions_for_queries(
+          sessions, conversation["queries"]
+        ).first(max_sessions)
+      end
       cap = conversation["step_max_sessions"].to_i
-      cap = ENV["LOCOMO_MAX_SESSIONS"].to_i if cap <= 0
-      cap = ENV["STEP_MAX_SESSIONS"].to_i if cap <= 0
+      if cap <= 0 && conversation["workload_class"].to_s == "locomo"
+        cap = ENV["LOCOMO_MAX_SESSIONS"].to_i
+        cap = ENV["STEP_MAX_SESSIONS"].to_i if cap <= 0
+      end
+      if conversation["workload_class"].to_s == "locomo_plus"
+        cap = ENV["LOCOMO_PLUS_MAX_SESSIONS"].to_i
+        cap = ENV["STEP_MAX_SESSIONS"].to_i if cap <= 0
+        return sessions if cap <= 0 || sessions.size <= cap
+
+        return sessions.last(cap)
+      end
       return sessions if cap <= 0
 
       sessions.first(cap)
@@ -161,6 +200,7 @@ module LocalBenchmark
           role: role,
           content: turn["content"].to_s,
           occurred_at: Llmemory.parse_occurred_at(turn["occurred_at"]),
+          metadata: turn["metadata"],
           idempotency_key: turn["id"],
           add_to_checkpoint: true
         )
@@ -169,7 +209,8 @@ module LocalBenchmark
         memory.add_message(
           role: role,
           content: turn["content"].to_s,
-          occurred_at: Llmemory.parse_occurred_at(turn["occurred_at"])
+          occurred_at: Llmemory.parse_occurred_at(turn["occurred_at"]),
+          metadata: turn["metadata"]
         )
       end
     end

@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"User_6 agrees that the rule language regarding Legal stamping of verification and data-handling in the regulatory scope ambiguity specification is the final unresolved element.\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"If Legal stamps verification and data-handling in the regulatory scope ambiguity specification on 2025-07-14, QA can freeze the confirmed set cleanly and Ops will not inherit a fuzzy baseline.\",\n    \"importance\": 0.9,\n    \"event_date\": \"2025-07-14\",\n    \"category\": \"decisions\"\n  },\n  {\n    \"content\": \"User_7 owns responsibility for tagging source, version, timestamp, and reporter for each weak reporting link in the regulatory compliance control gaps specification.\",\n    \"importance\": 0.9,\n    \"category\": \"responsibilities\"\n  },\n  {\n    \"content\": \"User_7 recommends that Ops own the evidence trail for all controls, including source, version, timestamp, and a reviewer-proof status flag, while IA only intervenes for true exceptions.\",\n    \"importance\": 0.9,\n    \"category\": \"recommendations\"\n  },\n  {\n    \"content\": \"User_7 previously experienced a failure in Project Beacon where 'reporting ready' status masked stale evidence, leading to the recommendation of stricter controls on provisional entries.\",\n    \"importance\": 0.8,\n    \"category\": \"experiences\"\n  },\n  {\n    \"content\": \"@User_7 will close the phase cleanly\",\n    \"importance\": 0.9,\n    \"category\": \"commitments\"\n  }\n]",
+  "usage": {
+    "input_tokens": 965,
+    "output_tokens": 360,
+    "total_tokens": 1325
+  }
+}

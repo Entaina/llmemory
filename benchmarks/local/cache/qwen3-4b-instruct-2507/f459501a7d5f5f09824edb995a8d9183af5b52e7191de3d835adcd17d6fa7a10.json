@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"User_6 agrees that splitting validation into changed flows and unchanged onboarding keeps the gate operational rather than interpretive.\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User_6 requests that Security validate the redline date and trigger version together in the specification to prevent a clean stamp on a stale control state.\",\n    \"importance\": 0.9,\n    \"event_date\": null,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"Ops must timestamp the redline stamp in http://sharepoint/customer_onboarding_optimization/risk:_data_privacy_gaps_spec by today (2025-07-23)\",\n    \"importance\": 0.9,\n    \"event_date\": \"2025-07-23\",\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"Security can validate a single snapshot of the redline date and trigger version once timestamped in the spec.\",\n    \"importance\": 0.8,\n    \"event_date\": null,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"Ops should stop guessing control states after the redline stamp is properly timestamped in the specification.\",\n    \"importance\": 0.7,\n    \"event_date\": null,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"Missing stamps are treated as blockers only for changed flows, not for the rest of onboarding.\",\n    \"importance\": 0.8,\n    \"event_date\": null,\n    \"category\": \"policy\"\n  }\n]",
+  "usage": {
+    "input_tokens": 1418,
+    "output_tokens": 355,
+    "total_tokens": 1773
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"User is experimenting with citrus fruits in cocktails, specifically grapefruit and lemon, and seeks recommendations for other citrus types that pair well with gin and lavender.\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User wants to try different citrus fruits beyond grapefruit and lemon in gin and lavender cocktails.\",\n    \"importance\": 0.85,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User is interested in citrus fruit pairings with gin and lavender, indicating a preference for botanical or aromatic cocktail combinations.\",\n    \"importance\": 0.8,\n    \"category\": \"preferences\"\n  }\n]",
+  "usage": {
+    "input_tokens": 514,
+    "output_tokens": 153,
+    "total_tokens": 667
+  }
+}

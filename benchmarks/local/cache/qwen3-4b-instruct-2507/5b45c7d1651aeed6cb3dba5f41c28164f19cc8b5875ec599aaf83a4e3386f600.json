@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"Hervé was one of the first Norman mercenaries to serve as a Byzantine general in the 1050s.\",\n    \"importance\": 0.9,\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"Norman mercenaries were serving as far away as Trebizond and Georgia by the 1050s.\",\n    \"importance\": 0.8,\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"Norman mercenaries were based at Malatya and Edessa under the Byzantine duke of Antioch, Isaac Komnenos in the 1050s.\",\n    \"importance\": 0.9,\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"Robert Crispin led the Normans of Edessa against the Turks in the 1060s.\",\n    \"importance\": 0.8,\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"Roussel de Bailleul attempted to carve out an independent state in Asia Minor with support from the local population, but was stopped by Byzantine general Alexius Komnenos.\",\n    \"importance\": 0.9,\n    \"category\": \"factual_context\"\n  }\n]",
+  "usage": {
+    "input_tokens": 637,
+    "output_tokens": 287,
+    "total_tokens": 924
+  }
+}

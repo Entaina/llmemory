@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"The speaker is treating legal and reporting processes as a compliance Jenga tower, where stability depends on careful alignment across teams and definitions.\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"Finance, Risk, and Sustainability teams will be consulted to determine which definitions are non-negotiable versus those that can be localized.\",\n    \"importance\": 0.9,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"The framework for legal and reporting must be finalized before July 19, 2025.\",\n    \"importance\": 0.95,\n    \"event_date\": \"2025-07-19\",\n    \"category\": \"deadline\"\n  },\n  {\n    \"content\": \"The speaker will confirm definitions with Finance, Risk, and Sustainability to shape the compliance framework prior to the July 19 cutoff.\",\n    \"importance\": 0.8,\n    \"category\": \"behavior\"\n  }\n]",
+  "usage": {
+    "input_tokens": 519,
+    "output_tokens": 224,
+    "total_tokens": 743
+  }
+}

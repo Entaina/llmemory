@@ -1,0 +1,8 @@
+{
+  "content": "Musical group activities this weekend matching preferences",
+  "usage": {
+    "input_tokens": 65,
+    "output_tokens": 9,
+    "total_tokens": 74
+  }
+}

@@ -35,7 +35,7 @@ module Llmemory
         ranked_turns = rank_units(query, profile, turns.uniq { |u| u.id })
         top_turns = ranked_turns.first([k, ranked_turns.size].min)
 
-        seed_trace_ids = top_turns.flat_map(&:member_trace_ids).uniq
+        seed_trace_ids = (top_turns.flat_map(&:member_trace_ids) + recent_trace_ids(user_id)).uniq
         neighbor_trace_ids = expand_local_neighbors(user_id, seed_trace_ids, top_turns) - seed_trace_ids
         ordered_ids = (seed_trace_ids + neighbor_trace_ids).uniq
         traces = ordered_ids.map { |id| @storage.get_trace(user_id, id) }.compact
@@ -70,7 +70,7 @@ module Llmemory
 
       def rank_units(query, profile, units)
         docs = units.map do |u|
-          { id: u.id, text: unit_text(u), unit: u }
+          { id: u.id, text: focus_text(query, unit_text(u)), unit: u }
         end
         scored = @bm25.score_documents(query, docs)
         scored.sort_by { |d| -combined_score(query, profile, d) }
@@ -94,6 +94,17 @@ module Llmemory
         combined_score(query, profile, doc)
       end
 
+      def focus_text(query, text)
+        return text if text.length <= 480
+
+        tokens = Llmemory::Tokenizer.tokenize(query).select { |token| token.length >= 4 }
+        sentences = text.split(/(?<=[.!?])\s+/)
+        picked = sentences.select { |sentence| tokens.any? { |token| sentence.downcase.include?(token) } }
+        excerpt = picked.join(" ")
+        excerpt = text if excerpt.empty?
+        excerpt.length > 800 ? excerpt[0, 800] : excerpt
+      end
+
       def unit_text(unit)
         unit.member_trace_ids.map do |tid|
           @storage.get_trace(unit.user_id, tid)&.content
@@ -115,6 +126,13 @@ module Llmemory
 
         age = Time.now - unit.occurred_to
         1.0 / (1.0 + (age / 86_400.0))
+      end
+
+      def recent_trace_ids(user_id, limit: 2)
+        @storage.list_traces(user_id)
+                .sort_by { |trace| [trace.occurred_at || Time.at(0), trace.sequence.to_i] }
+                .last(limit)
+                .map(&:id)
       end
 
       def expand_local_neighbors(user_id, trace_ids, turn_units)

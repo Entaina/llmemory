@@ -52,7 +52,13 @@ module SuiteDiagHelpers
       hybrid = bench_runs.find { |r| r[:variant] == "hybrid" }
       next [] unless hybrid
 
-      primary_metric = bench == "locomo" ? "locomo_f1" : "substring_em"
+      primary_metric = case bench.to_s
+                       when "locomo" then "locomo_f1"
+                       when "memory_arena" then "arena_match"
+                       when "memsyco" then "memsyco_judge"
+                       when "mem2act" then "tool_accuracy"
+                       else "substring_em"
+                       end
       {
         bench: bench,
         hybrid_vs_classic: delta_metrics(hybrid, classic, primary_metric),

@@ -30,6 +30,8 @@ module LocalBenchmark
         list = each_conversation.to_a
         list = Canonical.limit_conversations(list, limit: limit) if limit
         list.each { |c| Canonical.validate!(c) }
+        return list if limit.nil?
+
         list.map { |conv| cap_sessions(conv, max_sessions) }
       end
 
@@ -44,13 +46,31 @@ module LocalBenchmark
         end
       end
 
+      STOPWORDS = %w[the and for from with that this what when where which who how were was are did].freeze
+
       def cap_sessions(conv, max_sessions)
         sessions = Array(conv["sessions"])
-        return conv if sessions.size <= max_sessions
+        return conv if max_sessions <= 0 || sessions.size <= max_sessions
 
         dup = conv.dup
-        dup["sessions"] = sessions.first(max_sessions)
+        dup["sessions"] = rank_sessions_for_queries(sessions, conv["queries"]).first(max_sessions)
         dup
+      end
+
+      def rank_sessions_for_queries(sessions, queries)
+        keywords = Array(queries).flat_map { |q| question_keywords(q["text"]) }.uniq
+        return sessions if keywords.empty?
+
+        sessions.sort_by do |session|
+          texts = session["turns"].map { |t| t["content"].to_s.downcase }
+          best = texts.map { |text| keywords.count { |kw| text.include?(kw) } }.max || 0
+          total = texts.sum { |text| keywords.count { |kw| text.include?(kw) } }
+          [-best, -total, session["id"].to_s]
+        end
+      end
+
+      def question_keywords(question)
+        question.to_s.downcase.scan(/[a-z0-9]{4,}/).reject { |w| STOPWORDS.include?(w) }.uniq
       end
 
       private
@@ -89,20 +109,7 @@ module LocalBenchmark
         chunks = extract_chunks(record)
         sessions = build_chunk_sessions(chunks)
 
-        questions = Array(record["questions"] || record["qa_pairs"] || [record])
-        queries = questions.filter_map.with_index do |qa, qidx|
-          qtext = qa["question"] || qa["query"] || record["question"]
-          ans = qa["answer"] || qa["gold_answer"] || record["answer"]
-          next if qtext.to_s.empty?
-
-          {
-            "id" => qa["qa_pair_id"] || qa["id"] || "q#{qidx + 1}",
-            "text" => qtext.to_s,
-            "gold_answer" => ans.to_s,
-            "gold_trace_ids" => [],
-            "question_type" => @subset
-          }
-        end
+        queries = build_queries(record)
 
         {
           "id" => record["id"] || record["sample_id"] || "mab_#{file_idx}_#{rec_idx}",
@@ -128,6 +135,66 @@ module LocalBenchmark
               }
             end
           }
+        end
+      end
+
+      def build_queries(record)
+        pairs = parallel_question_answer_pairs(record)
+        return pairs if pairs.any?
+
+        questions = Array(record["qa_pairs"] || record["questions"] || [record])
+        questions.filter_map.with_index do |qa, qidx|
+          next unless qa.is_a?(Hash)
+
+          qtext = qa["question"] || qa["query"] || record["question"]
+          ans = qa["answer"] || qa["gold_answer"] || record["answer"]
+          next if qtext.to_s.empty?
+
+          gold_answers = normalize_gold_answers(ans)
+          {
+            "id" => qa["qa_pair_id"] || qa["id"] || "q#{qidx + 1}",
+            "text" => qtext.to_s,
+            "gold_answer" => gold_answers.first.to_s,
+            "gold_answers" => gold_answers,
+            "gold_trace_ids" => [],
+            "question_type" => @subset
+          }
+        end
+      end
+
+      def parallel_question_answer_pairs(record)
+        qlist = record["questions"]
+        alist = record["answers"]
+        return [] unless qlist.is_a?(Array) && alist.is_a?(Array) && qlist.size == alist.size
+        return [] if qlist.empty?
+        return [] if qlist.first.is_a?(Hash)
+
+        ids = Array(record.dig("metadata", "qa_pair_ids"))
+        qlist.each_with_index.filter_map do |qtext, qidx|
+          next if qtext.to_s.strip.empty?
+
+          gold_answers = normalize_gold_answers(alist[qidx])
+          next if gold_answers.empty?
+
+          {
+            "id" => ids[qidx] || "q#{qidx + 1}",
+            "text" => qtext.to_s,
+            "gold_answer" => gold_answers.first.to_s,
+            "gold_answers" => gold_answers,
+            "gold_trace_ids" => [],
+            "question_type" => @subset
+          }
+        end
+      end
+
+      def normalize_gold_answers(raw)
+        case raw
+        when Array
+          raw.flat_map { |v| normalize_gold_answers(v) }.map(&:to_s).reject(&:empty?).uniq
+        when nil
+          []
+        else
+          [raw.to_s].reject(&:empty?)
         end
       end
 

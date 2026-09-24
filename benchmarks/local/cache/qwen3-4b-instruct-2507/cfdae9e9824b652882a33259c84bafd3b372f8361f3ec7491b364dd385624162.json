@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"Caroline experienced transitioning and found acceptance with support from friends, family, and people she looked up to\",\n    \"importance\": 0.9,\n    \"category\": \"experiences\"\n  },\n  {\n    \"content\": \"Caroline values emotional support and wants to pass on the same kind of support to others who need it\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"Caroline finds joy in bringing comfort and helping others grow\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"Caroline expresses gratitude for the support of close people, stating their encouragement helped shape her identity\",\n    \"importance\": 0.8,\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"The assistant (Melanie) acknowledges and celebrates Caroline's journey of self-discovery and shared support\",\n    \"importance\": 0.8,\n    \"category\": \"interactions\"\n  },\n  {\n    \"content\": \"The assistant expresses a preference for being present and supportive during family moments, such as camping trips\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  }\n]",
+  "usage": {
+    "input_tokens": 845,
+    "output_tokens": 275,
+    "total_tokens": 1120
+  }
+}

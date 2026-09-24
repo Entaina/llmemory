@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"The Social Chapter was developed in 1989 by the representatives of UNICE, the employers' confederation, the European Trade Union Confederation (ETUC), and CEEP, the European Centre of Public Enterprises.\",\n    \"importance\": 0.9,\n    \"event_date\": \"1989-01-01\",\n    \"subject\": \"Social Chapter\",\n    \"predicate\": \"developed_by\",\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"A toned down version of the Social Chapter was adopted as the Social Charter at the 1989 Strasbourg European Council.\",\n    \"importance\": 0.9,\n    \"event_date\": \"1989-06-01\",\n    \"subject\": \"Social Charter\",\n    \"predicate\": \"adopted_at\",\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"The Social Charter declares 30 general principles, including fair remuneration of employment, health and safety at work, rights of disabled and elderly, workers' rights, vocational training, and improvements of living conditions.\",\n    \"importance\": 0.8,\n    \"event_date\": null,\n    \"subject\": \"Social Charter\",\n    \"predicate\": \"includes_principles_of\",\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"The Social Charter became the basis for 40 pieces of European Community legislation on employment, health and safety, workers' rights, vocational training, and living conditions.\",\n    \"importance\": 0.8,\n    \"event_date\": null,\n    \"subject\": \"Social Charter\",\n    \"predicate\": \"served_as_basis_for\",\n    \"category\": \"factual_context\"\n  }\n]",
+  "usage": {
+    "input_tokens": 705,
+    "output_tokens": 382,
+    "total_tokens": 1087
+  }
+}

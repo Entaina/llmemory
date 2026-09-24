@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"User and assistant agree on the importance of standing together to make positive changes in the community\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User expresses a commitment to speaking up for their community and discussing important issues\",\n    \"importance\": 0.9,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"User believes that working together as a team is essential for tackling problems and building a strong community\",\n    \"importance\": 0.85,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User acknowledges Maria's support and appreciates her role in the community effort\",\n    \"importance\": 0.7,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"Assistant recognizes user's initiative and views their advocacy as admirable and inspiring\",\n    \"importance\": 0.8,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"User and assistant collaborate to bring about positive change in the neighborhood\",\n    \"importance\": 0.9,\n    \"category\": \"behavior\"\n  }\n]",
+  "usage": {
+    "input_tokens": 875,
+    "output_tokens": 254,
+    "total_tokens": 1129
+  }
+}

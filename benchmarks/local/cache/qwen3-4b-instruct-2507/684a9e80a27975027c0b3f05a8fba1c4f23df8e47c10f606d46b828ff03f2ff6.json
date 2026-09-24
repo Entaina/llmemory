@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"Jacksonville is the largest city by population in Florida and the largest city by area in the contiguous United States\",\n    \"importance\": 0.9,\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"Jacksonville is the county seat of Duval County\",\n    \"importance\": 0.9,\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"The city government of Jacksonville consolidated with Duval County in 1968\",\n    \"importance\": 0.9,\n    \"event_date\": \"1968-01-01\",\n    \"category\": \"historical_event\"\n  },\n  {\n    \"content\": \"Jacksonville has an estimated population of 853,382 as of 2014\",\n    \"importance\": 0.8,\n    \"event_date\": \"2014-01-01\",\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"Jacksonville is the most populous city proper in Florida and the Southeast\",\n    \"importance\": 0.8,\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"Jacksonville is the 12th most populous city in the United States\",\n    \"importance\": 0.8,\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"Jacksonville is the principal city in the Jacksonville metropolitan area, which has a population of 1,345,596\",\n    \"importance\": 0.8,\n    \"category\": \"factual_context\"\n  }\n]",
+  "usage": {
+    "input_tokens": 582,
+    "output_tokens": 364,
+    "total_tokens": 946
+  }
+}

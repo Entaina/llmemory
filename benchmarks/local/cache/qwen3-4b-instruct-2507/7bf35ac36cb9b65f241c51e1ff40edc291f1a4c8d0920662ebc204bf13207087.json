@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"User_1 is setting up a short triage session to review the pilot cohort, confirm whether it’s representative, and align on the highest-impact fixes before the pattern hardens.\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"The working reference for the triage session is http://sharepoint/customer_onboarding_optimization/risk:_high_verification_drop_off_spec.\",\n    \"importance\": 0.8,\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"User_1 requires that any known blockers or anomaly reads be sent before the triage meeting.\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"The triage session is scheduled prior to the pattern hardening, indicating a time-sensitive decision point.\",\n    \"importance\": 0.7,\n    \"category\": \"factual_context\"\n  }\n]",
+  "usage": {
+    "input_tokens": 1563,
+    "output_tokens": 214,
+    "total_tokens": 1777
+  }
+}

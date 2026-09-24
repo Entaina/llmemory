@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"Caroline is going swimming with the kids on 2023-05-08\",\n    \"importance\": 0.9,\n    \"event_date\": \"2023-05-08\",\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"Assistant (Melanie) engages in painting as a creative outlet for self-expression and relaxation\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"Assistant (Melanie) painted a lake sunrise last year (2022)\",\n    \"importance\": 0.8,\n    \"event_date\": \"2022-01-01\",\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"User expressed interest in supporting individuals with similar issues\",\n    \"importance\": 0.7,\n    \"category\": \"preferences\"\n  }\n]",
+  "usage": {
+    "input_tokens": 580,
+    "output_tokens": 207,
+    "total_tokens": 787
+  }
+}

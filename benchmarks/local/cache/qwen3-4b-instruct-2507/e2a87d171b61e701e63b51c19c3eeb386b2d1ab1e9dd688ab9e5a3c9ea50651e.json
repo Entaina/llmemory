@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"User rehearses with a small group of dancers after work\",\n    \"importance\": 0.9,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"The dance group performing at the festival is composed of dancers that the user has rehearsed with\",\n    \"importance\": 0.95,\n    \"category\": \"identity_role\"\n  },\n  {\n    \"content\": \"User is involved in choreography projects for a festival performance scheduled next month (February 2023)\",\n    \"importance\": 0.9,\n    \"event_date\": \"2023-02-01\",\n    \"category\": \"project\"\n  },\n  {\n    \"content\": \"User plans to make time to dance and vent as a way to destress\",\n    \"importance\": 0.8,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"User expresses strong determination to complete the dance studio setup process despite nerves\",\n    \"importance\": 0.7,\n    \"category\": \"motivation\"\n  },\n  {\n    \"content\": \"User believes success in the dance project is nearly within reach\",\n    \"importance\": 0.8,\n    \"category\": \"belief_state\"\n  }\n]",
+  "usage": {
+    "input_tokens": 905,
+    "output_tokens": 275,
+    "total_tokens": 1180
+  }
+}

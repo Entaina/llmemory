@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"Legal is being asked to confirm the final retention language in the draft document\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"Internal Audit is being asked to point to the exact control requirement in the draft document\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"The concern is that leaving either the retention language or the control requirement open could push approvals past 2025-07-29\",\n    \"importance\": 0.9,\n    \"event_date\": \"2025-07-29\",\n    \"category\": \"deadlines\"\n  },\n  {\n    \"content\": \"There is a risk of creating avoidable exceptions downstream if approvals are delayed past 2025-07-29\",\n    \"importance\": 0.8,\n    \"event_date\": \"2025-07-29\",\n    \"category\": \"risks\"\n  }\n]",
+  "usage": {
+    "input_tokens": 493,
+    "output_tokens": 232,
+    "total_tokens": 725
+  }
+}

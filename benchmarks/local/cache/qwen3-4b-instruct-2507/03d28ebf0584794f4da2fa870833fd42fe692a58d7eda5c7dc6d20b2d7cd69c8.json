@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"User is experimenting with classic cocktails including Pimm's No. 1 and the Bee's Knees, indicating a preference for gin-based drinks with honey or botanical elements.\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User specifically seeks tips on making a good honey syrup for cocktails, showing interest in homemade, flavorful syrups to enhance cocktail profiles.\",\n    \"importance\": 0.85,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User has a demonstrated preference for gin and honey combinations, as evidenced by their interest in the Bee's Knees cocktail.\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User is interested in creating homemade honey syrup, suggesting a preference for natural, artisanal ingredients over store-bought or commercial mixtures.\",\n    \"importance\": 0.8,\n    \"category\": \"behaviors\"\n  }\n]",
+  "usage": {
+    "input_tokens": 881,
+    "output_tokens": 221,
+    "total_tokens": 1102
+  }
+}

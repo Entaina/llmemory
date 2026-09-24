@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"Caroline and the assistant are on a trip together\",\n    \"importance\": 0.9,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"User attended a transgender poetry reading on 2023-10-13\",\n    \"importance\": 0.9,\n    \"event_date\": \"2023-10-13\",\n    \"category\": \"activity\"\n  },\n  {\n    \"content\": \"The assistant responds to Caroline in a supportive tone, indicating shared experience on the trip\",\n    \"importance\": 0.8,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"User agrees that something is 'priceless' and expresses positive sentiment toward Caroline's experience\",\n    \"importance\": 0.7,\n    \"category\": \"preferences\"\n  }\n]",
+  "usage": {
+    "input_tokens": 563,
+    "output_tokens": 189,
+    "total_tokens": 752
+  }
+}

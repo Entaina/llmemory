@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"User wants to collaborate with assistant on creating content and managing social media accounts\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User's goal in collaboration is to make the dance studio look awesome\",\n    \"importance\": 0.9,\n    \"category\": \"goals\"\n  },\n  {\n    \"content\": \"User and assistant agree to work together to make an impact through dance education and community inspiration\",\n    \"importance\": 0.9,\n    \"category\": \"collaboration_goals\"\n  },\n  {\n    \"content\": \"User expresses enthusiasm for teaching others to chase their dreams through dance\",\n    \"importance\": 0.8,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"Both user and assistant express mutual appreciation and positive reinforcement of each other's contributions\",\n    \"importance\": 0.7,\n    \"category\": \"interactions\"\n  },\n  {\n    \"content\": \"User expressed gratitude for support\",\n    \"importance\": 0.6,\n    \"category\": \"emotions\"\n  },\n  {\n    \"content\": \"User has a history of seeking LGBTQ support\",\n    \"importance\": 0.8,\n    \"category\": \"background_context\"\n  }\n]",
+  "usage": {
+    "input_tokens": 578,
+    "output_tokens": 282,
+    "total_tokens": 860
+  }
+}

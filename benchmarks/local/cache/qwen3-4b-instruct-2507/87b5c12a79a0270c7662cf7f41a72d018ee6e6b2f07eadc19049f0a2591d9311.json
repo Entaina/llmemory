@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"The team will freeze the control-impact wording and keep clean text moving to close the phase as Completed\",\n    \"importance\": 0.9,\n    \"category\": \"decisions\"\n  },\n  {\n    \"content\": \"The phase will be closed as Completed without dragging training or evidence mapping into rework\",\n    \"importance\": 0.9,\n    \"category\": \"decisions\"\n  }\n]",
+  "usage": {
+    "input_tokens": 472,
+    "output_tokens": 95,
+    "total_tokens": 567
+  }
+}

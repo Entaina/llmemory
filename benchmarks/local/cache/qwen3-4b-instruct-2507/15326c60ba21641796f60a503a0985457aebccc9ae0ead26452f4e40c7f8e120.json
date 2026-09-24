@@ -1,0 +1,8 @@
+{
+  "content": "[{\"content\": \"User expressed gratitude for support\", \"importance\": 0.9, \"category\": \"preferences\"}, {\"content\": \"User has a history of seeking LGBTQ support\", \"importance\": 0.8, \"category\": \"behavior\"}]",
+  "usage": {
+    "input_tokens": 470,
+    "output_tokens": 56,
+    "total_tokens": 526
+  }
+}

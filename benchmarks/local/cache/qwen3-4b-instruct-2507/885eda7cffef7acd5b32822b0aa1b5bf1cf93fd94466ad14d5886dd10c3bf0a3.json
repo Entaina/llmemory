@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"Caroline is going swimming with the kids on 2023-05-08\",\n    \"importance\": 0.9,\n    \"event_date\": \"2023-05-08\",\n    \"subject\": \"caroline\",\n    \"predicate\": \"is going swimming with the kids\",\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"Caroline values self-care as vital\",\n    \"importance\": 0.9,\n    \"event_date\": null,\n    \"subject\": \"caroline\",\n    \"predicate\": \"values self-care as vital\",\n    \"category\": \"preferences\"\n  }\n]",
+  "usage": {
+    "input_tokens": 490,
+    "output_tokens": 147,
+    "total_tokens": 637
+  }
+}

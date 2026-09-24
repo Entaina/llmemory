@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"User practices contemporary and hip-hop dances with a small group of dancers after work\",\n    \"importance\": 0.9,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"User is involved in choreography projects targeting performance at a festival next month (February 2023)\",\n    \"importance\": 0.95,\n    \"event_date\": \"2023-02-28\",\n    \"category\": \"commitment\"\n  },\n  {\n    \"content\": \"The dance group performing at the festival is composed of dancers that the user has rehearsed with after work\",\n    \"importance\": 0.9,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"User expressed emotional engagement with a dance studio by the water, describing it as 'really emotional and powerful'\",\n    \"importance\": 0.8,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User is looking for a dance studio location that will inspire them\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User expressed enthusiasm about participating in a group or initiative\",\n    \"importance\": 0.8,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"User joined an LGBTQ support group\",\n    \"importance\": 0.9,\n    \"category\": \"identity\"\n  },\n  {\n    \"content\": \"User plans to make time to dance and vent as a way to destress\",\n    \"importance\": 0.85,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"User is determined to complete the preparation for their dance studio project despite feelings of excitement and nerves\",\n    \"importance\": 0.9,\n    \"category\": \"commitment\"\n  }\n]",
+  "usage": {
+    "input_tokens": 701,
+    "output_tokens": 404,
+    "total_tokens": 1105
+  }
+}

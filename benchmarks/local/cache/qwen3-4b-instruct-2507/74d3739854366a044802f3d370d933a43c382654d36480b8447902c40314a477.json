@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"User is inspired by personal experiences and their own journey of self-discovery in writing a screenplay about a thirty-year-old woman dealing with loss and identity\",\n    \"importance\": 0.9,\n    \"event_date\": null,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User's screenplay features a main character on a road trip to heal and grow after experiencing loss\",\n    \"importance\": 0.8,\n    \"event_date\": null,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"User plans to submit their screenplay for attention, hoping it will be noticed and made into a film\",\n    \"importance\": 0.7,\n    \"event_date\": null,\n    \"category\": \"goals\"\n  },\n  {\n    \"content\": \"Assistant supports the user's creative work and expresses enthusiasm for the story's emotional depth\",\n    \"importance\": 0.6,\n    \"event_date\": null,\n    \"category\": \"interaction\"\n  },\n  {\n    \"content\": \"User identifies as Joanna\",\n    \"importance\": 0.9,\n    \"event_date\": null,\n    \"category\": \"identity\"\n  },\n  {\n    \"content\": \"Assistant refers to themselves as Nate\",\n    \"importance\": 0.8,\n    \"event_date\": null,\n    \"category\": \"identity\"\n  }\n]",
+  "usage": {
+    "input_tokens": 888,
+    "output_tokens": 299,
+    "total_tokens": 1187
+  }
+}

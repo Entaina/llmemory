@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"User expresses strong agreement with the value of spending time with loved ones and emphasizes that such moments bring happiness and gratitude\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User identifies family as central to their life values and well-being\",\n    \"importance\": 0.9,\n    \"category\": \"values\"\n  },\n  {\n    \"content\": \"User is motivated to create a family for children in need despite being a single parent\",\n    \"importance\": 0.9,\n    \"category\": \"motivation\"\n  },\n  {\n    \"content\": \"User has committed to providing a safe and loving home for children through adoption\",\n    \"importance\": 0.9,\n    \"category\": \"commitment\"\n  },\n  {\n    \"content\": \"User is researching adoption agencies that support LGBTQ+ families\",\n    \"importance\": 0.9,\n    \"category\": \"research_target\"\n  },\n  {\n    \"content\": \"User chose an adoption agency because it supports LGBTQ+ individuals\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"Assistant (Melanie) engages in painting as a creative outlet for self-expression and relaxation\",\n    \"importance\": 0.8,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"Assistant (Melanie) painted a lake sunrise last year (2022)\",\n    \"importance\": 0.7,\n    \"event_date\": \"2022-01-01\",\n    \"category\": \"activity\"\n  }\n]",
+  "usage": {
+    "input_tokens": 700,
+    "output_tokens": 357,
+    "total_tokens": 1057
+  }
+}

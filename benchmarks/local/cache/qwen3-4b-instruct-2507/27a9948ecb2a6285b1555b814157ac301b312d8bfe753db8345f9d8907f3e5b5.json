@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"Data Engineering is requested to confirm open source-mapping fixes and timing for validation support\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"Case Management is requested to flag any downstream workflow impacts\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"The single reference point for the discussion is the spec at http://sharepoint/aml_(anti_money_laundering)_project/cdd_data_source_integration_spec\",\n    \"importance\": 0.8,\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"A working session is proposed to be locked for this week, with owners to be assigned by EOD Friday, 2025-07-25\",\n    \"importance\": 0.9,\n    \"event_date\": \"2025-07-25\",\n    \"category\": \"deadlines\"\n  },\n  {\n    \"content\": \"The working session is scheduled for this week, with assignment of owners due by EOD Friday (2025-07-25)\",\n    \"importance\": 0.8,\n    \"event_date\": \"2025-07-25\",\n    \"category\": \"deadlines\"\n  }\n]",
+  "usage": {
+    "input_tokens": 1069,
+    "output_tokens": 296,
+    "total_tokens": 1365
+  }
+}

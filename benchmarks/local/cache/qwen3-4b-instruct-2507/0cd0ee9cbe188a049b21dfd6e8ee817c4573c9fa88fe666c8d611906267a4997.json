@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"User rode the Revenge of the Mummy rollercoaster three times in a row at Universal Studios Hollywood on 2023-10-15\",\n    \"importance\": 0.9,\n    \"event_date\": \"2023-10-15\",\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"User won 'Best Adult Costume' award at Mickey's Halloween Party event at Disneyland on 2023-09-24\",\n    \"importance\": 0.9,\n    \"event_date\": \"2023-09-24\",\n    \"category\": \"achievement\"\n  },\n  {\n    \"content\": \"User enjoys thrill rides, specifically rollercoasters like the Revenge of the Mummy\",\n    \"importance\": 0.85,\n    \"event_date\": null,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"The Revenge of the Mummy rollercoaster features a launch system that accelerates from 0 to 40 mph in just 2 seconds\",\n    \"importance\": 0.6,\n    \"event_date\": null,\n    \"category\": \"factual_context\"\n  }\n]",
+  "usage": {
+    "input_tokens": 795,
+    "output_tokens": 267,
+    "total_tokens": 1062
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"User won 'Best Adult Costume' award at Mickey's Halloween Party event at Disneyland on 2023-09-24\",\n    \"importance\": 0.95,\n    \"event_date\": \"2023-09-24\",\n    \"category\": \"achievement\"\n  },\n  {\n    \"content\": \"Assistant acknowledges user's award-winning costume and expresses interest in learning more about it\",\n    \"importance\": 0.8,\n    \"event_date\": null,\n    \"category\": \"interaction_context\"\n  },\n  {\n    \"content\": \"User is asked about their award-winning costume and how they might adapt it for HHN\",\n    \"importance\": 0.9,\n    \"event_date\": null,\n    \"category\": \"preferences\"\n  }\n]",
+  "usage": {
+    "input_tokens": 590,
+    "output_tokens": 177,
+    "total_tokens": 767
+  }
+}

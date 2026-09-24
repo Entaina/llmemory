@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"User will check the Disneyland website or official Disneyland app for showtimes and parade schedules for 'Frightfully Fun Parade' and 'Mickey's Trick & Treat' stage shows\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User plans to visit the Tiger Trail exhibit at the San Diego Zoo\",\n    \"importance\": 0.8,\n    \"category\": \"behaviors\"\n  },\n  {\n    \"content\": \"Tiger Trail exhibit raises awareness about critically endangered Sumatran tigers and their habitat threats\",\n    \"importance\": 0.9,\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"User intends to participate in conservation programs at the San Diego Zoo as part of their research into conservation efforts\",\n    \"importance\": 0.9,\n    \"category\": \"research_target\"\n  },\n  {\n    \"content\": \"User will research conservation efforts at the San Diego Zoo, specifically focusing on Sumatran tigers and habitat threats\",\n    \"importance\": 0.85,\n    \"category\": \"research_target\"\n  }\n]",
+  "usage": {
+    "input_tokens": 626,
+    "output_tokens": 252,
+    "total_tokens": 878
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"User_1 recommends freezing the `Completed` status only after Legal signs off on wording and the sanitized pack is posted to prevent Audit from labeling it a soft close.\",\n    \"importance\": 0.9,\n    \"event_date\": null,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User_13 is requested to publish the quarantine split with `decision-owner` specified on every non-accepted row today.\",\n    \"importance\": 0.9,\n    \"event_date\": \"2025-07-21\",\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"User_10 identifies that the compliance program is at 26% completion, with control gaps being more nuanced due to updated regulatory interpretations and late surfacing of operational exceptions.\",\n    \"importance\": 0.8,\n    \"event_date\": null,\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"User_10 categorizes items into three buckets: fully closed, formal exception, or short-term mitigation.\",\n    \"importance\": 0.7,\n    \"event_date\": null,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"Legal, Risk, and Operations are advised to evaluate evidence ownership and testing cadence for items under their responsibility.\",\n    \"importance\": 0.6,\n    \"event_date\": null,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User_1 references the AML Project Crescent as a precedent where no decision-owner and no closure led to project failure, even with perfect lineage.\",\n    \"importance\": 0.9,\n    \"event_date\": null,\n    \"category\": \"factual_context\"\n  }\n]",
+  "usage": {
+    "input_tokens": 1395,
+    "output_tokens": 382,
+    "total_tokens": 1777
+  }
+}

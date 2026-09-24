@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"User has developed the skill of saying 'no' to protect their time\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User feels less stressed overall after learning to say 'no'\",\n    \"importance\": 0.85,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"User expresses contentment with living honestly and accepting themselves\",\n    \"importance\": 0.9,\n    \"category\": \"personal_values\"\n  },\n  {\n    \"content\": \"User agrees that the camping experience is priceless\",\n    \"importance\": 0.9,\n    \"event_date\": \"2023-10-19\",\n    \"category\": \"experience_evaluation\"\n  },\n  {\n    \"content\": \"User expresses happiness for someone else's good fortune\",\n    \"importance\": 0.7,\n    \"category\": \"emotional_response\"\n  }\n]",
+  "usage": {
+    "input_tokens": 589,
+    "output_tokens": 212,
+    "total_tokens": 801
+  }
+}

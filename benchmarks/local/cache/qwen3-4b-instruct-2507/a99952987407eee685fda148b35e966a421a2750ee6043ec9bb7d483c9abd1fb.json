@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"User expresses concern about holding breath during hallway scenes in dance studio environment, despite no actual threat or movement occurring\",\n    \"importance\": 0.8,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"User has a history of seeking LGBTQ support\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User and assistant agree to collaborate on creating content and managing social media accounts\",\n    \"importance\": 0.9,\n    \"category\": \"collaboration\"\n  },\n  {\n    \"content\": \"User's primary goal in collaboration is to make the dance studio look awesome\",\n    \"importance\": 0.9,\n    \"category\": \"goal\"\n  },\n  {\n    \"content\": \"User and assistant agree to work together to promote dance education and community inspiration\",\n    \"importance\": 0.8,\n    \"category\": \"objective\"\n  },\n  {\n    \"content\": \"User expresses enthusiasm for teaching others to chase their dreams through dance\",\n    \"importance\": 0.9,\n    \"category\": \"preference\"\n  },\n  {\n    \"content\": \"User expresses gratitude for assistant's support and encouragement\",\n    \"importance\": 0.8,\n    \"category\": \"emotional_response\"\n  },\n  {\n    \"content\": \"Assistant provides positive reinforcement by acknowledging user's progress and motivation\",\n    \"importance\": 0.9,\n    \"category\": \"interaction_pattern\"\n  }\n]",
+  "usage": {
+    "input_tokens": 661,
+    "output_tokens": 328,
+    "total_tokens": 989
+  }
+}

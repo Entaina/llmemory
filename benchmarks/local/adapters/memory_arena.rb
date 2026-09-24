@@ -54,6 +54,15 @@ module LocalBenchmark
         end
       end
 
+      def serialize_gold_answer(raw)
+        case raw
+        when Hash
+          JSON.generate(raw)
+        else
+          raw.to_s
+        end
+      end
+
       def normalize(row, idx, path)
         questions = Array(row["questions"])
         answers = Array(row["answers"])
@@ -77,7 +86,7 @@ module LocalBenchmark
           {
             "id" => "q#{qidx + 1}",
             "text" => question.to_s,
-            "gold_answer" => answers[qidx].to_s,
+            "gold_answer" => serialize_gold_answer(answers[qidx]),
             "question_type" => @config,
             "task_success" => nil
           }

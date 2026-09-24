@@ -20,6 +20,17 @@ RSpec.describe Llmemory::Retrieval::Bm25Scorer do
       expect(python_doc[:bm25_score]).to be > unrelated_doc[:bm25_score]
     end
 
+    it "matches a plural query token to its singular and rode to ride" do
+      candidates = [
+        { text: "I rode the Xcelerator rollercoaster on October 8th" },
+        { text: "The Tiger Trail exhibit raises awareness about tigers" }
+      ]
+      scored = scorer.score_candidates("How many times did I ride rollercoasters", candidates)
+      ride = scored.find { |c| c[:text].include?("Xcelerator") }
+      other = scored.find { |c| c[:text].include?("Tiger") }
+      expect(ride[:bm25_score]).to be > other[:bm25_score]
+    end
+
     it "returns normalized_bm25 between 0 and 1" do
       candidates = [
         { text: "hello world", timestamp: Time.now, score: 1.0 },

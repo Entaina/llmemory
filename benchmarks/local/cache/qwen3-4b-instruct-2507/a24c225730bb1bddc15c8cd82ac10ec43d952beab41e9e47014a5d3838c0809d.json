@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"User prefers dramas and romcoms\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User enjoys movies that focus on emotions and plots\",\n    \"importance\": 0.8,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User watched a romantic drama about memory and relationships around 2021-12-21\",\n    \"importance\": 0.9,\n    \"event_date\": \"2021-12-21\",\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"User owns a physical copy of the romantic drama about memory and relationships\",\n    \"importance\": 0.8,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"User has watched the romantic drama multiple times\",\n    \"importance\": 0.7,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"User considers the romantic drama about memory and relationships to be one of their favorites\",\n    \"importance\": 0.8,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"Assistant prefers action and sci-fi movies\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"Assistant enjoys watching classic movies\",\n    \"importance\": 0.7,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"Assistant plans to watch the romantic drama about memory and relationships\",\n    \"importance\": 0.8,\n    \"category\": \"behavior\"\n  }\n]",
+  "usage": {
+    "input_tokens": 868,
+    "output_tokens": 359,
+    "total_tokens": 1227
+  }
+}

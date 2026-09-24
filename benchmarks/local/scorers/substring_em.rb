@@ -19,10 +19,21 @@ module LocalBenchmark
       end
 
       def score_row(row)
-        gold = row[:gold_answer] || row.dig(:query, :gold_answer)
-        return nil unless gold
+        refs = gold_references(row)
+        return nil if refs.empty?
 
-        match?(row[:prediction] || row["prediction"], gold) ? 1.0 : 0.0
+        pred = row[:prediction] || row["prediction"]
+        refs.any? { |ref| match?(pred, ref) } ? 1.0 : 0.0
+      end
+
+      def gold_references(row)
+        alts = row[:gold_answers] || row["gold_answers"]
+        if alts.is_a?(Array) && !alts.empty?
+          return alts.map(&:to_s).reject(&:empty?)
+        end
+
+        gold = row[:gold_answer] || row.dig(:query, :gold_answer)
+        gold.to_s.strip.empty? ? [] : [gold.to_s]
       end
 
       def normalize(text)

@@ -198,7 +198,7 @@ module ZeroMemBenchmark
       usage_after_retrieve = memory.llm_usage
 
       gold_ids = Array(query["gold_trace_ids"])
-      loc = compute_localization(query, turns, gold_ids)
+      loc = compute_localization(query, turns, gold_ids) unless retrieval_hit_not_applicable?(conversation)
 
       reader_start = Process.clock_gettime(Process::CLOCK_MONOTONIC)
       answer_text = @reader.answer(
@@ -234,8 +234,15 @@ module ZeroMemBenchmark
       answer_metrics[:task_success] = query["task_success"] if query.key?("task_success")
 
       max_sess = conversation["step_max_sessions"].to_i
+      gold_trace_ids = Array(query["gold_trace_ids"])
       ev_sess = evidence_max_session(query)
-      evidence_in_range = max_sess <= 0 || ev_sess <= max_sess
+      evidence_in_range = if gold_trace_ids.empty?
+                            nil
+                          elsif max_sess <= 0
+                            true
+                          else
+                            ev_sess <= max_sess
+                          end
 
       {
         variant: @variant,
@@ -252,8 +259,9 @@ module ZeroMemBenchmark
         category: query["category"],
         question_type: query["question_type"],
         gold_answer: query["gold_answer"],
+        gold_answers: query["gold_answers"],
         prediction: answer_text,
-        retrieval_hit: retrieval_hit?(@last_context, query, turns),
+        retrieval_hit: retrieval_hit_for_row(conversation, query, turns),
         localization: loc,
         answer: answer_metrics,
         cost: {
@@ -332,10 +340,22 @@ module ZeroMemBenchmark
       end.max || 999
     end
 
+    def retrieval_hit_for_row(conversation, query, turns)
+      return nil if retrieval_hit_not_applicable?(conversation)
+
+      retrieval_hit?(@last_context, query, turns)
+    end
+
+    def retrieval_hit_not_applicable?(conversation)
+      conversation["workload_class"].to_s == "memsyco"
+    end
+
     def retrieval_hit?(context, query, turns)
+      refs = Array(query["gold_answers"])
+      refs = [query["gold_answer"]] if refs.empty?
+      return true if refs.any? { |gold| LocalBenchmark::Scorers::DateNormalizer.calendar_mentioned?(context, gold) }
+
       ctx = LocalBenchmark::Scorers::DateNormalizer.normalize_text(context)
-      gold = LocalBenchmark::Scorers::DateNormalizer.normalize_text(query["gold_answer"])
-      return true if !gold.empty? && ctx.include?(gold)
 
       Array(query["gold_trace_ids"]).any? do |tid|
         content = LocalBenchmark::Scorers::DateNormalizer.normalize_text(turns[tid]&.dig("content"))

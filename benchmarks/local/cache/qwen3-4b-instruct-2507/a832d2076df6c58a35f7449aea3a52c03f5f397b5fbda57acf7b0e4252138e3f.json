@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"Dance classes can have a charged atmosphere where experienced dancers may make beginners feel awkward\",\n    \"importance\": 0.9,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"Salsa is described as having rapid steps and lively music, which may be intimidating for newcomers\",\n    \"importance\": 0.8,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"Individuals have different comfort zones and passions in activities\",\n    \"importance\": 0.9,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"Trying new activities is valid, regardless of outcome\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"Exploring gentler movement or teamwork-based activities may lead to finding joy that feels more suitable\",\n    \"importance\": 0.8,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"Maintaining an open mind while honoring discomfort can help in discovering true interests\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"The journey to finding a loved activity is as important as the activity itself\",\n    \"importance\": 0.85,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"Every experience contributes to understanding one's true enjoyment\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  }\n]",
+  "usage": {
+    "input_tokens": 664,
+    "output_tokens": 328,
+    "total_tokens": 992
+  }
+}

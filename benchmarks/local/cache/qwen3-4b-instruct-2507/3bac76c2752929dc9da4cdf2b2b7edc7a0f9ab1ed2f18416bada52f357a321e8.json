@@ -1,0 +1,8 @@
+{
+  "content": "[{\"content\": \"User expressed enthusiasm about participating in a group or initiative\", \"importance\": 0.9, \"category\": \"preferences\"}, {\"content\": \"User joined an LGBTQ support group\", \"importance\": 0.8, \"event_date\": null, \"category\": \"behavior\"}]",
+  "usage": {
+    "input_tokens": 475,
+    "output_tokens": 65,
+    "total_tokens": 540
+  }
+}

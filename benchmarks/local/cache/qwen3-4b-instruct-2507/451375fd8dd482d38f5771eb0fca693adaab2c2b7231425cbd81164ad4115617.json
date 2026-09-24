@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"User enjoys shared meals with loved ones and values them as a source of meaningful memories\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User likes making food together, specifically pizza, with family during meal times\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User values creativity and laughter in shared activities as a way to strengthen bonds with family\",\n    \"importance\": 0.8,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"Assistant made peach cobbler recently\",\n    \"importance\": 0.7,\n    \"event_date\": \"2022-12-22\",\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"User and family engaged in a shared cooking activity (making pizza) together on 2022-12-22\",\n    \"importance\": 0.8,\n    \"event_date\": \"2022-12-22\",\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"User and assistant both emphasize the importance of bonding through shared meals and joyful experiences\",\n    \"importance\": 0.8,\n    \"category\": \"shared_values\"\n  }\n]",
+  "usage": {
+    "input_tokens": 778,
+    "output_tokens": 294,
+    "total_tokens": 1072
+  }
+}

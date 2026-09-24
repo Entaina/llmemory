@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"The 'Frightfully Fun Parade' and 'Mickey's Trick & Treat' stage shows are designed to be fun for all ages and focus on Halloween-themed entertainment rather than outright scares.\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"The show's storyline revolves around Mickey and his friends preparing for a Halloween party, but things get out of hand when they discover a mysterious potion that causes chaos.\",\n    \"importance\": 0.8,\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"The shows feature upbeat music and choreographed dance numbers, including a fun rendition of the 'Monster Mash'.\",\n    \"importance\": 0.8,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"The shows encourage audience participation with characters frequently interacting with the crowd and encouraging kids to join in on the fun.\",\n    \"importance\": 0.9,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"The shows include special effects such as fog, strobe lights, and pyrotechnics to create a spooky atmosphere.\",\n    \"importance\": 0.8,\n    \"category\": \"factual_context\"\n  }\n]",
+  "usage": {
+    "input_tokens": 823,
+    "output_tokens": 275,
+    "total_tokens": 1098
+  }
+}

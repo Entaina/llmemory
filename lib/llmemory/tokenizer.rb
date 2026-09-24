@@ -31,6 +31,16 @@ module Llmemory
       normalized.scan(TOKEN_PATTERN)
     end
 
+    # Light lemma for lexical retrieval: plurals and a few verb forms.
+    def stem(token)
+      t = token.to_s.downcase
+      return "ride" if t == "rode" || t == "riding"
+      return t if t.length <= 4 || t.end_with?("ss")
+      return t.sub(/ies\z/, "y") if t.end_with?("ies")
+
+      t.end_with?("s") ? t.sub(/s\z/, "") : t
+    end
+
     # Lexical match used by storage-level keyword search. A query is split into
     # tokens and matched as an OR of per-token substrings.
     def content_tokens(text)

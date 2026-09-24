@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"User_10 instructed to close low-risk items and carry only true blockers forward\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User_10 specified that Ops/Risk updates should land on the blocker list without dragging clean findings into the next cycle\",\n    \"importance\": 0.8,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"User_10 requested to freeze the recap against http://sharepoint/regulatory_compliance_program/internal_compliance_audit___findings_review_spec and keep unresolved items explicitly open with owner and due date\",\n    \"importance\": 0.9,\n    \"category\": \"decision\"\n  },\n  {\n    \"content\": \"User_1 instructed to keep the two flagged items moving, but IT must validate frozen mapping against source logs\",\n    \"importance\": 0.9,\n    \"category\": \"decision\"\n  },\n  {\n    \"content\": \"On Project Beacon, a clean row-header check hid a stale file; Legal only accepted the pack after version ID, freeze time, and hash matched\",\n    \"importance\": 0.8,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"@IT must post the Friday freeze time, version ID, and source-log confirmation in-thread today against http://sharepoint/regulatory_compliance_program/internal_compliance_audit___findings_review_spec\",\n    \"importance\": 0.9,\n    \"category\": \"instruction\"\n  },\n  {\n    \"content\": \"Only items with a mismatch should be included in `revalidation-only`; otherwise, everything else can stay out of the revalidation-only list\",\n    \"importance\": 0.8,\n    \"category\": \"policy\"\n  }\n]",
+  "usage": {
+    "input_tokens": 704,
+    "output_tokens": 386,
+    "total_tokens": 1090
+  }
+}

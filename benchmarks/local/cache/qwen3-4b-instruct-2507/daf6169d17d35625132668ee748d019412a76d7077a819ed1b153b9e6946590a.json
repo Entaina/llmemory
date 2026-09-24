@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"The Normans had a profound effect on Irish culture and history after their invasion at Bannow Bay in 1169.\",\n    \"importance\": 0.95,\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"Initially, the Normans maintained a distinct culture and ethnicity.\",\n    \"importance\": 0.8,\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"Over time, the Normans became subsumed into Irish culture to the point that it has been said they became 'more Irish than the Irish themselves'.\",\n    \"importance\": 0.9,\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"The Normans settled mostly in an area in the east of Ireland, later known as the Pale.\",\n    \"importance\": 0.8,\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"Norman descendants today can be recognised by their surnames.\",\n    \"importance\": 0.7,\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"Names such as French, (De) Roche, Devereux, D'Arcy, Treacy and Lacy are particularly common in the southeast of Ireland, especially in the southern part of County Wexford.\",\n    \"importance\": 0.8,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"The name Furlong predominates in the area where the first Norman settlements were established in the southeast of Ireland.\",\n    \"importance\": 0.7,\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"Another common Norman-Irish name was Morell (Murrell), derived from the French Norman name M\",\n    \"importance\": 0.6,\n    \"category\": \"factual_context\"\n  }\n]",
+  "usage": {
+    "input_tokens": 929,
+    "output_tokens": 420,
+    "total_tokens": 1349
+  }
+}

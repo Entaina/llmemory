@@ -1,0 +1,8 @@
+{
+  "content": "[{\"content\": \"User recommended adding an experience to the list and offered tips for visiting\", \"importance\": 0.9, \"category\": \"preferences\"}, {\"content\": \"User expressed that the experience is fun\", \"importance\": 0.8, \"category\": \"preferences\"}]",
+  "usage": {
+    "input_tokens": 491,
+    "output_tokens": 63,
+    "total_tokens": 554
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"Dance classes can have a charged atmosphere where experienced dancers may make beginners feel awkward\",\n    \"importance\": 0.9,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"Salsa is described as having rapid steps and lively music, which may be intimidating for newcomers\",\n    \"importance\": 0.8,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"It is valid to feel discomfort in new activities, especially when they involve movement or teamwork\",\n    \"importance\": 0.9,\n    \"category\": \"feelings\"\n  },\n  {\n    \"content\": \"Exploring gentler introductions to movement or teamwork may help find a more suitable activity\",\n    \"importance\": 0.8,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"Maintaining an open mind while honoring personal discomfort can aid in discovering true interests\",\n    \"importance\": 0.9,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"The journey of finding a beloved activity is as valuable as the activity itself\",\n    \"importance\": 0.8,\n    \"category\": \"reflection\"\n  },\n  {\n    \"content\": \"Every experience contributes to understanding one's true preferences and comfort zones\",\n    \"importance\": 0.9,\n    \"category\": \"learning_outcome\"\n  }\n]",
+  "usage": {
+    "input_tokens": 664,
+    "output_tokens": 304,
+    "total_tokens": 968
+  }
+}

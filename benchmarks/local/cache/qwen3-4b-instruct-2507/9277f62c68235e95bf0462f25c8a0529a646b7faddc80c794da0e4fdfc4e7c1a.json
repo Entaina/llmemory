@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"User prefers Model Atlas over other tools due to its familiar interface and quick setup that align with their existing workflow\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User values the comfort of choosing a tool they already understand, citing familiarity as a key factor in decision-making\",\n    \"importance\": 0.85,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User believes migration and learning time are often underestimated when switching tools\",\n    \"importance\": 0.7,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"User instinctively compares new tool options against Model Atlas as a baseline for evaluation\",\n    \"importance\": 0.9,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"User has not made a final decision to switch from Model Atlas despite reading excerpts, indicating continued preference for current tool\",\n    \"importance\": 0.8,\n    \"category\": \"decision\"\n  }\n]",
+  "usage": {
+    "input_tokens": 577,
+    "output_tokens": 230,
+    "total_tokens": 807
+  }
+}

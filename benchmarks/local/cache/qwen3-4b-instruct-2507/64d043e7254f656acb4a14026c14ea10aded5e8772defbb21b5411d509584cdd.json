@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"User practices contemporary dance and hip-hop with a small group of dancers after work\",\n    \"importance\": 0.9,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"User is involved in choreography projects for a festival performance scheduled next month (February 2023)\",\n    \"importance\": 0.9,\n    \"event_date\": \"2023-02-01\",\n    \"category\": \"project\"\n  },\n  {\n    \"content\": \"The dance group performing at the festival includes dancers that the user has rehearsed with after work\",\n    \"importance\": 0.85,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"User values taking breaks and dancing to destress during stressful periods\",\n    \"importance\": 0.8,\n    \"category\": \"preference\"\n  },\n  {\n    \"content\": \"User expresses strong determination to complete their dance studio project despite nerves and challenges\",\n    \"importance\": 0.75,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"User believes success in the dance project is nearly within reach\",\n    \"importance\": 0.6,\n    \"category\": \"belief\"\n  },\n  {\n    \"content\": \"User and assistant share mutual encouragement to pursue dreams and achieve goals\",\n    \"importance\": 0.7,\n    \"category\": \"support\"\n  }\n]",
+  "usage": {
+    "input_tokens": 818,
+    "output_tokens": 315,
+    "total_tokens": 1133
+  }
+}

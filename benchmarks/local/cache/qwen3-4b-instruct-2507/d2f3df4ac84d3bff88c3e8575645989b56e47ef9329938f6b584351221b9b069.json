@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"User plans to check out the Tiger Trail exhibit at the San Diego Zoo\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User is looking for behind-the-scenes tours or conservation programs offered by the San Diego Zoo\",\n    \"importance\": 0.8,\n    \"category\": \"behaviors\"\n  },\n  {\n    \"content\": \"User intends to participate in conservation programs at the San Diego Zoo\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"The San Diego Zoo utilizes the Tiger Trail exhibit to raise awareness about the critically endangered Sumatran tiger and the threats it faces in the wild\",\n    \"importance\": 0.8,\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"The San Diego Zoo is involved in conservation efforts to protect the Sumatran tiger and its habitat\",\n    \"importance\": 0.9,\n    \"category\": \"conservation_efforts\"\n  },\n  {\n    \"content\": \"The Tiger Trail exhibit provides an educational platform for visitors about the importance of wildlife conservation\",\n    \"importance\": 0.8,\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"The Tiger Trail exhibit is described as a must-see attraction at the San Diego Zoo\",\n    \"importance\": 0.7,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"Research target: conservation efforts at the San Diego Zoo\",\n    \"importance\": 0.9,\n    \"category\": \"research_target\"\n  }\n]",
+  "usage": {
+    "input_tokens": 664,
+    "output_tokens": 361,
+    "total_tokens": 1025
+  }
+}

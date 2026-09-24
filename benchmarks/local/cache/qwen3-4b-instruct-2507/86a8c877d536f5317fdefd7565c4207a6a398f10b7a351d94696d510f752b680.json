@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"User plans to do taekwondo\",\n    \"importance\": 0.9,\n    \"event_date\": \"2022-12-22\",\n    \"subject\": \"user\",\n    \"predicate\": \"will_do_tae_kwondo\",\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User values cherishing time with loved ones and creating great memories\",\n    \"importance\": 0.8,\n    \"event_date\": null,\n    \"subject\": \"user\",\n    \"predicate\": \"values_family_memories\",\n    \"category\": \"preferences\"\n  }\n]",
+  "usage": {
+    "input_tokens": 496,
+    "output_tokens": 138,
+    "total_tokens": 634
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "content": "[{\"content\": \"User agrees that the experience is priceless\", \"importance\": 0.9, \"category\": \"preferences\"}, {\"content\": \"User expresses happiness for someone else's good fortune\", \"importance\": 0.8, \"category\": \"behavior\"}]",
+  "usage": {
+    "input_tokens": 474,
+    "output_tokens": 59,
+    "total_tokens": 533
+  }
+}

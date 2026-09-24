@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"User_9 requests confirmation of missing scenarios and downstream reporting or alert-handling impacts from Compliance, Operations, and Technology against the anti-money laundering project risk specification at http://sharepoint/aml_(anti-money_laundering)_project/risk:_incomplete_regulatory_coverage_spec.\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"The coverage gap review is underway and approximately 20% complete as of the Phase 1 checkpoint on 2025-07-10.\",\n    \"importance\": 0.8,\n    \"event_date\": \"2025-07-10\",\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"Compliance, Operations, and Technology are required to provide findings and downstream reporting or alert-handling impacts by end of day (EOD) on 2025-07-17.\",\n    \"importance\": 0.9,\n    \"event_date\": \"2025-07-17\",\n    \"category\": \"deadlines\"\n  },\n  {\n    \"content\": \"The risk specification under review is for the anti-money laundering (AML) project at http://sharepoint/aml_(anti-money_laundering)_project/risk:_incomplete_regulatory_coverage_spec.\",\n    \"importance\": 0.8,\n    \"category\": \"factual_context\"\n  }\n]",
+  "usage": {
+    "input_tokens": 1378,
+    "output_tokens": 318,
+    "total_tokens": 1696
+  }
+}

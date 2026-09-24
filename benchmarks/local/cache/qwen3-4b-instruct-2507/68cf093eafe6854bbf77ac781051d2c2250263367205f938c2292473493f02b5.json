@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"Assistant (Melanie) cherishes family time and finds happiness in shared moments with her family\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"Assistant (Melanie) engages in painting as a creative outlet for self-expression and relaxation\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"Assistant (Melanie) has been married to her partner for 5 years, with the wedding occurring at least 5 years prior to June 9, 2023\",\n    \"importance\": 0.8,\n    \"event_date\": \"2022-06-09\",\n    \"category\": \"behaviors\"\n  },\n  {\n    \"content\": \"Assistant (Melanie) describes family activities such as playing games and eating good food as enjoyable and meaningful\",\n    \"importance\": 0.7,\n    \"category\": \"behaviors\"\n  },\n  {\n    \"content\": \"User is researching adoption agencies that support LGBTQ+ families\",\n    \"importance\": 0.95,\n    \"category\": \"research_target\"\n  },\n  {\n    \"content\": \"User chose an adoption agency because it supports LGBTQ+ individuals\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User is motivated to create a family for children in need despite being a single parent\",\n    \"importance\": 0.9,\n    \"category\": \"motivation\"\n  },\n  {\n    \"content\": \"User expressed commitment to providing a safe and loving home for children through adoption\",\n    \"importance\": 0.9,\n    \"category\": \"commitment\"\n  }\n]",
+  "usage": {
+    "input_tokens": 1022,
+    "output_tokens": 384,
+    "total_tokens": 1406
+  }
+}

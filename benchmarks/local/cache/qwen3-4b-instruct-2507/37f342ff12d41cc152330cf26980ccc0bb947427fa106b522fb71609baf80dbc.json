@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"A Turing machine is a mathematical model of a general computing machine\",\n    \"importance\": 0.9,\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"A Turing machine manipulates symbols contained on a strip of tape\",\n    \"importance\": 0.9,\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"Turing machines are not intended as practical computing technology\",\n    \"importance\": 0.8,\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"Turing machines serve as a thought experiment representing a computing machine\",\n    \"importance\": 0.9,\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"A Turing machine can represent anything from an advanced supercomputer to a mathematician with a pen\",\n    \"importance\": 0.8,\n    \"category\": \"factual_context\"\n  }\n]",
+  "usage": {
+    "input_tokens": 505,
+    "output_tokens": 212,
+    "total_tokens": 717
+  }
+}

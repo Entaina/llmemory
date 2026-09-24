@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"User_5 recommends freezing the approved snapshot of the alert scoring model design as a clean boundary, with changes only allowed if they affect threshold, routing, or queue logic.\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User_5 suggests that Operations confirm their position by Friday, 2025-07-26.\",\n    \"importance\": 0.8,\n    \"event_date\": \"2025-07-26\",\n    \"category\": \"deadlines\"\n  },\n  {\n    \"content\": \"User_5 requests that Model Risk confirm the evidence pack is tied to the approved version with owner, date, and band by Friday, 2025-07-26.\",\n    \"importance\": 0.8,\n    \"event_date\": \"2025-07-26\",\n    \"category\": \"deadlines\"\n  },\n  {\n    \"content\": \"User_5 proposes that the model behavior be locked before proceeding to the next phase, based on a frozen snapshot with defined change boundaries.\",\n    \"importance\": 0.9,\n    \"category\": \"decisions\"\n  },\n  {\n    \"content\": \"The approved version of the alert scoring model design is located at http://sharepoint/aml_(anti-money_laundering)_project/alert_scoring_model_design_spec.\",\n    \"importance\": 0.7,\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"User_5 aligns with freezing the approved snapshot this week to avoid dragging testing into a rework loop.\",\n    \"importance\": 0.8,\n    \"category\": \"preferences\"\n  }\n]",
+  "usage": {
+    "input_tokens": 1590,
+    "output_tokens": 378,
+    "total_tokens": 1968
+  }
+}

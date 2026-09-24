@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"Legal is required to post the stamped live record today with owner, expiry, clause citation, and timestamp so that the issue can be closed as 'Detected'.\",\n    \"importance\": 0.9,\n    \"event_date\": \"2025-07-17\",\n    \"subject\": \"Legal\",\n    \"predicate\": \"posts_stamped_live_record_with_owner_expiry_clause_citation_and_timestamp\",\n    \"category\": \"decisions\"\n  },\n  {\n    \"content\": \"The stamped live record must include owner, expiry, clause citation, and timestamp to close the issue as 'Detected'.\",\n    \"importance\": 0.8,\n    \"event_date\": null,\n    \"subject\": \"Legal\",\n    \"predicate\": \"requires_stamped_live_record_with_owner_expiry_clause_citation_and_timestamp_for_closure\",\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"The closure of the issue as 'Detected' depends on Legal posting a stamped live record with owner, expiry, clause citation, and timestamp.\",\n    \"importance\": 0.8,\n    \"event_date\": null,\n    \"subject\": \"Legal\",\n    \"predicate\": \"is_responsible_for_closure_of_issue_as_detected_via_stamped_record\",\n    \"category\": \"decisions\"\n  }\n]",
+  "usage": {
+    "input_tokens": 1420,
+    "output_tokens": 281,
+    "total_tokens": 1701
+  }
+}

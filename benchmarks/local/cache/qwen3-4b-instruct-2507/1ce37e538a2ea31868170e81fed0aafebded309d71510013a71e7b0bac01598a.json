@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"The show features upbeat music and choreographed dance numbers, including a fun rendition of the 'Monster Mash'.\",\n    \"importance\": 0.85,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"The show encourages audience participation with characters frequently interacting with the crowd and encouraging kids to join in on the fun.\",\n    \"importance\": 0.9,\n    \"category\": \"behaviors\"\n  },\n  {\n    \"content\": \"The show includes special effects such as fog, strobe lights, and pyrotechnics to create a spooky atmosphere.\",\n    \"importance\": 0.75,\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"Both the 'Frightfully Fun Parade' and 'Mickey's Trick & Treat' stage show are designed to be fun for all ages with a focus on Halloween-themed entertainment rather than outright scares.\",\n    \"importance\": 0.8,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"The shows are great ways to get into the holiday spirit and enjoy festive fun with family and friends.\",\n    \"importance\": 0.65,\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"Audience should check the Disneyland website or official Disneyland app for showtimes and parade schedules as they are subject to change.\",\n    \"importance\": 0.7,\n    \"category\": \"instructions\"\n  }\n]",
+  "usage": {
+    "input_tokens": 660,
+    "output_tokens": 319,
+    "total_tokens": 979
+  }
+}

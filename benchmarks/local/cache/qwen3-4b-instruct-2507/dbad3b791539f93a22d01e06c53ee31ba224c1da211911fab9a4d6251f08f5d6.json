@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"User is experimenting with citrus fruits in gin and lavender cocktails, specifically grapefruit and lemon, and seeks recommendations for other citrus types that pair well with gin and lavender.\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"Satsumas pair nicely with gin and lavender, and their sweetness helps balance the bitterness of the gin.\",\n    \"importance\": 0.85,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"Bergamot pairs nicely with lavender and adds a subtle citrus complexity to gin-based cocktails, helping cut through the richness of the gin.\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User prefers using fresh citrus fruits over bottled or frozen juice for brighter, more vibrant flavor in cocktails.\",\n    \"importance\": 0.8,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"User is advised to experiment with different citrus varieties to find the perfect fit for their gin and lavender cocktails.\",\n    \"importance\": 0.75,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"Citrus should be balanced carefully in cocktails, as it can quickly overpower other flavors; start with a small amount and adjust to taste.\",\n    \"importance\": 0.8,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User is encouraged to use citrus peels (e.g., twists or peels) for added aroma and flavor depth in cocktails.\",\n    \"importance\": 0.7,\n    \"category\": \"behavior\"\n  }\n]",
+  "usage": {
+    "input_tokens": 808,
+    "output_tokens": 363,
+    "total_tokens": 1171
+  }
+}

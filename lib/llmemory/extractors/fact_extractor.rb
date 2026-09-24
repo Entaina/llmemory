@@ -5,6 +5,20 @@ require "json"
 module Llmemory
   module Extractors
     class FactExtractor
+      PARSE_FAILURE_KEY = :llmemory_extract_parse_failures
+
+      class << self
+        def consume_parse_failures
+          count = Thread.current[PARSE_FAILURE_KEY].to_i
+          Thread.current[PARSE_FAILURE_KEY] = 0
+          count
+        end
+
+        def record_parse_failure
+          Thread.current[PARSE_FAILURE_KEY] = Thread.current[PARSE_FAILURE_KEY].to_i + 1
+        end
+      end
+
       def initialize(llm: nil)
         @llm = llm || Llmemory::LLM.client
       end
@@ -37,10 +51,36 @@ module Llmemory
       }.freeze
 
       def extract_items(conversation_text, reference_time: nil, known_facts: nil)
+        chunks = chunk_conversation(conversation_text.to_s)
+        merged = chunks.flat_map do |chunk|
+          extract_items_from_text(chunk, reference_time: reference_time, known_facts: known_facts)
+        end
+        dedupe_extracted_items(merged)
+      end
+
+      def extract_items_from_text(conversation_text, reference_time: nil, known_facts: nil)
+        prompt = build_extract_prompt(conversation_text, reference_time: reference_time, known_facts: known_facts)
+        if bench_fast_extract?
+          bench_extract_trace("invoke start prompt_chars=#{prompt.length}")
+          response = @llm.invoke(prompt.strip)
+          bench_extract_trace("invoke done response_chars=#{response.to_s.length}")
+          items = parse_items_response(response, reference_time: reference_time)
+          return retry_structured_if_empty(items, prompt, conversation_text, reference_time: reference_time)
+        end
+
+        items = extract_items_structured(prompt.strip, reference_time: reference_time)
+        return items if items.any?
+
+        response = @llm.invoke(prompt.strip)
+        items = parse_items_response(response, reference_time: reference_time)
+        retry_structured_if_empty(items, prompt, conversation_text, reference_time: reference_time)
+      end
+
+      def build_extract_prompt(conversation_text, reference_time: nil, known_facts: nil)
         anchor = reference_time ? Llmemory::TimeCoercion.iso8601_or_string(reference_time) : nil
         anchor_line = anchor ? "Conversation anchor time (latest message): #{anchor}\n" : ""
         known_line = format_known_facts(known_facts)
-        prompt = <<~PROMPT
+        <<~PROMPT
           Extract discrete facts from this conversation.
           Focus on preferences, behaviors, and important details.
           #{anchor_line}#{known_line}When the conversation uses relative dates (yesterday, last week, this month), resolve them to an absolute calendar date using the anchor time when possible.
@@ -48,6 +88,7 @@ module Llmemory
           When the speaker lists multiple values (places, activities, likes), emit one JSON object per value with the same subject and predicate.
           Emit explicit identity or role facts when stated or clearly implied (e.g. transgender woman, adoption researcher).
           When someone says they will "do research" or "look into" a topic, record subject+predicate research_target with the topic (e.g. adoption agencies), distinct from generic career exploration.
+          For deadlines and commitments, emit subject, predicate (deadline/due_date), event_date (YYYY-MM-DD), and content with the ISO date.
           Conversation: #{conversation_text}
           Return as JSON array of objects with "content", "importance" (0-1), optional "event_date" (ISO8601 date YYYY-MM-DD or null), optional "subject"/"predicate", and "category" (lowercase_with_underscores).
           Put resolved absolute dates in content when the fact is time-specific (e.g. "Caroline went to LGBTQ support group on 2023-05-07").
@@ -55,18 +96,55 @@ module Llmemory
           Importance: 0.8-0.95 for preferences/corrections/decisions, 0.5-0.8 for factual context, 0.3-0.5 for ephemeral.
           Example: [{"content": "User prefers Ruby", "importance": 0.9, "event_date": null, "category": "preferences"}]
         PROMPT
-        if bench_fast_extract?
-          bench_extract_trace("invoke start prompt_chars=#{prompt.length}")
-          response = @llm.invoke(prompt.strip)
-          bench_extract_trace("invoke done response_chars=#{response.to_s.length}")
-          return parse_items_response(response, reference_time: reference_time)
-        end
+      end
 
-        items = extract_items_structured(prompt.strip, reference_time: reference_time)
+      def retry_structured_if_empty(items, prompt, conversation_text, reference_time:)
         return items if items.any?
+        return items if conversation_text.to_s.length < 80
+        return items if bench_fast_extract?
+        return items unless @llm.respond_to?(:invoke_with_json_schema)
 
-        response = @llm.invoke(prompt.strip)
-        parse_items_response(response, reference_time: reference_time)
+        structured = extract_items_structured(prompt.strip, reference_time: reference_time)
+        structured.any? ? structured : items
+      end
+
+      def chunk_conversation(text)
+        max_chars = extraction_chunk_chars
+        return [text] if text.length <= max_chars
+
+        chunks = []
+        buffer = +""
+        text.each_line do |line|
+          if buffer.length + line.length > max_chars && buffer.length.positive?
+            chunks << buffer
+            buffer = +""
+          end
+          buffer << line
+        end
+        chunks << buffer if buffer.length.positive?
+        chunks.empty? ? [text] : chunks
+      end
+
+      def extraction_chunk_chars
+        explicit = ENV["LLMEMORY_EXTRACTION_CHUNK_CHARS"].to_i
+        return explicit if explicit.positive?
+
+        bench = ENV["LLMEMORY_BENCH_EXTRACT_MAX_CHARS"].to_i
+        return bench if bench.positive?
+
+        4_000
+      end
+
+      def dedupe_extracted_items(items)
+        seen = {}
+        items.filter_map do |item|
+          content = (item["content"] || item[:content]).to_s.strip
+          next if content.empty?
+          next if seen[content]
+
+          seen[content] = true
+          item
+        end
       end
 
       def extract_items_structured(prompt, reference_time: nil)
@@ -208,8 +286,14 @@ module Llmemory
       def parse_items_response(response, reference_time: nil)
         json = extract_json_array(response)
         return [] unless json
+
         resolver = Llmemory::Temporal::RelativeDateResolver.new
-        json.map { |item| normalize_extracted_item(item, resolver: resolver, reference_time: reference_time) }
+        json.filter_map do |item|
+          normalize_extracted_item(item, resolver: resolver, reference_time: reference_time)
+        rescue StandardError
+          self.class.record_parse_failure
+          nil
+        end
       end
 
       def normalize_extracted_item(item, resolver:, reference_time:)
@@ -235,10 +319,37 @@ module Llmemory
         start_idx = response.index("[")
         return nil unless start_idx
         end_idx = response.rindex("]")
-        return nil unless end_idx
-        JSON.parse(response[start_idx..end_idx])
+        fragment = end_idx ? response[start_idx..end_idx] : response[start_idx..]
+        JSON.parse(fragment)
       rescue JSON::ParserError
-        nil
+        salvaged = salvage_json_objects(response[start_idx..] || response)
+        self.class.record_parse_failure if salvaged.nil? || salvaged.empty?
+        salvaged
+      end
+
+      def salvage_json_objects(fragment)
+        objects = []
+        i = 0
+        while (start = fragment.index("{", i))
+          depth = 0
+          parsed = nil
+          (start...fragment.length).each do |j|
+            depth += 1 if fragment[j] == "{"
+            depth -= 1 if fragment[j] == "}"
+            next unless depth.zero?
+
+            begin
+              parsed = JSON.parse(fragment[start..j])
+            rescue JSON::ParserError
+              parsed = nil
+            end
+            i = j + 1
+            break
+          end
+          objects << parsed if parsed.is_a?(Hash)
+          i = start + 1 if depth != 0
+        end
+        objects.empty? ? nil : objects
       end
     end
   end

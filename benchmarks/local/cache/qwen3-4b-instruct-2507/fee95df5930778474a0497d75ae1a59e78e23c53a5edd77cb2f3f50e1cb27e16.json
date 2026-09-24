@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"User is interested in learning more about conservation efforts and how to make a difference\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User plans to check out the Tiger Trail exhibit at the San Diego Zoo\",\n    \"importance\": 0.8,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"User is looking for behind-the-scenes tours or conservation programs offered by the San Diego Zoo\",\n    \"importance\": 0.7,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"User intends to participate in conservation programs at the San Diego Zoo\",\n    \"importance\": 0.8,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"Research target: conservation efforts at the San Diego Zoo\",\n    \"importance\": 0.9,\n    \"category\": \"research_target\"\n  }\n]",
+  "usage": {
+    "input_tokens": 527,
+    "output_tokens": 207,
+    "total_tokens": 734
+  }
+}

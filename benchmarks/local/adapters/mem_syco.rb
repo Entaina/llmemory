@@ -22,7 +22,7 @@ module LocalBenchmark
       def available?
         return false if @root.empty?
 
-        active_tasks.all? { |t| File.file?(task_file(t)) }
+        active_tasks.any? { |t| File.file?(task_file(t)) }
       end
 
       def skip_reason

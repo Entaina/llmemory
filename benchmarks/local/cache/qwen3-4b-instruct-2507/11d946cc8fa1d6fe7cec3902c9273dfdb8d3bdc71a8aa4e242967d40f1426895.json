@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"Melanie is married to a partner and has been married for 5 years\",\n    \"importance\": 0.9,\n    \"category\": \"relationships\"\n  },\n  {\n    \"content\": \"Melanie values family time and finds happiness in shared moments with loved ones\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"Melanie enjoys playing games, eating good food, and spending quality time with her family\",\n    \"importance\": 0.8,\n    \"category\": \"behaviors\"\n  },\n  {\n    \"content\": \"Caroline is committed to providing a safe and loving home for children in adoption\",\n    \"importance\": 0.95,\n    \"category\": \"adoption_commitment\"\n  },\n  {\n    \"content\": \"Caroline is interested in counseling or working in mental health\",\n    \"importance\": 0.95,\n    \"category\": \"career_interests\"\n  },\n  {\n    \"content\": \"Caroline wants to support individuals with similar mental health issues in a mental health setting\",\n    \"importance\": 0.9,\n    \"category\": \"mental_health_support_goal\"\n  },\n  {\n    \"content\": \"Caroline will conduct research on mental health careers\",\n    \"importance\": 0.85,\n    \"category\": \"research_target\"\n  },\n  {\n    \"content\": \"Melanie enjoys painting as a creative and relaxing outlet\",\n    \"importance\": 0.9,\n    \"category\": \"hobbies_and_interests\"\n  },\n  {\n    \"content\": \"Melanie painted a lake sunrise last year\",\n    \"importance\": 0.85,\n    \"category\": \"artistic_activity\"\n  }\n]",
+  "usage": {
+    "input_tokens": 945,
+    "output_tokens": 381,
+    "total_tokens": 1326
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"User is concerned about lack of education and crumbling infrastructure in their neighborhood\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User believes schools and infrastructure should be properly funded to prevent future generations from experiencing the same issues\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"The extra funding enabled needed repairs and renovations at a school, improving safety and modernity for students\",\n    \"importance\": 0.8,\n    \"event_date\": \"2022-12-17\",\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"User plans to chat with local leaders and organizations to gather support and ideas for their next political move\",\n    \"importance\": 0.9,\n    \"event_date\": \"2022-12-17\",\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"User intends to build a political campaign focused on education and infrastructure funding\",\n    \"importance\": 0.85,\n    \"category\": \"preferences\"\n  }\n]",
+  "usage": {
+    "input_tokens": 698,
+    "output_tokens": 255,
+    "total_tokens": 953
+  }
+}

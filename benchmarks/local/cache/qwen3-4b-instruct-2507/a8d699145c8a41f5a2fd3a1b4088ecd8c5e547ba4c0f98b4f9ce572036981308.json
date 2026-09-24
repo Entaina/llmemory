@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"Microsoft agreed to cease using the term 'SkyDrive' following a trademark infringement ruling by BSkyB, and will rename the service after an unspecified reasonable transition period.\",\n    \"importance\": 0.9,\n    \"event_date\": \"2013-07-31\",\n    \"subject\": \"Microsoft\",\n    \"predicate\": \"renamed SkyDrive to OneDrive\",\n    \"category\": \"decisions\"\n  },\n  {\n    \"content\": \"On 27 January 2014, Microsoft announced that 'SkyDrive' would be rebranded as 'OneDrive', and 'SkyDrive Pro' would become 'OneDrive for Business'.\",\n    \"importance\": 0.9,\n    \"event_date\": \"2014-01-27\",\n    \"subject\": \"Microsoft\",\n    \"predicate\": \"announced rebranding of SkyDrive to OneDrive\",\n    \"category\": \"decisions\"\n  },\n  {\n    \"content\": \"The settlement between BSkyB and Microsoft included a non-appeal clause and financial terms, which are confidential.\",\n    \"importance\": 0.8,\n    \"event_date\": \"2013-07-31\",\n    \"subject\": \"Microsoft and BSkyB\",\n    \"predicate\": \"reached settlement agreement with confidentiality of financial terms\",\n    \"category\": \"factual_context\"\n  }\n]",
+  "usage": {
+    "input_tokens": 736,
+    "output_tokens": 305,
+    "total_tokens": 1041
+  }
+}

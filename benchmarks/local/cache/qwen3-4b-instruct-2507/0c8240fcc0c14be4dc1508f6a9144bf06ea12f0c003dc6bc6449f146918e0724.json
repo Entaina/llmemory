@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"Assistant started surfing five years ago\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"Assistant enjoys the connection to nature while surfing\",\n    \"importance\": 0.8,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"Assistant finds the experience of being out in the water exciting and free-feeling\",\n    \"importance\": 0.8,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User does not surf but finds reading fantasy books to be a way to escape and feel free\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User feels immersed in another world when engaging with fantasy literature\",\n    \"importance\": 0.8,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"User compares the feeling of reading a fantasy book to surfing, describing both as moments of bliss and freedom\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"Assistant agrees that moments of happiness and freedom are valuable and shared across different experiences\",\n    \"importance\": 0.7,\n    \"category\": \"behavior\"\n  }\n]",
+  "usage": {
+    "input_tokens": 1079,
+    "output_tokens": 285,
+    "total_tokens": 1364
+  }
+}

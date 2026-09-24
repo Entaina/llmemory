@@ -58,7 +58,7 @@ module Llmemory
       private
 
       def tokenize(text)
-        Llmemory::Tokenizer.tokenize(text)
+        Llmemory::Tokenizer.tokenize(text).map { |token| Llmemory::Tokenizer.stem(token) }
       end
     end
   end

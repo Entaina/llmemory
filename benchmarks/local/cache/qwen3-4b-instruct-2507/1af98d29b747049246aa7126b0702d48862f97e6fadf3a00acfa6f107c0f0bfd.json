@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"User is allergic to most reptiles and animals with fur\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User finds writing a source of joy and self-expression\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User enjoys hanging out with friends as a way to have fun and connect socially\",\n    \"importance\": 0.8,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User creates wild worlds with awesome characters through writing\",\n    \"importance\": 0.9,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"User uses writing as a way to express their feelings\",\n    \"importance\": 0.8,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"User cannot imagine life without writing\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  }\n]",
+  "usage": {
+    "input_tokens": 820,
+    "output_tokens": 226,
+    "total_tokens": 1046
+  }
+}

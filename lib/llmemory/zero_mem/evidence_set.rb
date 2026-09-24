@@ -44,6 +44,7 @@ module Llmemory
 
         items = evidence.dup
         items.sort_by! { |ev| ev.occurred_at.to_f } if temporal_intent?
+        normalize_confidence!(items)
 
         lines = ["=== ZERO-MEM EVIDENCE ===", ""]
         if items.any?
@@ -118,6 +119,19 @@ module Llmemory
           label = "#{label} #{time.utc.strftime('%H:%M')}"
         end
         label
+      end
+
+      def normalize_confidence!(items)
+        scores = items.map(&:score)
+        min, max = scores.minmax
+        span = max - min
+        return if span < 1e-6
+
+        items.each do |ev|
+          normalized = 0.08 + 0.92 * ((ev.score - min) / span)
+          ev.instance_variable_set(:@confidence, normalized)
+          ev.instance_variable_set(:@score, normalized)
+        end
       end
 
       def snippet(text, limit = nil)

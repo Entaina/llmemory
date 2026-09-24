@@ -3,7 +3,7 @@
 module Llmemory
   module ZeroMem
     class QueryProfiler
-      TEMPORAL_EN = /\b(before|after|first|last|when|timeline|january|february|march|april|may|june|july|august|september|october|november|december|booking|remind)\b/i
+      TEMPORAL_EN = /\b(before|after|first|last|when|deadline|due date|timeline|january|february|march|april|may|june|july|august|september|october|november|december|booking|remind)\b/i
       TEMPORAL_ES = /\b(antes|después|primero|último|ultimo|cuándo|cuando|hora|enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre|reserva|recuerda)\b/i
       CURRENT_EN = /\b(now|today|current|currently|what is)\b/i
       CURRENT_ES = /\b(ahora|actual|hoy|cuál es|cual es)\b/i
@@ -52,8 +52,25 @@ module Llmemory
         text.match?(/[¿¡áéíóúñÁÉÍÓÚÑ]/) || text.match?(TEMPORAL_ES) ? :es : :en
       end
 
+      QUESTION_WORDS = %w[
+        when what where who whom whose which why how
+        cuándo cuando dónde donde quién quien qué que cuál cual cómo como
+      ].freeze
+
+      MONTH_WORDS = %w[
+        january february march april may june july august september october november december
+        enero febrero marzo abril mayo junio julio agosto septiembre octubre noviembre diciembre
+      ].freeze
+
       def extract_entities(text, _lang)
-        text.scan(/\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b/).uniq.first(5)
+        text.scan(/\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b/)
+            .reject { |name| QUESTION_WORDS.include?(name.downcase) || MONTH_WORDS.include?(name.downcase) }
+            .uniq
+            .first(5)
+      end
+
+      def deadline_question?(text)
+        text.match?(/\b(deadline|due date|yyyy-mm-dd|by when)\b/i)
       end
 
       def temporal_cues(text, lang)
@@ -69,6 +86,10 @@ module Llmemory
       end
 
       def infer_workload(text, lang, entities, temporal, rule_ids)
+        if deadline_question?(text)
+          rule_ids << "temporal_workload"
+          return :temporal
+        end
         if text.match?(PROCEDURAL)
           rule_ids << "procedural_cue"
           return :procedural
@@ -110,6 +131,10 @@ module Llmemory
           rule_ids << "answer_place"
           return :place
         end
+        if down.match?(/\b(who|quién|quien)\b/)
+          rule_ids << "answer_person"
+          return :person
+        end
         if down.match?(/\b(yes|no|true|false|sí|si)\b/)
           rule_ids << "answer_boolean"
           return :boolean
@@ -122,12 +147,12 @@ module Llmemory
       end
 
       def expected_count(workload, aggregation_cues = [])
-        return [3, Llmemory.configuration.zero_mem_max_top_k].min if aggregation_cues.any?
+        return Llmemory.configuration.zero_mem_max_top_k if aggregation_cues.any?
 
         case workload
         when :multi_hop then 3
         when :procedural then 2
-        when :temporal then 2
+        when :temporal then 8
         else 1
         end
       end

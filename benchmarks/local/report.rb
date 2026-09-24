@@ -25,12 +25,16 @@ module LocalBenchmark
       when "locomo"
         {
           locomo_f1: Scorers::LoCoMoF1.aggregate(rows),
-          retrieval_hit: retrieval_hit_aggregate(rows)
+          retrieval_hit: retrieval_hit_aggregate(rows),
+          extraction_yield: extraction_yield_aggregate(rows),
+          hits_converted: hits_converted_aggregate(rows, bench)
         }
       when "longmemeval", "memoryagentbench", "groupmembench"
         scores = {
           substring_em: Scorers::SubstringEM.aggregate(rows),
-          retrieval_hit: retrieval_hit_aggregate(rows)
+          retrieval_hit: retrieval_hit_aggregate(rows),
+          extraction_yield: extraction_yield_aggregate(rows),
+          hits_converted: hits_converted_aggregate(rows, bench)
         }
         scores[:llm_judge] = llm_judge_scores(rows, judge) if use_judge
         scores
@@ -117,11 +121,54 @@ module LocalBenchmark
       { mean: mean(scored), count: scored.size }
     end
 
+    def extraction_yield_aggregate(rows)
+      samples = rows.filter_map { |r| r[:extraction_yield] || r["extraction_yield"] }
+      return { mean_items_per_session: nil, parse_failures: 0, count: 0 } if samples.empty?
+
+      sessions = samples.sum { |s| s[:consolidate_sessions].to_i }
+      items = samples.sum { |s| s[:items_added].to_i }
+      empty = samples.sum { |s| s[:empty_extractions].to_i }
+      parse_failures = samples.sum { |s| s[:parse_failures].to_i }
+      {
+        mean_items_per_session: sessions.positive? ? items.to_f / sessions : nil,
+        empty_extractions: empty,
+        parse_failures: parse_failures,
+        count: samples.size
+      }
+    end
+
+    def hits_converted_aggregate(rows, bench)
+      scored = rows.filter_map do |row|
+        hit = row[:retrieval_hit]
+        next unless hit == true
+
+        f1 = row.dig(:answer, :f1)
+        em = row.dig(:answer, :exact_match)
+        judge = row[:llm_judge]
+        case bench.to_s
+        when "locomo"
+          f1.to_f > 0.2
+        when "longmemeval", "memoryagentbench", "groupmembench"
+          Scorers::SubstringEM.score_row(row).to_f.positive? || judge.to_f.positive?
+        else
+          f1.to_f > 0.2
+        end
+      end
+      hits = rows.count { |r| r[:retrieval_hit] == true }
+      return { rate: nil, hits: 0, converted: 0 } if hits.zero?
+
+      { rate: scored.count(true).to_f / hits, hits: hits, converted: scored.count(true) }
+    end
+
     def retrieval_hit_aggregate(rows)
       hits = rows.map { |r| r[:retrieval_hit] }.compact
-      return { mean: nil, count: 0 } if hits.empty?
+      return { mean: nil, count: 0, not_applicable: rows.size - hits.size } if hits.empty?
 
-      { mean: hits.count(true).to_f / hits.size, count: hits.size }
+      {
+        mean: hits.count(true).to_f / hits.size,
+        count: hits.size,
+        not_applicable: rows.count { |r| r[:retrieval_hit].nil? }
+      }
     end
 
     def mean(values)

@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"Boyd is set on obtaining an education\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"Brent believes Boyd can read law in Judge Parmalee’s office in Fayetteville\",\n    \"importance\": 0.8,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"Brent dismisses the idea of Boyd completing his education at universities as impractical due to the anticipated war\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"The twins believe a war is imminent and that college attendance would be impossible during wartime\",\n    \"importance\": 0.85,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"Debbie believes there will not be a war, citing assurances from Kali Abrianna and his father about an amicable agreement with Mr. Lincoln\",\n    \"importance\": 0.7,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"Debbie states that the Yankees are too scared of the Confederacy to fight, implying no war will occur\",\n    \"importance\": 0.6,\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"Kali Abrianna and his father communicated with Pa (likely a family member) about an amicable agreement between Confederate commissioners and Mr. Lincoln last week\",\n    \"importance\": 0.7,\n    \"event_date\": \"2026-09-18T00:00:00Z\",\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"The war is perceived as imminent by the twins, with a belief that it will start 'any day'\",\n    \"importance\": 0.8,\n    \"category\": \"behavior\"\n  }\n]",
+  "usage": {
+    "input_tokens": 615,
+    "output_tokens": 415,
+    "total_tokens": 1030
+  }
+}

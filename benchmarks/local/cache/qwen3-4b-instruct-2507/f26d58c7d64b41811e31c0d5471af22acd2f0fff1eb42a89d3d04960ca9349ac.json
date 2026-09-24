@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"The San Diego Zoo uses technology such as cameras and sensors to track tigers' movements and behavior in real-time, enhancing visitor experience.\",\n    \"importance\": 0.85,\n    \"category\": \"features_and_technology\"\n  },\n  {\n    \"content\": \"The San Diego Zoo utilizes the Tiger Trail exhibit to raise awareness about the critically endangered Sumatran tiger and the threats it faces in the wild.\",\n    \"importance\": 0.9,\n    \"category\": \"conservation_efforts\"\n  },\n  {\n    \"content\": \"The San Diego Zoo is involved in conservation efforts to protect the Sumatran tiger and its habitat.\",\n    \"importance\": 0.85,\n    \"category\": \"conservation_efforts\"\n  },\n  {\n    \"content\": \"The Tiger Trail exhibit at the San Diego Zoo provides an educational platform for visitors about the importance of wildlife conservation.\",\n    \"importance\": 0.75,\n    \"category\": \"education_and_exhibit_purpose\"\n  },\n  {\n    \"content\": \"The Tiger Trail exhibit is described as a must-see attraction at the San Diego Zoo.\",\n    \"importance\": 0.6,\n    \"category\": \"visitor_experience\"\n  }\n]",
+  "usage": {
+    "input_tokens": 605,
+    "output_tokens": 268,
+    "total_tokens": 873
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"User is experimenting with citrus fruits in cocktails, specifically grapefruit and lemon, and seeks recommendations for other citrus types that pair well with gin and lavender.\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User wants to try different citrus fruits beyond grapefruit and lemon in gin and lavender cocktails.\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User is interested in citrus fruit pairings with gin and lavender, indicating a preference for botanical or aromatic cocktail combinations.\",\n    \"importance\": 0.85,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"Hendrick's gin pairs well with Suze due to its floral and herbal notes matching the dry, herbaceous flavor of Suze.\",\n    \"importance\": 0.7,\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"The drink should not be over-diluted; stirring is only necessary to chill and slightly dilute ingredients to preserve flavor.\",\n    \"importance\": 0.8,\n    \"category\": \"behavior\"\n  }\n]",
+  "usage": {
+    "input_tokens": 605,
+    "output_tokens": 260,
+    "total_tokens": 865
+  }
+}

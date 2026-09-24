@@ -1,0 +1,8 @@
+{
+  "content": "[{\"content\": \"User needs to retrieve statistics about the hashtag 'trendsetter' promoted on TikTok by the influencer\", \"importance\": 0.9, \"category\": \"research_target\"}, {\"content\": \"The research target is the hashtag 'trendsetter' as it relates to promotion by an influencer on TikTok\", \"importance\": 0.8, \"category\": \"research_target\"}]",
+  "usage": {
+    "input_tokens": 486,
+    "output_tokens": 89,
+    "total_tokens": 575
+  }
+}

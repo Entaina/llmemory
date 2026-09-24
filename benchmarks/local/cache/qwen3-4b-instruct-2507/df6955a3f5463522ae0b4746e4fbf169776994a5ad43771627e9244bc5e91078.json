@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"User_7 recommends including a single-line rationale in the exceptions log to provide context for Finance sign-off, citing that skipping it on Orion led to five indistinct exceptions that QA could not triage effectively.\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User_7 specifies that the exceptions log should include tag, owner, field, impact, and a one-sentence rationale explaining why the exception is due to source, mapping, or policy.\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"The formatting inconsistency risk is confirmed at 29% complete as of 2025-07-21.\",\n    \"importance\": 0.8,\n    \"event_date\": \"2025-07-21\",\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"User_4 questions whether the template rules in the document http://sharepoint/financial_reporting_automation/risk:_formatting_inconsistencies_spec are sufficiently tight, or if they allow for drift in finance extracts and reconciliation files.\",\n    \"importance\": 0.8,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"User_7's recommendation is tied to the exceptions log located at http://sharepoint/financial_reporting_automation/risk:_formatting_inconsistencies_spec.\",\n    \"importance\": 0.6,\n    \"event_date\": null,\n    \"category\": \"factual_context\"\n  }\n]",
+  "usage": {
+    "input_tokens": 1520,
+    "output_tokens": 347,
+    "total_tokens": 1867
+  }
+}

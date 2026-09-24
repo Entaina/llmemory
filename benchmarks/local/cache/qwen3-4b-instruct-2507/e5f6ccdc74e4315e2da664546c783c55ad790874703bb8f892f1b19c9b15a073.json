@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"The Front Islamique de Salut (FIS) was founded in 1989\",\n    \"importance\": 0.9,\n    \"event_date\": \"1989-01-01\",\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"The FIS was an Islamist movement influenced by Salafism and the jihad in Afghanistan, as well as the Muslim Brotherhood\",\n    \"importance\": 0.9,\n    \"event_date\": null,\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"The FIS operated in Algeria\",\n    \"importance\": 0.8,\n    \"event_date\": null,\n    \"category\": \"geographic_presence\"\n  },\n  {\n    \"content\": \"Abbassi Madani was a leader of the FIS\",\n    \"importance\": 0.9,\n    \"event_date\": null,\n    \"category\": \"leadership\"\n  },\n  {\n    \"content\": \"Ali Belhadj was a charismatic Islamist young preacher and leader of the FIS\",\n    \"importance\": 0.9,\n    \"event_date\": null,\n    \"category\": \"leadership\"\n  },\n  {\n    \"content\": \"The FIS used preaching to advocate for a legal system based on Sharia law\",\n    \"importance\": 0.8,\n    \"event_date\": null,\n    \"category\": \"ideological_positioning\"\n  },\n  {\n    \"content\": \"The FIS advocated for economic liberalization and development programs\",\n    \"importance\": 0.8,\n    \"event_date\": null,\n    \"category\": \"ideological_positioning\"\n  },\n  {\n    \"content\": \"The FIS gained support by exploiting economic failure and unpopular social liberalization and secularization under the FLN government in Algeria\",\n    \"importance\": 0.9,\n    \"event_date\": null,\n    \"category\": \"strategic_mobilization\"\n  }\n]",
+  "usage": {
+    "input_tokens": 561,
+    "output_tokens": 429,
+    "total_tokens": 990
+  }
+}

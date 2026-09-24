@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"The Risk: Incomplete Impact Data phase is 26% complete\",\n    \"importance\": 0.9,\n    \"category\": \"status_update\"\n  },\n  {\n    \"content\": \"Late updates from Operations and Portfolio are arriving, potentially forcing reclassification of high-impact assets\",\n    \"importance\": 0.9,\n    \"category\": \"risk_assessment\"\n  },\n  {\n    \"content\": \"Reporting assumptions need a fresh look due to unresolved data dependencies\",\n    \"importance\": 0.85,\n    \"category\": \"decision_making\"\n  },\n  {\n    \"content\": \"Disclosures must maintain consistency, audit readiness, and defensibility of sustainability claims\",\n    \"importance\": 0.9,\n    \"category\": \"compliance_requirements\"\n  },\n  {\n    \"content\": \"Finance, ESG, and Data Governance need to align on unresolved dependencies quickly\",\n    \"importance\": 0.9,\n    \"category\": \"cross_functional_alignment\"\n  },\n  {\n    \"content\": \"A polished report may lack credibility if methodology, source quality, and coverage are not reconciled\",\n    \"importance\": 0.8,\n    \"category\": \"risk_outcome_assessment\"\n  }\n]",
+  "usage": {
+    "input_tokens": 641,
+    "output_tokens": 272,
+    "total_tokens": 913
+  }
+}

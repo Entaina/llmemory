@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"User is interested in counseling or working in mental health\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User wants to support individuals with similar issues\",\n    \"importance\": 0.8,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"Assistant enjoys painting and created a lake sunrise painting last year\",\n    \"importance\": 0.9,\n    \"event_date\": \"2023-05-07\",\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"Assistant finds painting to be a creative outlet for expressing feelings and relaxing after a long day\",\n    \"importance\": 0.8,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User agrees that self-care and emotional expression are important\",\n    \"importance\": 0.7,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"Assistant plans to go swimming with the kids\",\n    \"importance\": 0.6,\n    \"event_date\": \"2023-05-08\",\n    \"category\": \"behavior\"\n  }\n]",
+  "usage": {
+    "input_tokens": 751,
+    "output_tokens": 263,
+    "total_tokens": 1014
+  }
+}

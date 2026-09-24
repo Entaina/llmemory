@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"User is involved in a fan project focused on the Harry Potter universe\",\n    \"importance\": 0.9,\n    \"category\": \"activities\"\n  },\n  {\n    \"content\": \"User discusses characters, spells, and magical creatures within the Harry Potter universe\",\n    \"importance\": 0.8,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User visited a Harry Potter-themed location in London a few years ago\",\n    \"importance\": 0.7,\n    \"event_date\": null,\n    \"category\": \"experiences\"\n  },\n  {\n    \"content\": \"User participated in a Harry Potter tour in London\",\n    \"importance\": 0.8,\n    \"event_date\": null,\n    \"category\": \"experiences\"\n  },\n  {\n    \"content\": \"User expresses interest in visiting real Harry Potter locations someday\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"Assistant has not visited any real Harry Potter locations\",\n    \"importance\": 0.6,\n    \"category\": \"facts\"\n  },\n  {\n    \"content\": \"Assistant intends to visit real Harry Potter locations in the future\",\n    \"importance\": 0.8,\n    \"event_date\": null,\n    \"category\": \"intentions\"\n  }\n]",
+  "usage": {
+    "input_tokens": 806,
+    "output_tokens": 295,
+    "total_tokens": 1101
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"The San Diego Zoo uses technology such as cameras and sensors to track tigers' movements and behavior in real-time.\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"The Tiger Trail exhibit at the San Diego Zoo enhances visitor experience through real-time tracking of tiger movements and behavior.\",\n    \"importance\": 0.85,\n    \"category\": \"behaviors\"\n  },\n  {\n    \"content\": \"The San Diego Zoo uses the Tiger Trail exhibit to raise awareness about critically endangered Sumatran tigers and the threats they face in the wild.\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"The San Diego Zoo is involved in conservation efforts to protect Sumatran tigers and their habitat.\",\n    \"importance\": 0.8,\n    \"category\": \"behaviors\"\n  },\n  {\n    \"content\": \"The Tiger Trail exhibit serves as an educational platform for visitors to learn about the importance of conservation.\",\n    \"importance\": 0.75,\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"User is interested in learning more about conservation efforts and how they can make a difference.\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User asks if the San Diego Zoo offers behind-the-scenes tours or conservation programs for participation.\",\n    \"importance\": 0.8,\n    \"category\": \"behaviors\"\n  }\n]",
+  "usage": {
+    "input_tokens": 572,
+    "output_tokens": 340,
+    "total_tokens": 912
+  }
+}

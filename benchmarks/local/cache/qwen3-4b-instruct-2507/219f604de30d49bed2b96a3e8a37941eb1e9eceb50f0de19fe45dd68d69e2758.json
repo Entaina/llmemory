@@ -1,0 +1,8 @@
+{
+  "content": "[{\"content\": \"User is interested in cat breeds that are resistant to heat\", \"importance\": 0.9, \"category\": \"preferences\"}, {\"content\": \"User lives in an arid environment\", \"importance\": 0.8, \"category\": \"context\"}]",
+  "usage": {
+    "input_tokens": 365,
+    "output_tokens": 61,
+    "total_tokens": 426
+  }
+}

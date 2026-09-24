@@ -29,6 +29,29 @@
 
 ### Added
 
+- **Benchmark harness (plan 2026-09-23).** MemoryAgentBench parallel `questions`/`answers` zip with
+  `gold_answers`; GroupMemBench multi-project sessions, question-aware turn sampling, trace
+  `metadata.project`; MemSyco `MEMSYCO_TASK=all` in suite-diag; MemoryArena JSON gold for
+  `ArenaMatch`; `baseline` / `baseline-control-7b` commands; row `extraction_yield`,
+  `hits_converted` / `gold_answers` in reports; MemSyco `retrieval_hit` n/a; `evidence_in_range`
+  n/a without gold trace ids.
+- **Extraction robustness.** `FactExtractor` conversation chunking, truncated JSON salvage,
+  structured retry on empty extraction, deadline triples in prompt, parse-failure counter.
+- **Hybrid lexical prior.** Query terms that appear in few candidates outrank generic traces; dated rows win on temporal questions. GroupMemBench hit conversion uses date-normalized substring match.
+- **LoCoMo-Plus.** The trigger utterance is the question, so it is not stored as memory. The cue is dated after the time gap. Hierarchy retrieval and current-state packing keep the newest traces even when the query does not lexically match them.
+- **Dates.** A month and day without a year, such as "before July 18", is annotated with the message year in `YYYY-MM-DD`. A relative word in the same sentence, such as "today", does not overwrite that date. A date that already names the year is left as written.
+- **Snippets.** A long turn keeps the sentence that covers the most still-unmatched question terms, so a later quote is not crowded out by an earlier mention of the same topic.
+- **Context order.** A fact no longer leads the context when it names a different date, or a different proper name, than the trace that best matches the question. A fact that quotes the same name or date stays with that trace.
+- **Hybrid retrieval.** A corroborated fact no longer replaces its source trace when the fact omits a proper name that the trace states. Long snippets keep a later sentence that names an entity the earlier matches left out. Hierarchy ranking scores long turns by the sentences that match the query. Current-state packing still keeps undated seed turns instead of dropping every trace whose time was inferred.
+- **Person questions.** A "who" question prefers rows that name the subject, and long snippets keep a later sentence when it covers a query word the first sentence missed.
+- **MemoryAgentBench sampling.** When the session cap drops a long document, keep the sessions that overlap the questions that will actually be asked, instead of the document prefix or the other questions in the file.
+- **Counting questions.** Month names are not entities, so "how many … from July to October" stays temporal and asks for a larger evidence set. Lexical match folds plurals and `rode`/`ride`. The LoCoMo session cap no longer drops LongMemEval answer sessions.
+- **Question words are not entities.** A leading "When" no longer forces multi-hop/relational routing, so a temporal question keeps the hierarchy hit (for example "camping next month" resolves to June). Temporal queries also pull a larger evidence set. Relative "next month" / "this month" annotations use the full month name.
+- **Deadline retrieval.** Questions with `deadline` / `due date` profile as temporal before multi-hop or current-state.
+  Hybrid fusion drops duplicate fact text and downranks rows with no query-token overlap.
+- **GroupMemBench sampling.** Rank channel projects by query overlap, keep the top sessions, and keep neighboring turns around strong hits.
+- **Retrieval/context.** Zero-Mem greeting/project boosts, confidence normalization; hybrid fact-first
+  context, score spread, sentence snippets, counting timeline block.
 - **Local benchmark harness reliability.** Explicit `memory_mode` per variant; stratified `Sampler`
   (`--conversations`, `--per-conversation`, `--seed`, `--stratify`); `LLMEMORY_BENCH_CACHE` disk cache;
   bench LLM `temperature`/`seed`; date-normalized LoCoMo F1 and retrieval hits; row debug fields

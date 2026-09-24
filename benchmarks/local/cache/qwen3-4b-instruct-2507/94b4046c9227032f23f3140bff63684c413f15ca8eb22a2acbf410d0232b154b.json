@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"User chose an adoption agency that supports LGBTQ+ individuals due to its inclusivity and support services\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User is motivated by the desire to create a family for children in need, particularly as a single parent\",\n    \"importance\": 0.9,\n    \"category\": \"motivations\"\n  },\n  {\n    \"content\": \"User believes that providing a safe and loving home is a key responsibility in the adoption process\",\n    \"importance\": 0.8,\n    \"category\": \"beliefs\"\n  },\n  {\n    \"content\": \"User feels optimistic about the adoption journey despite acknowledging it will be challenging as a single parent\",\n    \"importance\": 0.7,\n    \"category\": \"emotions\"\n  },\n  {\n    \"content\": \"Assistant recognizes and affirms the user's caring heart and commitment to providing stability for children\",\n    \"importance\": 0.8,\n    \"category\": \"support_and_validation\"\n  }\n]",
+  "usage": {
+    "input_tokens": 793,
+    "output_tokens": 233,
+    "total_tokens": 1026
+  }
+}

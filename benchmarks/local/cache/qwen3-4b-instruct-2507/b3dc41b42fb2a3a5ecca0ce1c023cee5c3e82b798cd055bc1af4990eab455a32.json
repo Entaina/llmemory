@@ -1,0 +1,8 @@
+{
+  "content": "[\n  {\n    \"content\": \"User_13 confirms that the control for the delta cohort should be hard-gated to prevent false exceptions from propagating to Reporting\",\n    \"importance\": 0.9,\n    \"event_date\": null,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User_13 emphasizes that a missing yes/no spillover stamp on any flagged holding can cause Reporting to inherit a false exception\",\n    \"importance\": 0.9,\n    \"event_date\": null,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"Legal and Risk will only approve changes after confirmation from Portfolio and Reporting on the exact July 19 wording\",\n    \"importance\": 0.85,\n    \"event_date\": \"2025-07-19\",\n    \"category\": \"decisions\"\n  },\n  {\n    \"content\": \"The screening, compliance, and reporting trails are aligned prior to July 19, 2025\",\n    \"importance\": 0.8,\n    \"event_date\": \"2025-07-19\",\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"Data will keep ambiguous fields hard-blocked until they are completed in http://sharepoint/sustainable_finance_strategy/map_regulations_to_portfolio_spec\",\n    \"importance\": 0.8,\n    \"event_date\": null,\n    \"category\": \"behaviors\"\n  },\n  {\n    \"content\": \"Once signed holdings are refreshed, Reporting receives a clean input and avoids Meridian-style rework\",\n    \"importance\": 0.7,\n    \"event_date\": null,\n    \"category\": \"factual_context\"\n  }\n]",
+  "usage": {
+    "input_tokens": 1492,
+    "output_tokens": 375,
+    "total_tokens": 1867
+  }
+}
