@@ -1,8 +1,0 @@
-{
-  "content": "[\n  {\n    \"content\": \"User enjoys making and sharing meals with loved ones\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User made pizza with family and enjoyed picking out toppings together\",\n    \"importance\": 0.85,\n    \"event_date\": \"2022-12-22\",\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"User values creativity and laughter in shared experiences\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"Assistant made peach cobbler recently\",\n    \"importance\": 0.8,\n    \"event_date\": \"2022-12-22\",\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"User plans to do taekwondo soon\",\n    \"importance\": 0.75,\n    \"event_date\": \"2022-12-22\",\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"User prioritizes bonding through shared meals and family activities\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  }\n]",
-  "usage": {
-    "input_tokens": 805,
-    "output_tokens": 272,
-    "total_tokens": 1077
-  }
-}

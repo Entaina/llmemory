@@ -1,8 +1,0 @@
-{
-  "content": "[\n  {\n    \"content\": \"Caroline and the assistant are on a trip together\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"The conversation anchor time is 2023-10-13T08:31:00Z\",\n    \"importance\": 0.7,\n    \"event_date\": null,\n    \"category\": \"context\"\n  },\n  {\n    \"content\": \"Caroline values learning and exploration\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"The assistant responds to Caroline in a supportive tone, indicating shared experience on the trip\",\n    \"importance\": 0.6,\n    \"category\": \"behavior\"\n  }\n]",
-  "usage": {
-    "input_tokens": 484,
-    "output_tokens": 176,
-    "total_tokens": 660
-  }
-}

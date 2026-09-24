@@ -1,8 +1,0 @@
-{
-  "content": "[\n  {\n    \"content\": \"User is involved in a fan project focused on the Harry Potter universe\",\n    \"importance\": 0.95,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User expressed interest in visiting real Harry Potter locations someday\",\n    \"importance\": 0.9,\n    \"category\": \"behaviors\"\n  },\n  {\n    \"content\": \"User participated in a Harry Potter tour in London, which they described as amazing\",\n    \"importance\": 0.95,\n    \"event_date\": null,\n    \"category\": \"experiences\"\n  },\n  {\n    \"content\": \"User visited a Harry Potter-themed location in London a few years ago\",\n    \"importance\": 0.85,\n    \"event_date\": null,\n    \"category\": \"experiences\"\n  },\n  {\n    \"content\": \"User recommended adding an experience to the list and offered tips for visiting\",\n    \"importance\": 0.9,\n    \"category\": \"behaviors\"\n  },\n  {\n    \"content\": \"User expressed that the experience is fun\",\n    \"importance\": 0.8,\n    \"category\": \"preferences\"\n  }\n]",
-  "usage": {
-    "input_tokens": 582,
-    "output_tokens": 257,
-    "total_tokens": 839
-  }
-}

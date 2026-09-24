@@ -1,8 +1,0 @@
-{
-  "content": "[{\"content\": \"User is requesting the top MLB pitching statistics for the current season, specifically the Earned Run Average (ERA) for regular season games using the MLB sports code.\", \"importance\": 0.9, \"category\": \"preferences\"}]",
-  "usage": {
-    "input_tokens": 376,
-    "output_tokens": 54,
-    "total_tokens": 430
-  }
-}

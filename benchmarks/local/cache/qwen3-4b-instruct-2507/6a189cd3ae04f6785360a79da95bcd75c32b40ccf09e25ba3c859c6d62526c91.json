@@ -1,8 +1,0 @@
-{
-  "content": "[\n  {\n    \"content\": \"User is experimenting with different types of citrus in cocktails, specifically interested in options that pair well with gin and lavender.\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User has previously experimented with grapefruit and lemon in cocktails.\",\n    \"importance\": 0.8,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"User is seeking recommendations for citrus fruits that pair well with gin and lavender.\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  }\n]",
-  "usage": {
-    "input_tokens": 617,
-    "output_tokens": 131,
-    "total_tokens": 748
-  }
-}

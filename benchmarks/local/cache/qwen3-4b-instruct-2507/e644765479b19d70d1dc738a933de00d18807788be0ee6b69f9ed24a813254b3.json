@@ -1,8 +1,0 @@
-{
-  "content": "[\n  {\n    \"content\": \"User is researching adoption agencies that support LGBTQ+ families\",\n    \"importance\": 0.9,\n    \"event_date\": null,\n    \"subject\": \"user\",\n    \"predicate\": \"research_target\",\n    \"category\": \"adoption_research\"\n  },\n  {\n    \"content\": \"User chose an adoption agency because it supports LGBTQ+ individuals\",\n    \"importance\": 0.9,\n    \"event_date\": null,\n    \"subject\": \"user\",\n    \"predicate\": \"preference\",\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User is motivated to create a family for children in need, despite being a single parent\",\n    \"importance\": 0.9,\n    \"event_date\": null,\n    \"subject\": \"user\",\n    \"predicate\": \"motivation\",\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"User expressed commitment to providing a safe and loving home for children through adoption\",\n    \"importance\": 0.85,\n    \"event_date\": null,\n    \"subject\": \"user\",\n    \"predicate\": \"commitment\",\n    \"category\": \"behavior\"\n  }\n]",
-  "usage": {
-    "input_tokens": 873,
-    "output_tokens": 255,
-    "total_tokens": 1128
-  }
-}

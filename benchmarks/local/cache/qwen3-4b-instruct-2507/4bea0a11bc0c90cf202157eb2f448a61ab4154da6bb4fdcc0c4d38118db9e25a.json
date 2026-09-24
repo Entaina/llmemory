@@ -1,8 +1,0 @@
-{
-  "content": "[\n  {\n    \"content\": \"The user published a review on an album that merges Pacific sounds and electronic music\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"The user focused on the album's homage to its roots and its push towards new interpretations\",\n    \"importance\": 0.8,\n    \"category\": \"analysis\"\n  },\n  {\n    \"content\": \"The user noted the artists' use of traditional instruments alongside contemporary production techniques\",\n    \"importance\": 0.7,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"The user identified emotional depth and technical skill as key features of the album\",\n    \"importance\": 0.8,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"The user described the resulting sound as both nostalgic and modern\",\n    \"importance\": 0.6,\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"The user observed a dialogue about the evolution of music and its role in cultural expression\",\n    \"importance\": 0.5,\n    \"category\": \"factual_context\"\n  }\n]",
-  "usage": {
-    "input_tokens": 579,
-    "output_tokens": 256,
-    "total_tokens": 835
-  }
-}

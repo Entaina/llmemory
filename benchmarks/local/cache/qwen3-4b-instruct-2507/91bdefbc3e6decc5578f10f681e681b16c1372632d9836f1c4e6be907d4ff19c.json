@@ -1,8 +1,0 @@
-{
-  "content": "[\n  {\n    \"content\": \"User_4 requires that the specification at http://sharepoint/financial_reporting_automation/implement_report_generation_engine_spec includes a single owner, backup, cutoff, and rollback trigger entry before allowing Friday's run; otherwise, the gate will be held and QA logs the exception.\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"Finance Ops must sign exception outcomes before the gate is closed.\",\n    \"importance\": 0.9,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"The gate will stop being a moving target and behave like a proper adult after the specification at http://sharepoint/financial_reporting_automation/design_automated_report_templates_spec is updated.\",\n    \"importance\": 0.85,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"Controls must run all three fail states in http://sharepoint/financial_reporting_automation/design_automated_report_templates_spec by 2025-07-19\",\n    \"importance\": 0.9,\n    \"event_date\": \"2025-07-19\",\n    \"category\": \"deadline\"\n  },\n  {\n    \"content\": \"User_4 is concerned about Finance stamping all four fields together rather than piecemeal, indicating a preference for coordinated approval processes.\",\n    \"importance\": 0.8,\n    \"category\": \"preferences\"\n  }\n]",
-  "usage": {
-    "input_tokens": 695,
-    "output_tokens": 320,
-    "total_tokens": 1015
-  }
-}

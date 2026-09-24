@@ -1,8 +1,0 @@
-{
-  "content": "[\n  {\n    \"content\": \"User_7 is the gatekeeper for Legal/Ops stamping of deltas in AML Horizon specifications\",\n    \"importance\": 0.95,\n    \"category\": \"role_or_identity\"\n  },\n  {\n    \"content\": \"The sign-off window for User_7 is being dropped to allow freezing of the confirmed set and marking the phase as Completed\",\n    \"importance\": 0.9,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"@User_7 will close the phase cleanly\",\n    \"importance\": 0.95,\n    \"category\": \"commitment_or_action\"\n  },\n  {\n    \"content\": \"The conversation anchor time is 2025-07-26T17:23:05Z\",\n    \"importance\": 0.8,\n    \"event_date\": \"2025-07-26\",\n    \"category\": \"context\"\n  },\n  {\n    \"content\": \"A hard rule freeze is requested before another false close sneaks into Detected\",\n    \"importance\": 0.9,\n    \"category\": \"decision_or_preference\"\n  }\n]",
-  "usage": {
-    "input_tokens": 591,
-    "output_tokens": 256,
-    "total_tokens": 847
-  }
-}

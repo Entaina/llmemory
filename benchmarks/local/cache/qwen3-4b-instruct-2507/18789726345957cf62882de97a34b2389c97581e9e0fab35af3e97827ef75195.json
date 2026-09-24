@@ -1,8 +1,0 @@
-{
-  "content": "[\n  {\n    \"content\": \"The Court of Justice held that the Treaties allow citizens or corporations to bring claims against EU and member state institutions for violation of the Treaties and Regulations if properly interpreted as creating rights and obligations.\",\n    \"importance\": 0.9,\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"Member states and the Commission have a general legal right or 'standing' (locus standi) to bring claims against EU institutions and other member states for breach of the treaties.\",\n    \"importance\": 0.85,\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"Under Directives, citizens or corporations do not generally have standing to bring claims against EU or member state institutions unless the directives are interpreted as creating rights and obligations.\",\n    \"importance\": 0.9,\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"Constitutional law concerns the European Union's governance structure, while administrative law binds EU institutions and member states to follow the law.\",\n    \"importance\": 0.8,\n    \"category\": \"factual_context\"\n  }\n]",
-  "usage": {
-    "input_tokens": 556,
-    "output_tokens": 249,
-    "total_tokens": 805
-  }
-}

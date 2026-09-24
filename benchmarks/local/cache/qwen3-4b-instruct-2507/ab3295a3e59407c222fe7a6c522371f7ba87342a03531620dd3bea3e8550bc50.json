@@ -1,8 +1,0 @@
-{
-  "content": "[\n  {\n    \"content\": \"The team is requested to review the current controls in the spec to confirm whether any planned onboarding changes create a compliance gap.\",\n    \"importance\": 0.9,\n    \"category\": \"decisions\"\n  },\n  {\n    \"content\": \"The reference document for evaluating compliance gaps is located at http://sharepoint/customer_onboarding_optimization/risk:_data_privacy_gaps_spec.\",\n    \"importance\": 0.8,\n    \"category\": \"factual_context\"\n  }\n]",
-  "usage": {
-    "input_tokens": 1525,
-    "output_tokens": 112,
-    "total_tokens": 1637
-  }
-}

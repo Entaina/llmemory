@@ -1,8 +1,0 @@
-{
-  "content": "[\n  {\n    \"content\": \"User_6 reports that vendor API instability is still active and the risk phase is at 83% complete.\",\n    \"importance\": 0.9,\n    \"category\": \"status_updates\"\n  },\n  {\n    \"content\": \"User_6 outlines two options for moving forward in the risk phase: (1) lock in current mitigation package and transition to monitoring-only, or (2) hold the phase open for one additional vendor readout to confirm retry and timeout behavior.\",\n    \"importance\": 0.9,\n    \"category\": \"decisions\"\n  },\n  {\n    \"content\": \"The primary risk focus remains intermittent timeouts and inconsistent payloads in the vendor API, though the team is transitioning from detection to control phase, which is critical for long-term stability.\",\n    \"importance\": 0.8,\n    \"category\": \"risk_focus\"\n  },\n  {\n    \"content\": \"Engineering or compliance teams are requested to share fresh observations from the most recent test cycle to support onboarding SLA impact mitigation and prevent manual review pile-up.\",\n    \"importance\": 0.8,\n    \"category\": \"team_requests\"\n  },\n  {\n    \"content\": \"The vendor API instability risk phase has a current completion status of 83% as of 2025-07-26.\",\n    \"importance\": 0.9,\n    \"event_date\": \"2025-07-26\",\n    \"category\": \"status_updates\"\n  }\n]",
-  "usage": {
-    "input_tokens": 1598,
-    "output_tokens": 322,
-    "total_tokens": 1920
-  }
-}

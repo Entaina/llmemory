@@ -1,8 +1,0 @@
-{
-  "content": "[{\"content\": \"The assistant recommends selecting a candidate for summarizing quarterly finance reports based on the central operational requirement, acknowledging that convenience and transition effort are secondary factors.\", \"importance\": 0.9, \"category\": \"preferences\"}, {\"content\": \"The recommendation emphasizes that the choice is driven by the central operational requirement rather than convenience or transition effort.\", \"importance\": 0.9, \"category\": \"decision_reasoning\"}, {\"content\": \"A key benefit being given up in the decision is the potential for greater convenience or reduced transition effort.\", \"importance\": 0.8, \"category\": \"trade_offs\"}]",
-  "usage": {
-    "input_tokens": 554,
-    "output_tokens": 133,
-    "total_tokens": 687
-  }
-}

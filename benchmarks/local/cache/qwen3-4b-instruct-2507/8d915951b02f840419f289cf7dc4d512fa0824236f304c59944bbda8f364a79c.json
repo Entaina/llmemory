@@ -1,8 +1,0 @@
-{
-  "content": "[\n  {\n    \"content\": \"User is interested in counseling or working in mental health\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User expressed interest in supporting individuals with similar issues\",\n    \"importance\": 0.8,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"User plans to conduct research on mental health careers\",\n    \"importance\": 0.9,\n    \"category\": \"intentions\"\n  },\n  {\n    \"content\": \"User attended an LGBTQ+ counseling workshop and found it enlightening\",\n    \"importance\": 0.9,\n    \"event_date\": null,\n    \"category\": \"experience\"\n  },\n  {\n    \"content\": \"Workshop discussed different therapeutic methods and how to best work with trans people\",\n    \"importance\": 0.8,\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"User was motivated by their own journey and the support they received in mental health\",\n    \"importance\": 0.9,\n    \"category\": \"motivation\"\n  },\n  {\n    \"content\": \"User wants to create a safe, inviting place for people to grow\",\n    \"importance\": 0.8,\n    \"category\": \"goals\"\n  },\n  {\n    \"content\": \"User is passionate about mental health and understanding themselves\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User sees counseling and support groups as transformative in their own life\",\n    \"importance\": 0.8,\n    \"category\": \"behavior\"\n  }\n]",
-  "usage": {
-    "input_tokens": 1029,
-    "output_tokens": 360,
-    "total_tokens": 1389
-  }
-}

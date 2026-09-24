@@ -1,8 +1,0 @@
-{
-  "content": "[\n  {\n    \"content\": \"Caroline is considering adopting children in need of a family\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"Caroline selected an adoption agency that supports LGBTQ+ individuals\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"Caroline is committed to providing a safe and loving home for children in adoption\",\n    \"importance\": 0.9,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"Caroline views the challenge of being a single parent as an opportunity she is willing to embrace\",\n    \"importance\": 0.8,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"Melanie enjoys painting as a creative and relaxing outlet\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"Caroline wants to support individuals with similar mental health issues in a mental health setting\",\n    \"importance\": 0.8,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"Caroline is researching adoption agencies with inclusive policies for LGBTQ+ families\",\n    \"importance\": 0.9,\n    \"research_target\": \"adoption agencies that support LGBTQ+ individuals\",\n    \"category\": \"research\"\n  }\n]",
-  "usage": {
-    "input_tokens": 846,
-    "output_tokens": 301,
-    "total_tokens": 1147
-  }
-}

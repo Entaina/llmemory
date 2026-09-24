@@ -1,8 +1,0 @@
-{
-  "content": "[\n  {\n    \"content\": \"User is inspired by personal experiences and their own journey of self-discovery when writing a screenplay about a thirty-year-old woman dealing with loss and seeking identity through a road trip.\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User's story features a main character on a journey of self-discovery after experiencing loss, taking a road trip to heal and grow.\",\n    \"importance\": 0.9,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"User recommends movies to the assistant regularly.\",\n    \"importance\": 0.8,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"Assistant prefers action and sci-fi movies.\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"Assistant intends to watch a romantic drama about memory and relationships.\",\n    \"importance\": 0.8,\n    \"category\": \"intentions\"\n  }\n]",
-  "usage": {
-    "input_tokens": 851,
-    "output_tokens": 224,
-    "total_tokens": 1075
-  }
-}

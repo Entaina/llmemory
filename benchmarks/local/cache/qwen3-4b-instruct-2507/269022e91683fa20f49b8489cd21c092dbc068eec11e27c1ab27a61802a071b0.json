@@ -1,8 +1,0 @@
-{
-  "content": "[\n  {\n    \"content\": \"User wants to collaborate with assistant on creating content and managing social media accounts\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User specifically mentions making the dance studio look awesome as a goal of collaboration\",\n    \"importance\": 0.85,\n    \"category\": \"goals\"\n  },\n  {\n    \"content\": \"User and assistant agree to work together to make an impact through dance education and community inspiration\",\n    \"importance\": 0.9,\n    \"category\": \"shared_vision\"\n  },\n  {\n    \"content\": \"Assistant commits to managing social media accounts as part of the collaboration\",\n    \"importance\": 0.8,\n    \"category\": \"behaviors\"\n  },\n  {\n    \"content\": \"User expresses enthusiasm for teaching others to chase their dreams through dance\",\n    \"importance\": 0.75,\n    \"category\": \"values\"\n  },\n  {\n    \"content\": \"Both user and assistant express mutual appreciation and positive reinforcement of each other's contributions\",\n    \"importance\": 0.6,\n    \"category\": \"interactions\"\n  }\n]",
-  "usage": {
-    "input_tokens": 839,
-    "output_tokens": 255,
-    "total_tokens": 1094
-  }
-}

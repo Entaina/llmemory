@@ -1,8 +1,0 @@
-{
-  "content": "[\n  {\n    \"content\": \"User will persist through challenges\",\n    \"importance\": 0.9,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"User expressed gratitude for support\",\n    \"importance\": 0.8,\n    \"category\": \"preferences\"\n  }\n]",
-  "usage": {
-    "input_tokens": 496,
-    "output_tokens": 67,
-    "total_tokens": 563
-  }
-}

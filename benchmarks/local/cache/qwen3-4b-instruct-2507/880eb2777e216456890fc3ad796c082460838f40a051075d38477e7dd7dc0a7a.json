@@ -1,8 +1,0 @@
-{
-  "content": "[\n  {\n    \"content\": \"User_7 recommends including a single-line rationale in the exceptions log to ensure usability, citing that skipping it on Orion led to five 'same-looking' exceptions that QA could not triage cleanly.\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User_7 specifies that the exceptions log should include tag, owner, field, impact, and one sentence explaining why the exception is due to source, mapping, or policy.\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User_4 confirms that the formatting inconsistency risk is now at 29% complete, marking a key checkpoint in the project.\",\n    \"importance\": 0.9,\n    \"event_date\": \"2025-07-21\",\n    \"category\": \"progress\"\n  },\n  {\n    \"content\": \"User_4 questions whether the template rules in the document at http://sharepoint/financial_reporting_automation/risk:_formatting_inconsistencies_spec are sufficiently tight, or if drift is being baked in for finance extracts and reconciliation files.\",\n    \"importance\": 0.8,\n    \"event_date\": \"2025-07-21\",\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"User_4 raises a concern about the adequacy of template rules in financial reporting automation to prevent drift in finance extracts and reconciliation files.\",\n    \"importance\": 0.8,\n    \"event_date\": \"2025-07-21\",\n    \"category\": \"behavior\"\n  }\n]",
-  "usage": {
-    "input_tokens": 1566,
-    "output_tokens": 360,
-    "total_tokens": 1926
-  }
-}

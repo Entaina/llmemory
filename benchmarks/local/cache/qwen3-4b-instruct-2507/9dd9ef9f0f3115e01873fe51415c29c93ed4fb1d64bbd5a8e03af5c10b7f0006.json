@@ -1,8 +1,0 @@
-{
-  "content": "[\n  {\n    \"content\": \"The regulatory compliance program specification is located at http://sharepoint/regulatory_compliance_program/risk:_conflicting_jurisdiction_requirements_spec\",\n    \"importance\": 0.9,\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"Regional objections to the regulatory compliance specification should be captured before final alignment\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"Legal guidance is recommended to be escalated rather than absorbed into future rework\",\n    \"importance\": 0.9,\n    \"category\": \"decisions\"\n  },\n  {\n    \"content\": \"The July 16 target date for final alignment is approaching and downstream teams are already impacted\",\n    \"importance\": 0.9,\n    \"event_date\": \"2025-07-16\",\n    \"category\": \"deadlines\"\n  },\n  {\n    \"content\": \"A decision has been made to escalate legal guidance requests now to avoid rework later\",\n    \"importance\": 0.9,\n    \"category\": \"decisions\"\n  }\n]",
-  "usage": {
-    "input_tokens": 514,
-    "output_tokens": 248,
-    "total_tokens": 762
-  }
-}

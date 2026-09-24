@@ -1,8 +1,0 @@
-{
-  "content": "[\n  {\n    \"content\": \"User_3 recommends that Ops own evidence capture and remediation, while Legal handles only true ambiguity to maintain a lean review path and align with tested boundaries in the compliance control design spec.\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User_3 proposes mandatory fields for evidence standards: rationale, timestamp, owner, SLA, and sufficiency outcome, with no additional fields on day one of implementation.\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User_3 requires Ops to demonstrate one live exception with all required evidence fields populated and one delayed-entry case to validate timestamp integrity before freezing UAT in the compliance control design spec.\",\n    \"importance\": 0.9,\n    \"category\": \"behaviors\"\n  },\n  {\n    \"content\": \"The compliance control design spec is located at http://sharepoint/customer_onboarding_optimization/compliance_control_design_spec.\",\n    \"importance\": 0.8,\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"User_3 sets a deadline of EOD on July 15, 2025, to evaluate whether the specification is ready for freeze and protection of the July 16 plan.\",\n    \"importance\": 0.9,\n    \"event_date\": \"2025-07-15\",\n    \"category\": \"deadlines\"\n  },\n  {\n    \"content\": \"User_3 treats the enforcement proof as a real gate, not a checkbox, to ensure operational validity under pressure before UAT freeze.\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  }\n]",
-  "usage": {
-    "input_tokens": 1527,
-    "output_tokens": 377,
-    "total_tokens": 1904
-  }
-}

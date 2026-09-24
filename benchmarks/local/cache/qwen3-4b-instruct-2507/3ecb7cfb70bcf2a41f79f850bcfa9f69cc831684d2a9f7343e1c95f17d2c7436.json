@@ -1,8 +1,0 @@
-{
-  "content": "[\n  {\n    \"content\": \"User has engaged in discussions about the cultural significance of merging Pacific sounds and electronic music\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User published a music review on an album that merges Pacific sounds and electronic music\",\n    \"importance\": 0.9,\n    \"event_date\": \"2026-09-22\",\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"The reviewed album incorporates traditional instruments alongside contemporary production techniques\",\n    \"importance\": 0.8,\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"The album is described as having emotional depth that resonates with listeners and creates a journey through soundscapes\",\n    \"importance\": 0.7,\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"The artists behind the project pay homage to their roots while pushing boundaries for new interpretations\",\n    \"importance\": 0.8,\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"The intersection of traditional Pacific music and electronic styles fosters a dialogue about music evolution and cultural expression\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  }\n]",
-  "usage": {
-    "input_tokens": 550,
-    "output_tokens": 285,
-    "total_tokens": 835
-  }
-}

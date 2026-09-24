@@ -1,8 +1,0 @@
-{
-  "content": "[\n  {\n    \"content\": \"User won 'Best Adult Costume' award at Mickey's Halloween Party event at Disneyland on 2023-09-24\",\n    \"importance\": 0.95,\n    \"event_date\": \"2023-09-24\",\n    \"subject\": \"user\",\n    \"predicate\": \"won_award\",\n    \"category\": \"achievements\"\n  },\n  {\n    \"content\": \"User plans to incorporate elements from their 'Best Adult Costume' award into their HHN costume\",\n    \"importance\": 0.9,\n    \"event_date\": null,\n    \"subject\": \"user\",\n    \"predicate\": \"will_incorporate_costume_elements_from_award\",\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User is interested in creating a terrifyingly awesome costume for HHN with special effects such as fog, strobe lights, or pyrotechnics\",\n    \"importance\": 0.85,\n    \"event_date\": null,\n    \"subject\": \"user\",\n    \"predicate\": \"wants_costume_with_special_effects\",\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User considers coordinating group costumes when attending HHN with friends to create a cohesive and impressive look\",\n    \"importance\": 0.8,\n    \"event_date\": null,\n    \"subject\": \"user\",\n    \"predicate\": \"considers_group_costumes_for_cohesive_look\",\n    \"category\": \"preferences\"\n  }\n]",
-  "usage": {
-    "input_tokens": 875,
-    "output_tokens": 328,
-    "total_tokens": 1203
-  }
-}

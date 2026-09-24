@@ -1,8 +1,0 @@
-{
-  "content": "[\n  {\n    \"content\": \"User is interested in learning more about conservation efforts and how to make a difference\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User plans to check out the Tiger Trail exhibit at the San Diego Zoo\",\n    \"importance\": 0.9,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"The Tiger Trail exhibit raises awareness about critically endangered Sumatran tigers and their habitat threats\",\n    \"importance\": 0.8,\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"User is looking for behind-the-scenes tours or conservation programs offered by the San Diego Zoo\",\n    \"importance\": 0.9,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"User intends to participate in conservation programs at the San Diego Zoo as part of their research into conservation efforts\",\n    \"importance\": 0.9,\n    \"category\": \"intention\"\n  },\n  {\n    \"content\": \"User will conduct research on conservation efforts at the San Diego Zoo\",\n    \"importance\": 0.85,\n    \"category\": \"research_target\"\n  },\n  {\n    \"content\": \"User is asking about the 'Frightfully Fun Parade' and 'Mickey's Trick & Treat' stage shows\",\n    \"importance\": 0.7,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User wants to know what they can expect from the performances of 'Frightfully Fun Parade' and 'Mickey's Trick & Treat'\",\n    \"importance\": 0.8,\n    \"category\": \"preferences\"\n  }\n]",
-  "usage": {
-    "input_tokens": 628,
-    "output_tokens": 370,
-    "total_tokens": 998
-  }
-}

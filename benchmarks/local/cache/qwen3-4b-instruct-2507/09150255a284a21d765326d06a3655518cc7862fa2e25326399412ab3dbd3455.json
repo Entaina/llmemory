@@ -1,8 +1,0 @@
-{
-  "content": "[\n  {\n    \"content\": \"User prefers dramas and romcoms\",\n    \"importance\": 0.9,\n    \"event_date\": null,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User has seen a romantic drama about memory and relationships multiple times\",\n    \"importance\": 0.9,\n    \"event_date\": null,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"User first watched the romantic drama about memory and relationships on 2019-01-21\",\n    \"importance\": 0.9,\n    \"event_date\": \"2019-01-21\",\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"User owns a physical copy of the romantic drama about memory and relationships\",\n    \"importance\": 0.8,\n    \"event_date\": null,\n    \"category\": \"possession\"\n  },\n  {\n    \"content\": \"User likes the acting and emotional depth in movies\",\n    \"importance\": 0.9,\n    \"event_date\": null,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User will continue pursuing their passion for writing\",\n    \"importance\": 0.8,\n    \"event_date\": null,\n    \"category\": \"commitment\"\n  }\n]",
-  "usage": {
-    "input_tokens": 560,
-    "output_tokens": 290,
-    "total_tokens": 850
-  }
-}

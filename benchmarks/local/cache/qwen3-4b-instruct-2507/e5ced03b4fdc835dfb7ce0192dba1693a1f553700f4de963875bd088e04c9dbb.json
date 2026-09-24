@@ -1,8 +1,0 @@
-{
-  "content": "Best summarization method for finance reports with numerical accuracy and team adoption",
-  "usage": {
-    "input_tokens": 110,
-    "output_tokens": 14,
-    "total_tokens": 124
-  }
-}

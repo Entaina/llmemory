@@ -1,8 +1,0 @@
-{
-  "content": "[\n  {\n    \"content\": \"User_12 identifies a real coverage gap in regulatory expectations due to unmapped rule sets and jurisdiction scenarios, stating that only 20% of the work is complete.\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User_12 initiates a cross-functional review involving Monitoring, Data, and Operations to confirm ownership, missing controls, and test evidence for the AML project risk specification at http://sharepoint/aml_(anti-money_laundering)_project/risk:_incomplete_regulatory_coverage_spec.\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User_12 requests that any late business-line changes or local regulatory interpretations be flagged prior to locking the July 16 remediation plan.\",\n    \"importance\": 0.8,\n    \"event_date\": \"2025-07-16\",\n    \"category\": \"deadlines\"\n  },\n  {\n    \"content\": \"Ops is requested to send a first cut of data by Wednesday including typology, queue status, and blocker type, with Risk stamp expiries applied only after high-risk items are locked.\",\n    \"importance\": 0.9,\n    \"event_date\": null,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"The July 16 remediation plan is scheduled to be locked following the review and flagging of late business-line changes or local regulatory interpretations.\",\n    \"importance\": 0.8,\n    \"event_date\": \"2025-07-16\",\n    \"category\": \"deadlines\"\n  }\n]",
-  "usage": {
-    "input_tokens": 1440,
-    "output_tokens": 367,
-    "total_tokens": 1807
-  }
-}

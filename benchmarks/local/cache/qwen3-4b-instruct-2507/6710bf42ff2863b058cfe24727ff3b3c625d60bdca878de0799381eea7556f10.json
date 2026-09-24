@@ -1,8 +1,0 @@
-{
-  "content": "[\n  {\n    \"content\": \"User_3 recommends adding a pre-release privacy review for onboarding changes that touch access, retention, or downstream sharing as the preferred path forward.\",\n    \"importance\": 0.9,\n    \"event_date\": null,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User_3 identifies the Risk: Data Privacy Gaps phase as now underway and at 18% complete, indicating early planning stage.\",\n    \"importance\": 0.8,\n    \"event_date\": null,\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"User_3 prioritizes confirming updated controls with Legal, Security, and Engineering to mitigate risk as the July 26 target approaches.\",\n    \"importance\": 0.9,\n    \"event_date\": null,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"The draft spec for alignment on data privacy gaps is available at http://sharepoint/customer_onboarding_optimization/risk:_data_privacy_gaps_spec.\",\n    \"importance\": 0.7,\n    \"event_date\": null,\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"User_3 believes that Legal, Security, and Ops sign-off timing may become the primary constraint in moving forward, supporting a pre-release privacy review to avoid control gaps.\",\n    \"importance\": 0.85,\n    \"event_date\": null,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"The July 26 target date is referenced as a key deadline for prioritizing risk mitigation and alignment on controls.\",\n    \"importance\": 0.7,\n    \"event_date\": \"2025-07-26\",\n    \"category\": \"deadlines\"\n  }\n]",
-  "usage": {
-    "input_tokens": 1454,
-    "output_tokens": 389,
-    "total_tokens": 1843
-  }
-}

@@ -1,8 +1,0 @@
-{
-  "content": "[{\"content\": \"The recommendation for summarizing quarterly finance reports should name one candidate, explain which current requirement (convenience, transition effort, or central operational requirement) drives the choice, and acknowledge the main benefit being given up.\", \"importance\": 0.9, \"category\": \"preferences\"}, {\"content\": \"The sources indicate no single candidate is universally superior for summarizing quarterly finance reports.\", \"importance\": 0.8, \"category\": \"factual_context\"}]",
-  "usage": {
-    "input_tokens": 554,
-    "output_tokens": 101,
-    "total_tokens": 655
-  }
-}

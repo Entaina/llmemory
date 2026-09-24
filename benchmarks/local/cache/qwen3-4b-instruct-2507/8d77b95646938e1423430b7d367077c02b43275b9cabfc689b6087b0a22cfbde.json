@@ -1,8 +1,0 @@
-{
-  "content": "[\n  {\n    \"content\": \"User will persist through challenges\",\n    \"importance\": 0.9,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"User desires help with making content and managing social media accounts\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User wants to collaborate with assistant to make the dance studio look awesome\",\n    \"importance\": 0.8,\n    \"category\": \"goals\"\n  },\n  {\n    \"content\": \"User aims to bring dance magic and teach others to chase their dreams\",\n    \"importance\": 0.8,\n    \"category\": \"values_and_motivations\"\n  },\n  {\n    \"content\": \"User believes in making a positive impact through dance and collaboration\",\n    \"importance\": 0.7,\n    \"category\": \"beliefs\"\n  },\n  {\n    \"content\": \"Assistant agrees to collaborate with user on content creation and social media management\",\n    \"importance\": 0.9,\n    \"category\": \"commitments\"\n  },\n  {\n    \"content\": \"User expresses enthusiasm for the collaboration and shared vision of success\",\n    \"importance\": 0.8,\n    \"category\": \"emotions_and_attitudes\"\n  }\n]",
-  "usage": {
-    "input_tokens": 865,
-    "output_tokens": 279,
-    "total_tokens": 1144
-  }
-}

@@ -1,8 +1,0 @@
-{
-  "content": "[\n  {\n    \"content\": \"A chapter typically has two coordinating lead authors responsible for assembling contributions, ensuring stylistic and formatting consistency, and reporting to the Working Group chairs.\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"A chapter typically has ten to fifteen lead authors responsible for writing sections of chapters.\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"A chapter has a larger number of contributing authors who prepare text, graphs, or data for inclusion by lead authors.\",\n    \"importance\": 0.8,\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"The coordinating lead authors are responsible for ensuring that all author contributions meet stylistic and formatting requirements.\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"The coordinating lead authors report to the Working Group chairs.\",\n    \"importance\": 0.8,\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"Lead authors are responsible for writing sections of chapters.\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"Contributing authors prepare text, graphs, or data for inclusion by lead authors.\",\n    \"importance\": 0.8,\n    \"category\": \"factual_context\"\n  }\n]",
-  "usage": {
-    "input_tokens": 703,
-    "output_tokens": 314,
-    "total_tokens": 1017
-  }
-}

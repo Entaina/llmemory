@@ -1,8 +1,0 @@
-{
-  "content": "[\n  {\n    \"content\": \"John is concerned about lack of education and crumbling infrastructure in his neighborhood and believes schools and infrastructure should be properly funded.\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"John witnessed the impact of underfunded schools on his community during childhood and wants to prevent future generations from experiencing similar challenges.\",\n    \"importance\": 0.9,\n    \"category\": \"background\"\n  },\n  {\n    \"content\": \"The extra funding enabled necessary repairs and renovations at a school, improving safety and modernity for students.\",\n    \"importance\": 0.8,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"John plans to engage with local leaders and organizations to gather support and ideas for his next political move.\",\n    \"importance\": 0.9,\n    \"category\": \"next_steps\"\n  },\n  {\n    \"content\": \"John intends to build a political campaign by seeking collaboration with local leaders and community organizations.\",\n    \"importance\": 0.8,\n    \"category\": \"behavior\"\n  }\n]",
-  "usage": {
-    "input_tokens": 783,
-    "output_tokens": 239,
-    "total_tokens": 1022
-  }
-}

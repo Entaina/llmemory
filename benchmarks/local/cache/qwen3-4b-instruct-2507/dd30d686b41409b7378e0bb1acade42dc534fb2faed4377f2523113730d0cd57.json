@@ -1,8 +1,0 @@
-{
-  "content": "[{\"content\": \"User requests the latest videos on cryptocurrency trends\", \"importance\": 0.9, \"category\": \"preferences\"}, {\"content\": \"The request was made on 2026-09-22\", \"importance\": 0.8, \"event_date\": \"2026-09-22\", \"category\": \"behavior\"}]",
-  "usage": {
-    "input_tokens": 444,
-    "output_tokens": 83,
-    "total_tokens": 527
-  }
-}

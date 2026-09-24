@@ -1,8 +1,0 @@
-{
-  "content": "[\n  {\n    \"content\": \"User practices contemporary and hip-hop dances\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User rehearses with a small group of dancers after work\",\n    \"importance\": 0.8,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"User is involved in choreography projects for a festival performance scheduled next month\",\n    \"importance\": 0.9,\n    \"event_date\": null,\n    \"category\": \"projects\"\n  },\n  {\n    \"content\": \"The dance group performing at the festival is composed of dancers that the user has rehearsed with\",\n    \"importance\": 0.8,\n    \"category\": \"behavior\"\n  }\n]",
-  "usage": {
-    "input_tokens": 847,
-    "output_tokens": 168,
-    "total_tokens": 1015
-  }
-}

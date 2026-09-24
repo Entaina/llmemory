@@ -1,8 +1,0 @@
-{
-  "content": "[\n  {\n    \"content\": \"The user is reviewing the evidence trail against the sustainable finance strategy risk specification at http://sharepoint/sustainable_finance_strategy/risk:_incomplete_impact_data_spec.\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"The user has identified the need to flag new datasets, reclassification changes, or methodology exceptions in the risk specification to prevent compliance issues.\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"Reporting assumptions require a fresh look due to unresolved data dependencies.\",\n    \"importance\": 0.8,\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"Finance, ESG, and Data Governance need to align on unresolved dependencies quickly.\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"A polished report may lack credibility if methodology, source quality, and coverage are not reconciled.\",\n    \"importance\": 0.8,\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"The user is looking at the risk specification to confirm which gaps are owned and which metrics can still be trusted as-is.\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  }\n]",
-  "usage": {
-    "input_tokens": 609,
-    "output_tokens": 295,
-    "total_tokens": 904
-  }
-}

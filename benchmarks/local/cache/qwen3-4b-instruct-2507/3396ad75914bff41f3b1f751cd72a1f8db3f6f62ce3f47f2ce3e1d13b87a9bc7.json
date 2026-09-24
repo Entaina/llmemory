@@ -1,8 +1,0 @@
-{
-  "content": "[\n  {\n    \"content\": \"User_12 accepted baseline freeze with Finance Ops as single approver\",\n    \"importance\": 0.9,\n    \"category\": \"decisions\"\n  },\n  {\n    \"content\": \"Controls must run all three fail states in http://sharepoint/financial_reporting_automation/design_automated_report_templates_spec by 2025-07-19\",\n    \"importance\": 0.9,\n    \"event_date\": \"2025-07-19\",\n    \"category\": \"deadlines\"\n  },\n  {\n    \"content\": \"Any post-freeze cutoff change must go through controlled change with data preserving lineage\",\n    \"importance\": 0.8,\n    \"category\": \"processes\"\n  }\n]",
-  "usage": {
-    "input_tokens": 538,
-    "output_tokens": 169,
-    "total_tokens": 707
-  }
-}

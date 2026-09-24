@@ -1,8 +1,0 @@
-{
-  "content": "[\n  {\n    \"content\": \"User is interested in learning more about conservation efforts and how they can make a difference.\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User asks if the San Diego Zoo offers behind-the-scenes tours or conservation programs for participation.\",\n    \"importance\": 0.85,\n    \"category\": \"behavior\"\n  }\n]",
-  "usage": {
-    "input_tokens": 627,
-    "output_tokens": 91,
-    "total_tokens": 718
-  }
-}

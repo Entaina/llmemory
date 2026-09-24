@@ -1,8 +1,0 @@
-{
-  "content": "[\n  {\n    \"content\": \"User installed non-slip mats throughout the kitchen after a toddler slipped on the floor\",\n    \"importance\": 0.9,\n    \"event_date\": \"2023-07-23\",\n    \"subject\": \"user\",\n    \"predicate\": \"installed_non_slip_mats_in_kitchen_after_toddler_slip\",\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"Assistant acknowledged the incident as a turning point in household safety setup\",\n    \"importance\": 0.8,\n    \"event_date\": \"2023-07-23\",\n    \"subject\": \"assistant\",\n    \"predicate\": \"recognized_incident_as_turning_point_in_household_safety_setup\",\n    \"category\": \"behavior\"\n  }\n]",
-  "usage": {
-    "input_tokens": 717,
-    "output_tokens": 173,
-    "total_tokens": 890
-  }
-}

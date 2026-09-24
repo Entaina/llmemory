@@ -1,8 +1,0 @@
-{
-  "content": "[\n  {\n    \"content\": \"User prefers Model Atlas due to its familiar interface and quick setup that align with their existing workflow\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User values comfort in using tools they already understand, citing familiarity as a key factor in decision-making\",\n    \"importance\": 0.8,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User believes migration and learning time are often underestimated when switching tools\",\n    \"importance\": 0.7,\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"User suspects that a different tool would need to demonstrate noticeable benefits in use to justify the extra effort required for adoption or transition\",\n    \"importance\": 0.8,\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"User suggests that the team would benefit from having at least one person who already knows the starting point of the tool workflow\",\n    \"importance\": 0.9,\n    \"category\": \"team_preferences_or_recommendation\"\n  }\n]",
-  "usage": {
-    "input_tokens": 578,
-    "output_tokens": 242,
-    "total_tokens": 820
-  }
-}

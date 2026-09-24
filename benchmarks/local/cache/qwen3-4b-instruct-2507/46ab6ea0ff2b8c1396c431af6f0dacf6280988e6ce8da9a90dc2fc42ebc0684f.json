@@ -1,8 +1,0 @@
-{
-  "content": "[\n  {\n    \"content\": \"Legal will post the blocker list by end of day\",\n    \"importance\": 0.9,\n    \"event_date\": \"2025-07-26\",\n    \"subject\": \"Legal\",\n    \"predicate\": \"will post blocker list by EOD\",\n    \"category\": \"deadlines\"\n  },\n  {\n    \"content\": \"@User_7 will close the phase cleanly\",\n    \"importance\": 0.9,\n    \"event_date\": \"2025-07-26\",\n    \"subject\": \"@User_7\",\n    \"predicate\": \"will close the phase cleanly\",\n    \"category\": \"deadlines\"\n  },\n  {\n    \"content\": \"The conversation anchor time is 2025-07-26T17:23:05Z\",\n    \"importance\": 0.9,\n    \"event_date\": null,\n    \"subject\": \"conversation\",\n    \"predicate\": \"has anchor time of 2025-07-26T17:23:05Z\",\n    \"category\": \"context\"\n  }\n]",
-  "usage": {
-    "input_tokens": 502,
-    "output_tokens": 249,
-    "total_tokens": 751
-  }
-}

@@ -1,8 +1,0 @@
-{
-  "content": "[\n  {\n    \"content\": \"User is interested in counseling or working in mental health\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User expressed interest in supporting individuals with similar issues\",\n    \"importance\": 0.8,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"Assistant (Melanie) painted a lake sunrise last year\",\n    \"importance\": 0.7,\n    \"event_date\": null,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"Assistant (Melanie) engages in painting as a creative outlet for self-expression and relaxation\",\n    \"importance\": 0.8,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"User plans to conduct research on mental health careers\",\n    \"importance\": 0.9,\n    \"category\": \"research_target\"\n  }\n]",
-  "usage": {
-    "input_tokens": 821,
-    "output_tokens": 202,
-    "total_tokens": 1023
-  }
-}

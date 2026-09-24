@@ -1,8 +1,0 @@
-{
-  "content": "[\n  {\n    \"content\": \"User and assistant emphasize the importance of bonding through shared meals and joyful experiences\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"Assistant values nature and finds peace in natural settings, particularly during sunset\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"Assistant shared a photo taken at the beach last month during sunset viewing\",\n    \"importance\": 0.8,\n    \"event_date\": \"2023-01-09\",\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"Assistant made peach cobbler recently\",\n    \"importance\": 0.8,\n    \"event_date\": \"2023-01-09\",\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"User and assistant agree that discussing community issues and standing together is essential for making positive changes in the neighborhood\",\n    \"importance\": 0.9,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"User expresses commitment to speaking up for their community and advocating for change\",\n    \"importance\": 0.8,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"Assistant acknowledges and appreciates the user's support and efforts in promoting community well-being\",\n    \"importance\": 0.7,\n    \"category\": \"interaction\"\n  }\n]",
-  "usage": {
-    "input_tokens": 904,
-    "output_tokens": 322,
-    "total_tokens": 1226
-  }
-}

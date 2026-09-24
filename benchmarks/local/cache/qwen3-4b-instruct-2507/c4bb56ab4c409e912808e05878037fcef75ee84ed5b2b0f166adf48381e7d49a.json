@@ -1,8 +1,0 @@
-{
-  "content": "[{\"content\": \"@User_7 has requested to drop the sign-off time so that the confirmed slice can be locked and the phase marked as Completed\", \"importance\": 0.9, \"category\": \"decisions\"}, {\"content\": \"The phase is being marked as Completed after the sign-off time is dropped by @User_7\", \"importance\": 0.8, \"category\": \"status_updates\"}]",
-  "usage": {
-    "input_tokens": 464,
-    "output_tokens": 89,
-    "total_tokens": 553
-  }
-}

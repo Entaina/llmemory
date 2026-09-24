@@ -1,8 +1,0 @@
-{
-  "content": "[\n  {\n    \"content\": \"User_3 identifies the handoff issue between onboarding and identity checks as a confirmed risk, not a broad funnel issue.\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"Product should maintain a reversible patch ready for the hot lane to address potential drop-offs.\",\n    \"importance\": 0.9,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"Ops and Support will remain live through one more retry wave to capture the first-failed step, exact error text, and turnaround gap in http://sharepoint/customer_onboarding_optimization/risk:_high_verification_drop_off_spec.\",\n    \"importance\": 0.9,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"The handoff issue is at 83% completion and requires leadership attention to prevent downstream impacts on conversion, activation, and the July 29 rollout path.\",\n    \"importance\": 0.85,\n    \"event_date\": \"2025-07-26\",\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"A short-term fix package is required to be aligned on by Product, Ops, and Support this week.\",\n    \"importance\": 0.9,\n    \"event_date\": \"2025-07-26\",\n    \"category\": \"decision\"\n  },\n  {\n    \"content\": \"The phase specification for the handoff issue is located at http://sharepoint/customer_onboarding_optimization/risk:_high_verification_drop_off_spec.\",\n    \"importance\": 0.8,\n    \"event_date\": null,\n    \"category\": \"reference\"\n  }\n]",
-  "usage": {
-    "input_tokens": 1543,
-    "output_tokens": 373,
-    "total_tokens": 1916
-  }
-}

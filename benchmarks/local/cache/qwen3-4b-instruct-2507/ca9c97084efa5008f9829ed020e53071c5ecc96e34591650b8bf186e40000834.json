@@ -1,8 +1,0 @@
-{
-  "content": "[\n  {\n    \"content\": \"John is concerned about lack of education and crumbling infrastructure in his neighborhood\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"John believes schools and infrastructure should be properly funded to prevent future generations from experiencing the same issues\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"John observed a school in his neighborhood that received funding last year, which enabled necessary repairs and renovations\",\n    \"importance\": 0.8,\n    \"event_date\": \"2022-12-17\",\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"The extra funding improved the learning environment by making it safer and more modern for students\",\n    \"importance\": 0.8,\n    \"category\": \"factual_context\"\n  },\n  {\n    \"content\": \"John plans to engage with local leaders and organizations to gather support and ideas for his next political move\",\n    \"importance\": 0.9,\n    \"event_date\": \"2022-12-17\",\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"John intends to pursue a political campaign involving community engagement with local leaders and organizations\",\n    \"importance\": 0.9,\n    \"category\": \"behavior\"\n  }\n]",
-  "usage": {
-    "input_tokens": 789,
-    "output_tokens": 303,
-    "total_tokens": 1092
-  }
-}

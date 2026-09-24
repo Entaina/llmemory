@@ -1,8 +1,0 @@
-{
-  "content": "[\n  {\n    \"content\": \"User_3 is initiating the Compliance Review Gate at approximately 5% progress, focusing on evidence gathering and control mapping against the spec at http://sharepoint/customer_onboarding_optimization/compliance_review_gate_spec.\",\n    \"importance\": 0.9,\n    \"event_date\": null,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"User_3 is aligning review efforts with policy exceptions, audit trail completeness, and potential control gaps that could lead to rework for Legal, Security, or Ops.\",\n    \"importance\": 0.8,\n    \"event_date\": null,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"User_3 has requested validation of evidence capture for revised onboarding controls against the current spec at http://sharepoint/customer_onboarding_optimization/compliance_review_gate_spec.\",\n    \"importance\": 0.9,\n    \"event_date\": null,\n    \"category\": \"decision\"\n  },\n  {\n    \"content\": \"User_3 has requested flagging of any late policy clarifications that altered control wording to prevent rework before it reaches customer success or implementation.\",\n    \"importance\": 0.8,\n    \"event_date\": null,\n    \"category\": \"decision\"\n  }\n]",
-  "usage": {
-    "input_tokens": 1217,
-    "output_tokens": 274,
-    "total_tokens": 1491
-  }
-}

@@ -1,8 +1,0 @@
-{
-  "content": "[{\"content\": \"Steam turbines were not ideally suited to the railroad environment and failed to replace classic reciprocating steam units in the way modern diesel and electric traction has done.\", \"importance\": 0.85, \"category\": \"factual_context\"}, {\"content\": \"Direct-drive locomotives found success in long haul freight operations in Sweden and express passenger work in Britain but were not repeated elsewhere.\", \"importance\": 0.75, \"category\": \"factual_context\"}, {\"content\": \"In the U.S.A., experimental advanced designs with electric transmission were built but not reproduced.\", \"importance\": 0.6, \"category\": \"factual_context\"}, {\"content\": \"Citizens and corporations have standing to bring claims against EU institutions and member states for treaty violations when treaties are interpreted as creating rights and obligations.\", \"importance\": 0.9, \"category\": \"legal_precedent\"}, {\"content\": \"Member states and the European Commission have general legal right or 'standing' (locus standi) to bring claims against EU institutions and other member states for breach of treaties.\", \"importance\": 0.85, \"category\": \"legal_precedent\"}, {\"content\": \"Under Directives, citizens and corporations may not have standing to bring claims unless the directives are interpreted as creating rights and obligations.\", \"importance\": 0.7, \"category\": \"legal_precedent\"}]",
-  "usage": {
-    "input_tokens": 550,
-    "output_tokens": 298,
-    "total_tokens": 848
-  }
-}

@@ -1,8 +1,0 @@
-{
-  "content": "[\n  {\n    \"content\": \"Data Ops will stamp the exception log owner today\",\n    \"importance\": 0.9,\n    \"event_date\": \"2025-07-17\",\n    \"subject\": \"Data Ops\",\n    \"predicate\": \"stamps exception log owner\",\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"Weaker providers' evidence will be kept only in http://sharepoint/sustainable_finance_strategy/risk:_esg_data_provider_reliability_spec\",\n    \"importance\": 0.8,\n    \"event_date\": null,\n    \"subject\": \"weaker providers\",\n    \"predicate\": \"have evidence stored in SharePoint document\",\n    \"category\": \"behaviors\"\n  },\n  {\n    \"content\": \"The control snapshot will be set to July 29, 2025\",\n    \"importance\": 0.9,\n    \"event_date\": \"2025-07-29\",\n    \"subject\": \"control snapshot\",\n    \"predicate\": \"set to July 29, 2025\",\n    \"category\": \"deadlines\"\n  },\n  {\n    \"content\": \"Closing the issue as 'Detected' will be done without risking another rework loop\",\n    \"importance\": 0.8,\n    \"event_date\": null,\n    \"subject\": \"issue closure\",\n    \"predicate\": \"will be closed as Detected to avoid rework loops\",\n    \"category\": \"decisions\"\n  }\n]",
-  "usage": {
-    "input_tokens": 1231,
-    "output_tokens": 325,
-    "total_tokens": 1556
-  }
-}

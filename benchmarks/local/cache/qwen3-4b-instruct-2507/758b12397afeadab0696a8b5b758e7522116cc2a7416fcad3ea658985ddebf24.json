@@ -1,8 +1,0 @@
-{
-  "content": "[{\"content\": \"User requests the latest videos on cryptocurrency trends\", \"importance\": 0.9, \"event_date\": \"2026-09-22\", \"category\": \"preferences\"}]",
-  "usage": {
-    "input_tokens": 353,
-    "output_tokens": 47,
-    "total_tokens": 400
-  }
-}

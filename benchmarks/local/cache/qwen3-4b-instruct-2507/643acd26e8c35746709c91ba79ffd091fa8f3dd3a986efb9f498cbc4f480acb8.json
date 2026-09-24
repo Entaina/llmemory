@@ -1,8 +1,0 @@
-{
-  "content": "[\n  {\n    \"content\": \"Assistant made peach cobbler recently\",\n    \"importance\": 0.9,\n    \"category\": \"behaviors\"\n  },\n  {\n    \"content\": \"Assistant shared a photo taken at the beach last month during sunset viewing\",\n    \"importance\": 0.85,\n    \"event_date\": \"2023-01-09\",\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"Assistant values nature and finds peace in natural settings, particularly during sunset\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User and assistant both emphasize the importance of bonding through shared meals and joyful experiences\",\n    \"importance\": 0.95,\n    \"category\": \"shared_values\"\n  }\n]",
-  "usage": {
-    "input_tokens": 543,
-    "output_tokens": 180,
-    "total_tokens": 723
-  }
-}

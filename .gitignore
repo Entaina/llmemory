@@ -36,6 +36,7 @@ Thumbs.db
 !/benchmarks/zero_mem/results/example_*
 
 # Local LM Studio benchmark artifacts
+/benchmarks/local/cache/
 /benchmarks/local/results/*
 !/benchmarks/local/results/.gitkeep
 benchmarks/local/benchmarks.env

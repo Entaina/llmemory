@@ -1,8 +1,0 @@
-{
-  "content": "[\n  {\n    \"content\": \"User_3 supports Engineering posting the final branch logic in the policy specification this week to provide a deterministic basis for Legal and Support validation.\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User_3 recommends limiting the branch logic to hard-fail, manual review, and allowed-with-reason-code, with parser blanks and regional exceptions explicitly tagged in http://sharepoint/customer_onboarding_optimization/kyc_vendor_selection_spec.\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User_3 believes sharing the final version of branch logic now will help flush out policy gaps before implementation locks and avoid a subsequent cleanup cycle.\",\n    \"importance\": 0.8,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"User_11 agrees that the exception path is a high-risk area where unintended behavior can quietly creep in.\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User_11 recommends that Ops post regional manual-review SLAs and Product define extra-click tolerance to stop debates about intent and lock behavioral definitions in http://sharepoint/customer_onboarding_optimization/kyc_vendor_selection_spec.\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  }\n]",
-  "usage": {
-    "input_tokens": 1179,
-    "output_tokens": 301,
-    "total_tokens": 1480
-  }
-}

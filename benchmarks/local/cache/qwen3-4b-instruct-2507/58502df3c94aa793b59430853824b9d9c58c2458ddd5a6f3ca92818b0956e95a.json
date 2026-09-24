@@ -1,8 +1,0 @@
-{
-  "content": "[\n  {\n    \"content\": \"User finds Harry Potter reminders helpful for escaping daily reality\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User expresses intent to visit more Harry Potter-themed locations in the future\",\n    \"importance\": 0.9,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"User feels immersed in the Harry Potter world when visiting real-life locations\",\n    \"importance\": 0.8,\n    \"category\": \"experience\"\n  },\n  {\n    \"content\": \"User previously visited a Harry Potter-themed location in London and participated in a Harry Potter tour there\",\n    \"importance\": 0.9,\n    \"category\": \"background_facts\"\n  },\n  {\n    \"content\": \"User has an ongoing fan project focused on the Harry Potter universe\",\n    \"importance\": 0.9,\n    \"category\": \"identity_or_role\"\n  },\n  {\n    \"content\": \"User discusses characters, spells, and magical creatures within the Harry Potter universe\",\n    \"importance\": 0.8,\n    \"category\": \"interests\"\n  }\n]",
-  "usage": {
-    "input_tokens": 908,
-    "output_tokens": 250,
-    "total_tokens": 1158
-  }
-}

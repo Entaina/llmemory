@@ -1,8 +1,0 @@
-{
-  "content": "[{\"content\": \"User provided the URL of a Facebook video\", \"importance\": 0.9, \"event_date\": \"2026-09-22\", \"subject\": \"user\", \"predicate\": \"provided_url_of_facebook_video\", \"category\": \"behavior\"}]",
-  "usage": {
-    "input_tokens": 452,
-    "output_tokens": 63,
-    "total_tokens": 515
-  }
-}

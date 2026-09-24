@@ -1,8 +1,0 @@
-{
-  "content": "[\n  {\n    \"content\": \"User_13 opposes clause-scoping the EOD note at this late stage, citing it as a 'velvet rope for a stampede' and emphasizing that the real risk is owner ambiguity.\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"User_13 requires the freeze stamp and named owners from Legal, Finance, Risk, and Ops to be included in the specification immediately, not delayed to future email-based interpretive dances.\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"@User_7 is designated as the gatekeeper for sign-off on regulatory changes.\",\n    \"importance\": 0.95,\n    \"category\": \"role\"\n  },\n  {\n    \"content\": \"User_7 should confirm the sign-off window to allow freezing of the confirmed set and marking the phase as Completed.\",\n    \"importance\": 0.85,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"@User_7 has requested to drop the sign-off time so that the confirmed slice can be locked and the phase marked as Completed.\",\n    \"importance\": 0.9,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"The phase is marked as Completed after the sign-off time is dropped by @User_7.\",\n    \"importance\": 0.85,\n    \"category\": \"behavior\"\n  }\n]",
-  "usage": {
-    "input_tokens": 653,
-    "output_tokens": 324,
-    "total_tokens": 977
-  }
-}

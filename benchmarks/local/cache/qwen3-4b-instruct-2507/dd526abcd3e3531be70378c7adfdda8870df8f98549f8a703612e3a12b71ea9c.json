@@ -1,8 +1,0 @@
-{
-  "content": "[\n  {\n    \"content\": \"Finance can stamp fallback owners and expiry only after Data Ops names turnarounds in http://sharepoint/sustainable_finance_strategy/risk:_incomplete_impact_data_spec\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"Any missing owner, expiry, or evidence status remains blocked until resolved\",\n    \"importance\": 0.9,\n    \"category\": \"constraints\"\n  },\n  {\n    \"content\": \"Locking the split today closes the risk cleanly without baking in incorrect assumptions\",\n    \"importance\": 0.8,\n    \"event_date\": \"2025-07-27\",\n    \"category\": \"decisions\"\n  }\n]",
-  "usage": {
-    "input_tokens": 1443,
-    "output_tokens": 163,
-    "total_tokens": 1606
-  }
-}

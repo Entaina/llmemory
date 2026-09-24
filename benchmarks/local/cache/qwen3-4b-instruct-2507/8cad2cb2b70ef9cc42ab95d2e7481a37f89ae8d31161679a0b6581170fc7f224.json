@@ -1,8 +1,0 @@
-{
-  "content": "[\n  {\n    \"content\": \"The conversation emphasizes that dance classes can have a charged atmosphere where experienced dancers may make beginners feel awkward.\",\n    \"importance\": 0.8,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"It is noted that everyone has different passions and comfort zones, and finding the right activity requires experimentation.\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"Salsa is mentioned as having rapid steps and lively music, which may be inviting but also daunting for beginners.\",\n    \"importance\": 0.8,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"The speaker validates the user's feelings of discomfort when trying new activities, affirming that those feelings are valid.\",\n    \"importance\": 0.9,\n    \"category\": \"emotional_response\"\n  },\n  {\n    \"content\": \"Exploring gentler alternatives to dance classes is suggested as a way to find joy in movement or teamwork that feels more suitable.\",\n    \"importance\": 0.8,\n    \"category\": \"behavior\"\n  },\n  {\n    \"content\": \"Maintaining an open mind about different experiences while honoring one's discomfort is presented as a path to discovering true interests.\",\n    \"importance\": 0.9,\n    \"category\": \"preferences\"\n  },\n  {\n    \"content\": \"The journey of finding an activity one loves is considered as important as the activity itself, with each experience contributing to understanding personal enjoyment.\",\n    \"importance\": 0.9,\n    \"category\": \"behavior\"\n  }\n]",
-  "usage": {
-    "input_tokens": 552,
-    "output_tokens": 345,
-    "total_tokens": 897
-  }
-}
