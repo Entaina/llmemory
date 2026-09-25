@@ -12,7 +12,7 @@ RSpec.describe "llmemory zero-mem CLI" do
   end
 
   it "lists traces for a user" do
-    memory = Llmemory::Memory.new(user_id: "u_cli", session_id: "default", trace_store: trace_store, memory_mode: :zero_mem)
+    memory = Llmemory::Memory.new(user_id: "u_cli", session_id: "default", trace_store: trace_store, memory_mode: :hybrid)
     memory.add_message(role: :user, content: "cli trace")
 
     output = capture_stdout do
@@ -22,7 +22,7 @@ RSpec.describe "llmemory zero-mem CLI" do
   end
 
   it "searches evidence without LLM" do
-    memory = Llmemory::Memory.new(user_id: "u_cli", session_id: "default", trace_store: trace_store, memory_mode: :zero_mem)
+    memory = Llmemory::Memory.new(user_id: "u_cli", session_id: "default", trace_store: trace_store, memory_mode: :hybrid)
     memory.add_message(role: :user, content: "unique needle xyz")
 
     output = capture_stdout do

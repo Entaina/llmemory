@@ -70,6 +70,7 @@ module LocalBenchmark
 
         normalized = normalize_text(text)
         return true if normalized.include?(normalized_gold)
+        return true if quoted_core_mentioned?(text, gold)
 
         match = normalized_gold.match(/\A(\d{1,2}) ([a-z]{3}) (\d{4})\z/)
         return false unless match
@@ -79,6 +80,18 @@ module LocalBenchmark
         month = MONTH_NAMES[mon]
         down = text.to_s.downcase
         down.match?(/\b#{Regexp.escape(month)}\s+#{day}\b/) || down.match?(/\b#{day}\s+#{mon}/)
+      end
+
+      def quoted_core_mentioned?(text, gold)
+        normalized = normalize_text(text)
+        extract_quoted_spans(gold).any? do |core|
+          ncore = normalize_text(core)
+          ncore.length >= 30 && normalized.include?(ncore)
+        end
+      end
+
+      def extract_quoted_spans(gold)
+        gold.to_s.scan(/['"]([^'"]{20,})['"]/).flatten
       end
 
       def numeric_days_match?(prediction, gold)

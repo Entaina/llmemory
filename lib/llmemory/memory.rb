@@ -85,7 +85,6 @@ module Llmemory
     # Reflects over recent episodes and writes distilled insights to the
     # semantic store (file/graph) with provenance back to source episodes.
     def reflect!(window: 10, category: "insights")
-      deny_generative!(:reflect!) if zero_mem_strict?
       Reflection::Reflector.new(episodic: episodic, semantic: @long_term, llm: tracked_llm_client)
         .reflect(window: window, category: category)
     end
@@ -101,7 +100,6 @@ module Llmemory
     # `auto_register: true`, registers them in procedural memory (with provenance
     # back to the source episodes) and returns the new skill ids.
     def mine_skills!(window: SkillMining::Miner::DEFAULT_WINDOW, outcomes: nil, auto_register: false)
-      deny_generative!(:mine_skills!) if zero_mem_strict?
       SkillMining::Miner.new(episodic: episodic, procedural: procedural, llm: tracked_llm_client)
         .mine(window: window, outcomes: outcomes, auto_register: auto_register)
     end
@@ -229,10 +227,8 @@ module Llmemory
 
     def retrieve_evidence(query, top_k: nil, max_tokens: nil, boundary: nil, explain: false, current_trace_id: nil,
                           **opts)
-      raise ConfigurationError, "retrieve_evidence requires memory_mode :zero_mem or :hybrid" unless zero_mem_enabled?
       raise ConfigurationError, "trace_store is not configured" unless @trace_store
 
-      invoke_before = generative_invoke_calls
       result = zero_mem_engine.retrieve_evidence(
         query,
         top_k: top_k,
@@ -242,8 +238,6 @@ module Llmemory
         current_trace_id: current_trace_id,
         **opts
       )
-      compliant = generative_invoke_delta(invoke_before).zero?
-      result.metrics[:zero_mem_compliant] = compliant if zero_mem_strict?
       result
     end
 
@@ -279,22 +273,7 @@ module Llmemory
       msgs = pruned_messages
       short_context = format_short_term_context(msgs)
 
-      if hybrid? && @trace_store
-        return retrieve_hybrid(query, short_context, max_tokens)
-      end
-
-      if zero_mem_strict? && @trace_store
-        invoke_before = generative_invoke_calls
-        evidence_context = zero_mem_engine.to_context(query, max_tokens: max_tokens)
-        combined = combine_contexts(short_context, evidence_context)
-        compliant = generative_invoke_delta(invoke_before).zero?
-        Llmemory::Instrumentation.instrument(
-          :retrieve,
-          query_chars: query.to_s.length,
-          zero_mem_compliant: compliant
-        )
-        return combined
-      end
+      return retrieve_hybrid(query, short_context, max_tokens) if @trace_store
 
       long_context = @retrieval_engine.retrieve_for_inference(query, user_id: @user_id, max_tokens: max_tokens)
       combine_contexts(short_context, long_context)
@@ -331,7 +310,6 @@ module Llmemory
     end
 
     def consolidate!
-      deny_generative!(:consolidate!) if zero_mem_strict?
       msgs = messages
       return true if msgs.empty?
 
@@ -368,10 +346,8 @@ module Llmemory
 
     def compact!(max_bytes: nil)
       max = max_bytes || Llmemory.configuration.compact_max_bytes
-      if trace_backed? || zero_mem_strict?
-        if hybrid? && !zero_mem_strict?
-          flush_memory_before_compaction!(messages)
-        end
+      if trace_backed?
+        flush_memory_before_compaction!(messages)
         return compact_trace_deterministic!(max)
       end
 
@@ -393,7 +369,6 @@ module Llmemory
     end
 
     def maybe_flush_memory!
-      return false if zero_mem_strict?
       return false unless Llmemory.configuration.memory_flush_enabled
       msgs = messages
       return false if msgs.empty?
@@ -439,11 +414,6 @@ module Llmemory
 
     def check_context_window!
       return false if messages.empty?
-
-      if zero_mem_strict?
-        return compact! if should_compact?
-        return false
-      end
 
       flushed = false
       if should_auto_consolidate? && Llmemory.configuration.memory_flush_enabled
@@ -500,11 +470,11 @@ module Llmemory
     end
 
     def hybrid?
-      @memory_mode == :hybrid
+      true
     end
 
     def shadow_write_enabled?
-      @memory_mode == :classic && Llmemory.configuration.zero_mem_shadow_write
+      false
     end
 
     def user_id
@@ -516,7 +486,6 @@ module Llmemory
     end
 
     def retrieve_fused(query, max_tokens: nil)
-      raise ConfigurationError, "retrieve_fused requires memory_mode :hybrid" unless hybrid?
       raise ConfigurationError, "trace_store is not configured" unless @trace_store
 
       classic = @retrieval_engine.ranked_for(query, user_id: @user_id)
@@ -600,10 +569,6 @@ module Llmemory
       )
     end
 
-    def deny_generative!(operation)
-      raise GenerativeOperationDisabled, "#{operation} is disabled when memory_mode is :zero_mem"
-    end
-
     def generative_invoke_calls
       llm_usage.dig(:invoke, :calls).to_i
     end
@@ -613,7 +578,6 @@ module Llmemory
     end
 
     def flush_memory_before_compaction!(msgs)
-      return false if zero_mem_strict?
       return false unless Llmemory.configuration.memory_flush_enabled
       return false if msgs.empty?
       return false if estimated_tokens(msgs) < Llmemory.configuration.memory_flush_threshold_tokens

@@ -25,10 +25,6 @@ module Llmemory
         class << self
           def call(query:, user_id:, session_id: nil, top_k: nil, max_tokens: nil, boundary: nil,
                    explain: false, server_context: nil)
-            unless ZeroMem::Mode.zero_mem_enabled?(Llmemory.configuration.memory_mode)
-              return error_response("memory_retrieve_evidence requires memory_mode :zero_mem or :hybrid")
-            end
-
             session = session_id || "default"
             memory = StoreHelpers.build_memory(user_id: user_id, session_id: session)
             result = memory.retrieve_evidence(

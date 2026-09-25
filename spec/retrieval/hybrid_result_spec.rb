@@ -56,6 +56,7 @@ RSpec.describe Llmemory::Retrieval::HybridResult do
     )
 
     expect(result.to_context).to include("circumference")
+    expect(result.to_context).to include("Library is a sphere")
   end
 
   it "puts the witness trace ahead of a fact that names a different date" do
@@ -112,5 +113,38 @@ RSpec.describe Llmemory::Retrieval::HybridResult do
 
     context = result.to_context
     expect(context.index("Boreal")).to be < context.index("Atlas")
+  end
+
+  it "sums explicit time counts in the event counts block for how-many questions" do
+    profile = Llmemory::ZeroMem::QueryProfiler.new.profile(
+      "How many times did I ride the rollercoaster in July and August?",
+      language: :en
+    )
+    july = Time.utc(2024, 7, 15)
+    august = Time.utc(2024, 8, 10)
+    result = described_class.new(
+      items: [
+        {
+          kind: :trace,
+          text: "I rode the Galaxy rollercoaster three times today.",
+          score: 0.9,
+          trace_id: "t1",
+          occurred_at: july
+        },
+        {
+          kind: :trace,
+          text: "I rode the Galaxy rollercoaster two times today.",
+          score: 0.8,
+          trace_id: "t2",
+          occurred_at: august
+        }
+      ],
+      profile: profile
+    )
+
+    context = result.to_context
+    expect(context).to include("Event counts")
+    expect(context).to match(/- 5×/)
+    expect(context).not_to match(/- 1×.*- 1×/m)
   end
 end

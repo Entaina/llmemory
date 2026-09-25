@@ -26,6 +26,7 @@ module Llmemory
         scored = apply_corroboration(scored, seed_ids, profile: profile)
         ordered = drop_redundant_traces(scored, profile: profile)
         ordered = limit_uncorroborated_traces(ordered, profile: profile)
+        ordered = promote_query_evidenced_trace(ordered, profile: profile)
         packed = pack_items(ordered, max_tokens: max_tokens)
 
         corroborated = packed.count { |i| i[:via_trace_id] }
@@ -222,12 +223,15 @@ module Llmemory
         drop = Set.new
         unless temporal_profile?(profile)
           facts = scored.select { |row| row[:kind] == :fact && row[:corroborated] }
+          preserve_id = query_evidenced_trace_id(scored, profile)
           scored.each do |row|
             next unless row[:kind] == :trace
 
             covering = facts.select { |fact| Array(fact[:drop_trace_ids]).include?(row[:trace_id].to_s) }
             next if covering.empty?
+            next if preserve_id && row[:trace_id].to_s == preserve_id
             next if covering.any? { |fact| omits_trace_name?(fact[:text], row[:text]) }
+            next if omits_trace_query_term?(covering, row[:text], profile)
 
             drop << row[:trace_id].to_s
           end
@@ -320,6 +324,65 @@ module Llmemory
       def omits_trace_name?(fact_text, trace_text)
         names = trace_text.to_s.scan(/\b[A-Z][a-z]{2,}\b/).uniq
         names.any? { |name| !fact_text.to_s.include?(name) }
+      end
+
+      def omits_trace_query_term?(facts, trace_text, profile)
+        return false unless profile
+
+        tokens = query_retention_tokens(profile)
+        return false if tokens.empty?
+
+        trace = trace_text.to_s
+        facts_blob = facts.map { |f| f[:text].to_s }.join("\n")
+        tokens.any? do |token|
+          Llmemory::Tokenizer.matches?(trace, token) && !Llmemory::Tokenizer.matches?(facts_blob, token)
+        end
+      end
+
+      def promote_query_evidenced_trace(ordered, profile:)
+        return ordered if temporal_profile?(profile)
+
+        trace_id = query_evidenced_trace_id(ordered, profile)
+        return ordered unless trace_id
+
+        idx = ordered.index { |row| row[:trace_id].to_s == trace_id }
+        return ordered unless idx && idx.positive?
+
+        row = ordered.delete_at(idx)
+        insert_at = ordered.index { |r| r[:kind] == :trace } || ordered.length
+        ordered.insert(insert_at, row)
+      end
+
+      def query_evidenced_trace_id(ordered, profile)
+        facts_blob = ordered.select { |row| row[:kind] == :fact }.map { |row| row[:text].to_s }.join("\n")
+        query_tokens = query_retention_tokens(profile)
+        traces = ordered.select { |row| row[:kind] == :trace }
+        best = traces.max_by { |row| trace_evidence_rank(row, facts_blob, query_tokens) }
+        return nil unless best
+
+        rank = trace_evidence_rank(best, facts_blob, query_tokens)
+        rank[0].positive? || rank[1] >= 2 ? best[:trace_id].to_s : nil
+      end
+
+      def trace_evidence_rank(row, facts_blob, query_tokens)
+        text = row[:text].to_s
+        query_uncovered = query_tokens.count do |token|
+          Llmemory::Tokenizer.matches?(text, token) && !Llmemory::Tokenizer.matches?(facts_blob, token)
+        end
+        content_uncovered = trace_content_tokens(text).count do |token|
+          !Llmemory::Tokenizer.matches?(facts_blob, token)
+        end
+        [query_uncovered, content_uncovered, row[:fusion_score].to_f]
+      end
+
+      def query_retention_tokens(profile)
+        return [] unless profile
+
+        Array(profile.keywords || profile[:keywords]).map(&:to_s).select { |token| token.length >= 4 }
+      end
+
+      def trace_content_tokens(text)
+        Llmemory::Tokenizer.content_tokens(text).select { |token| token.length >= 4 }
       end
 
       def current_state_profile?(profile)

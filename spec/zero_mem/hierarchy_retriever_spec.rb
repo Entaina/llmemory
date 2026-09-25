@@ -40,6 +40,27 @@ RSpec.describe Llmemory::ZeroMem::HierarchyRetriever do
     expect(result[:traces].map(&:content).join(" ")).to include("Boreal")
   end
 
+  it "prefers a specific researching phrase over a generic research mention" do
+    memory = Llmemory::Memory.new(user_id: "u_research", session_id: "s1", trace_store: storage)
+    memory.add_message(
+      role: :user,
+      content: "Totally agree. Well, I'm off to go do some research.",
+      occurred_at: Time.utc(2023, 5, 8)
+    )
+    memory2 = Llmemory::Memory.new(user_id: "u_research", session_id: "s2", trace_store: storage)
+    memory2.add_message(
+      role: :user,
+      content: "Researching adoption agencies — it's been a dream to have a family.",
+      occurred_at: Time.utc(2023, 5, 25)
+    )
+    query = "What did Caroline research?"
+    profile = Llmemory::ZeroMem::QueryProfiler.new.profile(query)
+    result = retriever.retrieve(user_id: "u_research", query: query, profile: profile, top_k: 3)
+    joined = result[:traces].map(&:content).join(" ")
+    expect(joined).to include("adoption agencies")
+    expect(joined.index("adoption agencies")).to be < joined.index("go do some research")
+  end
+
   it "returns traces with dense degradation flagged" do
     profile = Llmemory::ZeroMem::QueryProfiler.new.profile("favorite color teal")
     result = retriever.retrieve(user_id: user_id, query: "favorite color teal", profile: profile, top_k: 5)

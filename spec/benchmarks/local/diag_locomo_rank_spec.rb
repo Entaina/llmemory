@@ -39,7 +39,7 @@ RSpec.describe "LoCoMo-style temporal localization (diag_locomo regression)" do
       user_id: user_id,
       session_id: "s1",
       trace_store: storage,
-      memory_mode: :zero_mem
+      memory_mode: :hybrid
     )
     turn_to_trace = {}
     conv["sessions"].each do |session|

@@ -8,7 +8,7 @@ RSpec.describe Llmemory::MCP::Tools::MemoryRetrieveEvidence do
   before do
     Llmemory.reset_configuration!
     Llmemory.configuration.short_term_store = :memory
-    Llmemory.configuration.memory_mode = :zero_mem
+    Llmemory.configuration.memory_mode = :hybrid
     Llmemory::MCP::StoreHelpers.instance_variable_set(:@trace_store_instance, nil)
   end
 
@@ -16,7 +16,7 @@ RSpec.describe Llmemory::MCP::Tools::MemoryRetrieveEvidence do
     store = Llmemory::ZeroMem::Storages::Memory.new
     allow(Llmemory::ZeroMem::Storages).to receive(:build).and_return(store)
 
-    memory = Llmemory::Memory.new(user_id: "u_ev", session_id: "default", trace_store: store, memory_mode: :zero_mem)
+    memory = Llmemory::Memory.new(user_id: "u_ev", session_id: "default", trace_store: store)
     memory.add_message(role: :user, content: "Project Atlas uses Nimbus")
 
     response = described_class.call(query: "Atlas database", user_id: "u_ev")
@@ -26,9 +26,9 @@ RSpec.describe Llmemory::MCP::Tools::MemoryRetrieveEvidence do
     expect(payload["evidence"]).to be_an(Array)
   end
 
-  it "errors when memory_mode is classic" do
-    Llmemory.configuration.memory_mode = :classic
-    response = described_class.call(query: "x", user_id: "u")
-    expect(response.instance_variable_get(:@error)).to be true
+  it "rejects a non-hybrid memory_mode" do
+    expect do
+      Llmemory.configure { |c| c.memory_mode = :classic }
+    end.to raise_error(Llmemory::ConfigurationError, /invalid memory_mode/)
   end
 end

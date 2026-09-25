@@ -11,7 +11,7 @@ RSpec.describe "Memory#retrieve_evidence (lexical Zero-Mem)" do
       user_id: user_id,
       session_id: session_id,
       trace_store: storage,
-      memory_mode: :zero_mem
+      memory_mode: :hybrid
     )
     Array(conv["sessions"]).each do |session|
       Array(session["turns"]).each do |turn|

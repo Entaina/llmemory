@@ -58,35 +58,13 @@ RSpec.describe "Hybrid memory_mode retrieve" do
     expect(fused.ranked_trace_ids).not_to be_empty
   end
 
-  it "routes strict zero_mem through evidence only" do
-    Llmemory.configure { |c| c.memory_mode = :zero_mem }
-    memory = Llmemory::Memory.new(
-      user_id: user_id,
-      session_id: "s1",
-      trace_store: trace_store,
-      long_term: long_term,
-      retrieval_engine: retrieval_engine
-    )
-    memory.add_message(role: :user, content: "Atlas database migration project")
-
-    expect { memory.consolidate! }.to raise_error(Llmemory::GenerativeOperationDisabled)
-
-    ctx = memory.retrieve("Atlas database")
-    expect(ctx).to include("ZERO-MEM EVIDENCE")
-    expect(ctx).to include("Atlas")
-  end
-
-  it "keeps classic retrieve without Zero-Mem banner when mode is classic" do
-    memory = Llmemory::Memory.new(
-      user_id: user_id,
-      session_id: "s1",
-      long_term: long_term,
-      retrieval_engine: retrieval_engine
-    )
+  it "retrieves fused memory without a separate Zero-Mem banner" do
+    memory = hybrid_memory
     memory.add_message(role: :user, content: "Secret code phrase: emerald-42")
     memory.consolidate!
 
     ctx = memory.retrieve("emerald")
+    expect(ctx).to include("=== MEMORY ===")
     expect(ctx).not_to include("ZERO-MEM EVIDENCE")
     expect(ctx).to match(/emerald|Secret/i)
   end

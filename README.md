@@ -153,19 +153,15 @@ Llmemory.configure do |config|
 end
 ```
 
-### Hybrid memory (default) and Zero-Mem modes
+### Memory retrieval
 
-**Default `memory_mode` is `:hybrid`:** immutable **traces** (Zero-Mem) plus **classic** long-term facts from
-`consolidate!`, merged into a single ranked context (`=== MEMORY ===`) via reciprocal-rank fusion.
-Facts link back to source traces through provenance for corroboration and deduplication.
-`hybrid_classic_token_ratio` is the **ceiling** on tokens spent on facts/summaries (not a fixed 50/50 split).
-
-Legacy modes: `:classic` (facts only, no auto trace store) and strict `:zero_mem` (traces only; generative
-ops raise). Experimental — does not reproduce published Zero-Mem paper numbers.
+Every `Memory` stores immutable **traces** and long-term facts from `consolidate!`. `retrieve` merges
+them into one ranked context (`=== MEMORY ===`) via reciprocal-rank fusion. Facts link back to source
+traces through provenance. `hybrid_classic_token_ratio` is the **ceiling** on tokens spent on
+facts/summaries (not a fixed 50/50 split).
 
 ```ruby
 Llmemory.configure do |config|
-  config.memory_mode = :hybrid          # default; or :classic / :zero_mem
   config.hybrid_classic_token_ratio = 0.5  # max share of retrieve budget for facts
   config.zero_mem_trace_store = :memory    # or :active_record in Rails apps
 end
@@ -176,15 +172,9 @@ memory.consolidate!
 context = memory.retrieve("Which database does Atlas use?")
 fused = memory.retrieve_fused("Which database does Atlas use?")  # HybridResult + ranked_trace_ids
 evidence = memory.retrieve_evidence("Which database does Atlas use?", explain: true)
-
-# Explicit generative ops raise in strict :zero_mem
-# Llmemory.configure { |c| c.memory_mode = :zero_mem }
-# memory.consolidate!  # => Llmemory::GenerativeOperationDisabled
 ```
 
-CLI: `llmemory zero-mem traces USER`, `status`, `reindex`, `search USER "query"`. MCP: `memory_retrieve` (text, same as before) and `memory_retrieve_evidence` (structured JSON + context).
-
-Rollout: enable `zero_mem_shadow_write` while staying on `:classic` for reads; see [docs/zero_mem_limitations.md](docs/zero_mem_limitations.md). Benchmarks: [benchmarks/zero_mem/README.md](benchmarks/zero_mem/README.md).
+CLI: `llmemory zero-mem traces USER`, `status`, `reindex`, `search USER "query"`. MCP: `memory_retrieve` (text) and `memory_retrieve_evidence` (structured JSON + context). See [docs/zero_mem_limitations.md](docs/zero_mem_limitations.md) and [benchmarks/zero_mem/README.md](benchmarks/zero_mem/README.md).
 
 ## Consolidation policy
 

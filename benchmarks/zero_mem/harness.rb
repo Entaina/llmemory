@@ -6,6 +6,7 @@ require_relative "reader"
 require_relative "variants"
 require "json"
 require File.expand_path("../local/scorers/date_normalizer", __dir__)
+require File.expand_path("../local/scorers/context_hit", __dir__)
 require File.expand_path("../local/bench_trace", __dir__)
 
 # Load fixture helpers from spec support (benchmark-only; not part of the gem).
@@ -58,7 +59,7 @@ module ZeroMemBenchmark
           user_id: user_id,
           session_id: "zm0_session",
           trace_store: trace_store,
-          memory_mode: :zero_mem
+          memory_mode: :hybrid
         )
       when :hybrid
         trace_store = Llmemory::ZeroMem::Storages::Memory.new
@@ -86,7 +87,7 @@ module ZeroMemBenchmark
         Llmemory::Memory.new(
           user_id: user_id,
           session_id: "zm0_session",
-          memory_mode: :classic,
+          memory_mode: :hybrid,
           long_term: long_term,
           retrieval_engine: Llmemory::Retrieval::Engine.new(long_term, llm: llm)
         )
@@ -94,11 +95,9 @@ module ZeroMemBenchmark
     end
 
     def assert_variant_memory_mode!(memory)
-      expected = @variant_opts[:mode]
-      actual = memory.memory_mode
-      return if actual == expected
+      return if memory.memory_mode == :hybrid
 
-      raise ArgumentError, "variant #{@variant} expected memory_mode #{expected.inspect}, got #{actual.inspect}"
+      raise ArgumentError, "variant #{@variant} expected memory_mode :hybrid, got #{memory.memory_mode.inspect}"
     end
 
     def zero_mem_variant?
@@ -261,7 +260,8 @@ module ZeroMemBenchmark
         gold_answer: query["gold_answer"],
         gold_answers: query["gold_answers"],
         prediction: answer_text,
-        retrieval_hit: retrieval_hit_for_row(conversation, query, turns),
+        retrieval_hit: (ctx_hit = context_hit_for_row(conversation, query, turns)),
+        context_hit: ctx_hit,
         localization: loc,
         answer: answer_metrics,
         cost: {
@@ -343,24 +343,21 @@ module ZeroMemBenchmark
     def retrieval_hit_for_row(conversation, query, turns)
       return nil if retrieval_hit_not_applicable?(conversation)
 
-      retrieval_hit?(@last_context, query, turns)
+      context_hit_for_row(conversation, query, turns)
+    end
+
+    def context_hit_for_row(conversation, query, turns)
+      return nil if retrieval_hit_not_applicable?(conversation)
+
+      LocalBenchmark::Scorers::ContextHit.hit?(
+        context: @last_context,
+        query: query,
+        turns: turns
+      )
     end
 
     def retrieval_hit_not_applicable?(conversation)
-      conversation["workload_class"].to_s == "memsyco"
-    end
-
-    def retrieval_hit?(context, query, turns)
-      refs = Array(query["gold_answers"])
-      refs = [query["gold_answer"]] if refs.empty?
-      return true if refs.any? { |gold| LocalBenchmark::Scorers::DateNormalizer.calendar_mentioned?(context, gold) }
-
-      ctx = LocalBenchmark::Scorers::DateNormalizer.normalize_text(context)
-
-      Array(query["gold_trace_ids"]).any? do |tid|
-        content = LocalBenchmark::Scorers::DateNormalizer.normalize_text(turns[tid]&.dig("content"))
-        !content.empty? && ctx.include?(content)
-      end
+      !LocalBenchmark::Scorers::ContextHit.applicable?(conversation)
     end
 
     def rank_trace_ids_in_context(context, turns, query)

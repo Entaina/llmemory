@@ -22,4 +22,19 @@ RSpec.describe LocalBenchmark::Report do
       expect(agg[:mean]).to eq(1.0)
     end
   end
+
+  describe ".enrich with eval context" do
+    it "exposes only context_hit, localization, and extraction_yield in bench_scores" do
+      report = {
+        rows: [{ context_hit: true, extraction_yield: { consolidate_sessions: 1, items_added: 2, empty_extractions: 0, parse_failures: 0 } }],
+        means: { localization: { "recall@5" => 0.8 } }
+      }
+      enriched = described_class.enrich(report, bench: "locomo", eval: "context")
+      expect(enriched[:eval]).to eq("context")
+      expect(enriched[:bench_scores].keys).to contain_exactly(:context_hit, :localization, :extraction_yield)
+      expect(enriched[:bench_scores][:context_hit][:mean]).to eq(1.0)
+      expect(enriched[:bench_scores][:localization]["recall@5"]).to eq(0.8)
+      expect(enriched[:bench_scores]).not_to have_key(:locomo_f1)
+    end
+  end
 end

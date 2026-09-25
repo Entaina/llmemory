@@ -10,14 +10,28 @@ module LocalBenchmark
   module Report
     module_function
 
-    def enrich(report, bench:, judge: nil, use_judge: false)
+    def enrich(report, bench:, judge: nil, use_judge: false, eval: nil)
       rows = Array(report[:rows])
-      bench_scores = bench_metrics(bench, rows, judge: judge, use_judge: use_judge)
-      report.merge(
+      bench_scores = if eval.to_s == "context"
+                       context_bench_metrics(rows, report)
+                     else
+                       bench_metrics(bench, rows, judge: judge, use_judge: use_judge)
+                     end
+      out = report.merge(
         bench: bench,
         bench_scores: bench_scores,
-        disclaimer: disclaimer_for(bench, use_judge: use_judge)
+        disclaimer: disclaimer_for(bench, use_judge: use_judge, eval: eval)
       )
+      out[:eval] = eval.to_s if eval
+      out
+    end
+
+    def context_bench_metrics(rows, report)
+      {
+        context_hit: context_hit_aggregate(rows),
+        localization: report.dig(:means, :localization) || {},
+        extraction_yield: extraction_yield_aggregate(rows)
+      }
     end
 
     def bench_metrics(bench, rows, judge:, use_judge:)
@@ -171,6 +185,17 @@ module LocalBenchmark
       }
     end
 
+    def context_hit_aggregate(rows)
+      hits = rows.map { |r| r[:context_hit] || r[:retrieval_hit] }.compact
+      return { mean: nil, count: 0, not_applicable: rows.size - hits.size } if hits.empty?
+
+      {
+        mean: hits.count(true).to_f / hits.size,
+        count: hits.size,
+        not_applicable: rows.count { |r| (r[:context_hit] || r[:retrieval_hit]).nil? }
+      }
+    end
+
     def mean(values)
       vals = Array(values).compact
       return nil if vals.empty?
@@ -178,8 +203,12 @@ module LocalBenchmark
       vals.sum / vals.size
     end
 
-    def disclaimer_for(bench, use_judge:)
+    def disclaimer_for(bench, use_judge: false, eval: nil)
       parts = ["Local LM Studio run; not comparable to cloud paper numbers."]
+      if eval.to_s == "context"
+        parts << "Context-only eval: context_hit (no LLM reader or judge)."
+        return parts.join(" ")
+      end
       parts << "LLM-as-judge uses the same local model." if use_judge
       parts << "LoCoMo F1 follows snap-research token F1 protocol." if bench.to_s == "locomo"
       parts.join(" ")

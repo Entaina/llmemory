@@ -78,7 +78,6 @@ module Llmemory
                   :zero_mem_pagerank_damping,
                   :zero_mem_graph_weight,
                   :zero_mem_ner_http_url,
-                  :memory_mode,
                   :zero_mem_ttl_days,
                   :zero_mem_sidecar_timeout_seconds,
                   :zero_mem_sidecar_failure_threshold,
@@ -178,10 +177,18 @@ module Llmemory
       @long_trace_strategy = :split
     end
 
+    def memory_mode
+      @memory_mode
+    end
+
+    def memory_mode=(mode)
+      @memory_mode = ZeroMem::Mode.normalize(mode)
+    end
+
     def validate!
       mode = @memory_mode.to_sym
       unless ZeroMem::Mode.valid?(mode)
-        raise ConfigurationError, "memory_mode must be :classic, :zero_mem, or :hybrid (got #{@memory_mode.inspect})"
+        raise ConfigurationError, "memory_mode must be :hybrid (got #{@memory_mode.inspect})"
       end
 
       rho = zero_mem_graph_weight.to_f

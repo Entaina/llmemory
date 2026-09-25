@@ -3,27 +3,27 @@
 module Llmemory
   module ZeroMem
     module Mode
-      MODES = %i[classic zero_mem hybrid].freeze
+      MODE = :hybrid
 
       module_function
 
       def valid?(mode)
-        MODES.include?(mode.to_sym)
+        mode.to_sym == MODE
       end
 
       def normalize(mode)
-        sym = (mode || :classic).to_sym
+        sym = (mode || MODE).to_sym
         raise Llmemory::ConfigurationError, "invalid memory_mode: #{mode.inspect}" unless valid?(sym)
 
         sym
       end
 
-      def zero_mem_enabled?(mode)
-        %i[zero_mem hybrid].include?(normalize(mode))
+      def zero_mem_enabled?(_mode = MODE)
+        true
       end
 
-      def zero_mem_strict?(mode)
-        normalize(mode) == :zero_mem
+      def zero_mem_strict?(_mode = MODE)
+        false
       end
     end
   end

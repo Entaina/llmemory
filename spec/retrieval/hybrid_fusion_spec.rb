@@ -120,6 +120,76 @@ RSpec.describe Llmemory::Retrieval::HybridFusion do
     expect(result.items.map { |item| item[:text] }.join(" ")).to include("Boreal")
   end
 
+  it "keeps a trace when the corroborating fact omits a query term present in the trace" do
+    profile_research = Llmemory::ZeroMem::QueryProfiler.new.profile(
+      "What did Caroline research?",
+      language: :en
+    )
+    classic = [
+      {
+        id: "f1",
+        text: "Caroline chose an adoption agency",
+        score: 0.9,
+        kind: :fact,
+        provenance: { sources: [{ type: "trace", id: "t1" }] }
+      }
+    ]
+    evidence_set = Llmemory::ZeroMem::EvidenceSet.new(
+      route: :hierarchy,
+      profile: profile_research,
+      evidence: [
+        evidence_row(
+          trace_id: "t1",
+          content: "Caroline researched adoption agencies for LGBTQ+ family planning.",
+          score: 0.85
+        )
+      ],
+      metrics: {}
+    )
+
+    result = fusion.fuse(classic_candidates: classic, evidence_set: evidence_set, max_tokens: 500)
+    expect(result.items.map { |i| i[:kind] }).to include(:trace)
+    expect(result.to_context).to include("adoption agencies")
+  end
+
+  it "packs a trace whose wording beats a paraphrased corroborating fact" do
+    profile_research = Llmemory::ZeroMem::QueryProfiler.new.profile(
+      "What did Caroline research?",
+      language: :en
+    )
+    filler = Array.new(8) do |i|
+      evidence_row(
+        trace_id: "fill#{i}",
+        content: "Caroline and Melanie chatted about painting and family time again #{i}.",
+        score: 0.85 - (i * 0.01)
+      )
+    end
+    classic = [
+      {
+        id: "f1",
+        text: "Caroline plans to do research on a topic not yet specified",
+        score: 0.95,
+        kind: :fact,
+        provenance: { sources: [{ type: "trace", id: "t_research" }] }
+      }
+    ]
+    evidence_set = Llmemory::ZeroMem::EvidenceSet.new(
+      route: :hierarchy,
+      profile: profile_research,
+      evidence: filler + [
+        evidence_row(
+          trace_id: "t_research",
+          content: "Caroline researched adoption agencies for LGBTQ+ family planning.",
+          score: 0.1
+        )
+      ],
+      metrics: {}
+    )
+
+    result = fusion.fuse(classic_candidates: classic, evidence_set: evidence_set, max_tokens: 450)
+    expect(result.to_context).to include("adoption agencies")
+  end
+
   it "keeps trace evidence for temporal queries" do
     classic = [
       {

@@ -29,7 +29,7 @@ module LocalBenchmark
       def initialize(argv)
         @options = {
           bench: "fixtures",
-          variant: :classic,
+          variant: :hybrid,
           limit: nil,
           out: ENV.fetch("LLMEMORY_BENCH_OUT", DEFAULT_OUT),
           skip_health: false,
@@ -38,7 +38,8 @@ module LocalBenchmark
           conversations: nil,
           per_conversation: nil,
           seed: ENV["LLMEMORY_BENCH_SEED"],
-          stratify: nil
+          stratify: nil,
+          eval: nil
         }
         parse!(argv)
       end
@@ -83,7 +84,12 @@ module LocalBenchmark
           reader: reader
         )
         report = harness.run!(conversations: conversations)
-        report = Report.enrich(report, bench: @options[:bench], use_judge: @options[:use_judge])
+        report = Report.enrich(
+          report,
+          bench: @options[:bench],
+          use_judge: @options[:use_judge],
+          eval: @options[:eval]
+        )
         report[:lm_studio] = profile_meta if profile_meta
         report[:generated_at] = Time.now.utc.iso8601
         report[:sampling] = sampled[:sampling]
@@ -100,7 +106,7 @@ module LocalBenchmark
         OptionParser.new do |opts|
           opts.banner = "Usage: bundle exec ruby benchmarks/local/runners/run.rb [options]"
           opts.on("--bench NAME", "Benchmark id (#{Registry::BENCHES.keys.join(', ')})") { |v| @options[:bench] = v }
-          opts.on("--variant NAME", "classic|zero_mem_full|...") { |v| @options[:variant] = v.to_sym }
+          opts.on("--variant NAME", "hybrid") { |v| @options[:variant] = v.to_sym }
           opts.on("--limit N", Integer, "Max queries (smoke)") { |v| @options[:limit] = v }
           opts.on("--conversations N", Integer, "Stratified sample: number of conversations") { |v| @options[:conversations] = v }
           opts.on("--per-conversation Q", Integer, "Stratified sample: queries per conversation") { |v| @options[:per_conversation] = v }
@@ -110,6 +116,7 @@ module LocalBenchmark
           opts.on("--reader MODE", "deterministic|llm") { |v| @options[:reader] = v.to_sym }
           opts.on("--use-judge", "Run local LLM judge (extra tokens)") { @options[:use_judge] = true }
           opts.on("--skip-health", "Skip LM Studio /v1/models check") { @options[:skip_health] = true }
+          opts.on("--eval MODE", "full (default) or context (gold-in-context only)") { |v| @options[:eval] = v }
         end.parse!(argv)
       end
 

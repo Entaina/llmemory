@@ -38,6 +38,7 @@ module Llmemory
         seed_trace_ids = (top_turns.flat_map(&:member_trace_ids) + recent_trace_ids(user_id)).uniq
         neighbor_trace_ids = expand_local_neighbors(user_id, seed_trace_ids, top_turns) - seed_trace_ids
         ordered_ids = (seed_trace_ids + neighbor_trace_ids).uniq
+        ordered_ids = prepend_specific_research_trace_ids(user_id, profile, ordered_ids)
         traces = ordered_ids.map { |id| @storage.get_trace(user_id, id) }.compact
 
         {
@@ -86,7 +87,9 @@ module Llmemory
         boundary = profile.boundary ? 0.1 : 0.0
         answer = 0.05
         short_penalty = Llmemory::Tokenizer.tokenize(doc[:text]).size < 4 ? -0.15 : 0.0
-        bm25 + phrase + subject + temporal + boundary + answer + short_penalty
+        specificity = attribute_specificity_boost(profile, doc[:text])
+        month_window = month_window_boost(profile, unit)
+        bm25 + phrase + subject + temporal + boundary + answer + short_penalty + specificity + month_window
       end
 
       def score_unit(query, profile, unit)
@@ -121,11 +124,52 @@ module Llmemory
         profile.subject_entities.count { |e| down.include?(e.downcase) } * 0.15
       end
 
+      GENERIC_RESEARCH = /\b(?:go|do)\s+(?:some\s+)?research\b/i.freeze
+      SPECIFIC_RESEARCH = /\bresearching\s+[\p{L}]{3,}/i.freeze
+
+      def attribute_specificity_boost(profile, text)
+        return 0.0 unless profile.workload_class == :local_fact
+        return 0.0 unless Array(profile.rule_ids).include?("attribute_fact_cue")
+
+        down = text.to_s
+        return 0.35 if down.match?(SPECIFIC_RESEARCH)
+        return -0.25 if down.match?(GENERIC_RESEARCH)
+
+        0.0
+      end
+
+      def prepend_specific_research_trace_ids(user_id, profile, ordered_ids)
+        return ordered_ids unless profile.workload_class == :local_fact
+        return ordered_ids unless Array(profile.rule_ids).include?("attribute_fact_cue")
+
+        specific_id = @storage.list_traces(user_id).find { |t| t.content.to_s.match?(SPECIFIC_RESEARCH) }&.id
+        return ordered_ids unless specific_id
+
+        ([specific_id] + ordered_ids).uniq
+      end
+
       def temporal_boost(profile, unit)
         return 0.0 unless profile.freshness_requirement
 
         age = Time.now - unit.occurred_to
         1.0 / (1.0 + (age / 86_400.0))
+      end
+
+      COUNT_MONTHS = %w[
+        january february march april may june july august september october november december
+      ].freeze
+
+      def month_window_boost(profile, unit)
+        return 0.0 unless Array(profile.aggregation_cues).any?
+        return 0.0 unless unit.respond_to?(:occurred_to) && unit.occurred_to
+
+        cues = Array(profile.temporal_cues).map(&:to_s).map(&:downcase)
+        indices = cues.filter_map { |cue| COUNT_MONTHS.index(cue) }.map { |i| i + 1 }
+        return 0.0 if indices.size < 2
+
+        month = unit.occurred_to.month
+        lo, hi = indices.minmax
+        month.between?(lo, hi) ? 0.22 : -0.08
       end
 
       def recent_trace_ids(user_id, limit: 2)

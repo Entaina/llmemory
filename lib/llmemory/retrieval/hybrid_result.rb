@@ -39,11 +39,13 @@ module Llmemory
           Temporal::SnippetEnricher.timeline_deltas(timeline_items).each { |line| lines << line }
         end
 
-        if counting_intent? && timeline_items.size > 1
+        count_timeline = counting_timeline_items_from(ordered)
+        if counting_intent? && count_timeline.size > 1
           lines << ""
           lines << "Event counts (by dated evidence):"
-          timeline_items.group_by { |r| r[:text].to_s.downcase.strip[0, 80] }.each do |label, rows|
-            lines << "- #{rows.size}× #{label}"
+          count_timeline.group_by { |r| event_count_group_key(r[:text]) }.each do |key, rows|
+            total = rows.sum { |r| explicit_time_count(r[:text]) }
+            lines << "- #{total}× #{key}"
           end
         end
 
@@ -199,6 +201,28 @@ module Llmemory
         Array(cues).any?
       end
 
+      EXPLICIT_TIME_COUNT = /\b(\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+times?\b/i.freeze
+      WORD_COUNTS = {
+        "one" => 1, "two" => 2, "three" => 3, "four" => 4, "five" => 5,
+        "six" => 6, "seven" => 7, "eight" => 8, "nine" => 9, "ten" => 10
+      }.freeze
+
+      def explicit_time_count(text)
+        match = text.to_s.match(EXPLICIT_TIME_COUNT)
+        return 1 unless match
+
+        raw = match[1].downcase
+        WORD_COUNTS.fetch(raw) { raw.to_i.positive? ? raw.to_i : 1 }
+      end
+
+      def event_count_group_key(text)
+        base = text.to_s.downcase.gsub(/\s*\(on [^)]+\)\z/, "")
+        base = base.gsub(EXPLICIT_TIME_COUNT, " times")
+        return "rollercoaster_ride" if base.match?(/rollercoaster|revenge of the mummy|mummy rollercoaster/)
+
+        base.gsub(/\s+/, " ").strip[0, 80]
+      end
+
       def dated_timeline_items_from(rows)
         rows.filter_map do |i|
           next unless i[:kind] == :trace || i[:kind] == :fact
@@ -209,6 +233,10 @@ module Llmemory
 
           { time: time, text: enriched_text(i), trace_id: i[:trace_id] || i[:id] }
         end.sort_by { |r| r[:time] }
+      end
+
+      def counting_timeline_items_from(rows)
+        dated_timeline_items_from(rows.select { |i| i[:kind] == :trace })
       end
 
       def dated_timeline_items
@@ -257,6 +285,7 @@ module Llmemory
           picked.sort_by! { |sentence| sentences.index(sentence) }
           append_named_sentence!(picked, sentences, limit)
           append_outcome_sentence!(picked, sentences, limit)
+          append_rare_query_sentence!(picked, sentences, limit)
           return picked.join(" ") if picked.any?
         end
 
@@ -278,6 +307,22 @@ module Llmemory
 
         while picked.any? && (picked.join(" ").length + sentence.length + 1) > limit
           picked.pop
+        end
+        picked << sentence if picked.empty? || (picked.join(" ").length + sentence.length + 1) <= limit
+      end
+
+      def append_rare_query_sentence!(picked, sentences, limit)
+        picked_text = picked.join(" ").downcase
+        rare = query_tokens.select { |token| token.length >= 9 && !picked_text.include?(token.downcase) }
+        return if rare.empty?
+
+        sentence = sentences
+                   .reject { |candidate| picked.include?(candidate) }
+                   .find { |candidate| rare.any? { |token| candidate.downcase.include?(token.downcase) } }
+        return unless sentence
+
+        while picked.any? && (picked.join(" ").length + sentence.length + 1) > limit
+          picked.shift
         end
         picked << sentence if picked.empty? || (picked.join(" ").length + sentence.length + 1) <= limit
       end

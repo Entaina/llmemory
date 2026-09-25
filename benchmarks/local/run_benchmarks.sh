@@ -36,7 +36,7 @@ BENCHES=(
 if [[ -n "${SUITE_DIAG_VARIANTS:-}" ]]; then
   read -ra SUITE_DIAG_VARIANTS <<< "${SUITE_DIAG_VARIANTS}"
 else
-  SUITE_DIAG_VARIANTS=(classic zero_mem_full hybrid)
+  SUITE_DIAG_VARIANTS=(hybrid)
 fi
 # Default suite excludes memory_arena (needs arena_match scorer, not substring EM on JSON gold).
 SUITE_DIAG_BENCHES="${SUITE_DIAG_BENCHES:-fixtures locomo longmemeval memoryagentbench locomo_plus memsyco groupmembench mem2act}"
@@ -109,6 +109,7 @@ Commands:
   suite-smoke       Run smoke limits on every bench that has dataset env set
   suite-diag        Diagnostic limits × variants (needs LM Studio; prefer step)
   step BENCH        Hybrid mini slice (fix issues before scaling up)
+  step-context BENCH  Same sample as step; context_hit only (deterministic reader, no judge)
   step-cycle        smoke + all hybrid steps + summarize_cycle.rb
   step-plan         Print recommended step order (hybrid only)
   baseline          Reference run (LoCoMo×3, LongMemEval×3, hybrid on other benches)
@@ -175,6 +176,33 @@ cmd_run() {
     }
 }
 
+cmd_context_run() {
+  if [[ $# -lt 1 ]]; then
+    echo "Usage: $0 step-context BENCH [extra run.rb options]" >&2
+    exit 1
+  fi
+  local bench="$1"
+  shift
+  apply_lmstudio_defaults
+  mkdir -p "$RESULTS_DIR"
+  local out="${LLMEMORY_BENCH_OUT:-$RESULTS_DIR/${bench}__hybrid__context_${TIMESTAMP}.json}"
+  local timeout_secs="${SUITE_DIAG_BENCH_TIMEOUT:-3600}"
+  timeout "$timeout_secs" "${RUNNER[@]}" \
+    --bench "$bench" \
+    --reader deterministic \
+    --eval context \
+    --out "$out" \
+    "$@" \
+    || {
+      ec=$?
+      if [[ $ec -eq 124 ]]; then
+        echo "WARN: bench $bench timed out after ${timeout_secs}s" >&2
+        exit 124
+      fi
+      exit "$ec"
+    }
+}
+
 bench_dataset_ready() {
   local bench="$1"
   case "$bench" in
@@ -218,7 +246,7 @@ cmd_suite_smoke() {
     fi
     limit="$(smoke_limit_for "$bench")"
     echo "=== suite-smoke: $bench (limit=$limit) ==="
-    cmd_run "$bench" --limit "$limit" --variant classic || echo "WARN: $bench run failed"
+    cmd_run "$bench" --limit "$limit" --variant hybrid || echo "WARN: $bench run failed"
   done
   echo "Done. Results in $RESULTS_DIR/"
 }
@@ -367,6 +395,77 @@ cmd_step() {
   fi
 }
 
+cmd_step_context() {
+  local bench="${1:-}"
+  shift || true
+  if [[ -z "$bench" ]]; then
+    echo "Usage: $0 step-context BENCH [extra run.rb options]" >&2
+    exit 1
+  fi
+  apply_lmstudio_defaults
+  check_lmstudio
+  if ! bench_dataset_ready "$bench"; then
+    echo "Skip $bench (dataset env not set)" >&2
+    exit 1
+  fi
+
+  apply_hybrid_step_env
+  mkdir -p "$RESULTS_DIR"
+  local out="${LLMEMORY_BENCH_OUT:-$RESULTS_DIR/${bench}__hybrid__context_${TIMESTAMP}.json}"
+  local extra=(--variant hybrid)
+  case "$bench" in
+    locomo)
+      export SUITE_DIAG_BENCH_TIMEOUT="${STEP_BENCH_TIMEOUT:-1800}"
+      extra+=(
+        --stratify category
+        --conversations "${STEP_CONVERSATIONS:-1}"
+        --per-conversation "${STEP_PER_CONV:-4}"
+        --seed "${LLMEMORY_BENCH_SEED}"
+      )
+      echo "LoCoMo step-context: ${LOCOMO_MAX_SESSIONS} sessions, ${STEP_PER_CONV:-4} queries (consolidate per session)"
+      ;;
+    longmemeval)
+      extra+=(
+        --stratify question_type
+        --limit "${STEP_LIMIT:-3}"
+        --seed "${LLMEMORY_BENCH_SEED}"
+      )
+      ;;
+    locomo_plus)
+      export STEP_MAX_SESSIONS="${LOCOMO_PLUS_MAX_SESSIONS:-4}"
+      export LOCOMO_MAX_SESSIONS="$STEP_MAX_SESSIONS"
+      extra+=(--limit "${STEP_LIMIT:-5}")
+      ;;
+    memsyco)
+      export MEMSYCO_TASK="${MEMSYCO_TASK:-all}"
+      extra+=(--limit "${STEP_LIMIT:-5}")
+      ;;
+    groupmembench)
+      export SUITE_DIAG_BENCH_TIMEOUT="${STEP_BENCH_TIMEOUT:-2400}"
+      export GROUPMEMBENCH_MAX_TURNS="${GROUPMEMBENCH_MAX_TURNS:-120}"
+      extra+=(--limit "${STEP_LIMIT:-3}")
+      ;;
+    *)
+      extra+=(--limit "${STEP_LIMIT:-5}")
+      ;;
+  esac
+
+  local trace_log="$RESULTS_DIR/step_context_trace_${TIMESTAMP}.log"
+  export LLMEMORY_BENCH_TRACE_FILE="$trace_log"
+  echo "=== step-context: $bench hybrid (out=$out) trace=$trace_log ==="
+  export LLMEMORY_BENCH_OUT="$out"
+  if cmd_context_run "$bench" "${extra[@]}" "$@"; then
+    unset LLMEMORY_BENCH_OUT LLMEMORY_BENCH_TRACE_FILE
+    echo "Summarize: bundle exec ruby benchmarks/local/scripts/summarize_run.rb $out"
+    bundle exec ruby benchmarks/local/scripts/summarize_run.rb "$out" || true
+  else
+    unset LLMEMORY_BENCH_OUT LLMEMORY_BENCH_TRACE_FILE
+    echo "Trace log (even on timeout): $trace_log" >&2
+    [[ -f "$trace_log" ]] && tail -30 "$trace_log" >&2
+    return 1
+  fi
+}
+
 cmd_baseline() {
   load_env
   apply_lmstudio_defaults
@@ -376,7 +475,7 @@ cmd_baseline() {
   export LLMEMORY_BENCH_SEED="${LLMEMORY_BENCH_SEED:-baseline}"
   export MEMSYCO_TASK="${MEMSYCO_TASK:-all}"
   local variant run_ts="${TIMESTAMP}"
-  for variant in classic zero_mem_full hybrid; do
+  for variant in hybrid; do
     echo "=== baseline: locomo variant=$variant ==="
     export LLMEMORY_BENCH_OUT="$RESULTS_DIR/locomo__${variant}__baseline_${run_ts}.json"
     cmd_run locomo --variant "$variant" \
@@ -385,7 +484,7 @@ cmd_baseline() {
       || echo "WARN: locomo $variant baseline failed"
     unset LLMEMORY_BENCH_OUT
   done
-  for variant in classic zero_mem_full hybrid; do
+  for variant in hybrid; do
     echo "=== baseline: longmemeval variant=$variant ==="
     export LLMEMORY_BENCH_OUT="$RESULTS_DIR/longmemeval__${variant}__baseline_${run_ts}.json"
     cmd_run longmemeval --variant "$variant" \
@@ -494,6 +593,7 @@ main() {
     step-plan) cmd_step_plan ;;
     step-cycle) cmd_step_cycle ;;
     step) cmd_step "$@" ;;
+    step-context) cmd_step_context "$@" ;;
     *)
       echo "Unknown command: $cmd" >&2
       cmd_help

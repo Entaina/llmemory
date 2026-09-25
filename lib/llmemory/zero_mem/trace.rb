@@ -54,7 +54,7 @@ module Llmemory
         if Llmemory.configuration.message_sanitizer_enabled
           sanitizer = Llmemory::ShortTerm::MessageSanitizer.new
           sanitized = sanitizer.sanitize!([{ role: :user, content: text }])
-          text = sanitized.first[:content].to_s
+          text = sanitized.first&.[](:content).to_s
         end
 
         text

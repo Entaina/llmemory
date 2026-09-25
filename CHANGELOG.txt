@@ -27,6 +27,10 @@
 
 ## [Unreleased]
 
+### Changed
+
+- Memory always fuses traces and long-term facts. `memory_mode` only accepts `:hybrid`; `:classic` and `:zero_mem` are rejected.
+
 ### Added
 
 - **Benchmark harness (plan 2026-09-23).** MemoryAgentBench parallel `questions`/`answers` zip with
@@ -42,7 +46,11 @@
 - **Dates.** A month and day without a year, such as "before July 18", is annotated with the message year in `YYYY-MM-DD`. A relative word in the same sentence, such as "today", does not overwrite that date. A date that already names the year is left as written.
 - **Snippets.** A long turn keeps the sentence that covers the most still-unmatched question terms, so a later quote is not crowded out by an earlier mention of the same topic.
 - **Context order.** A fact no longer leads the context when it names a different date, or a different proper name, than the trace that best matches the question. A fact that quotes the same name or date stays with that trace.
-- **Hybrid retrieval.** A corroborated fact no longer replaces its source trace when the fact omits a proper name that the trace states. Long snippets keep a later sentence that names an entity the earlier matches left out, and a later sentence that states a new claim about a name already included. Hierarchy ranking scores long turns by the sentences that match the query. Current-state packing still keeps undated seed turns instead of dropping every trace whose time was inferred.
+- **Hybrid retrieval.** A corroborated fact no longer replaces its source trace when the fact omits a proper name that the trace states, or when it omits a query keyword (length ≥ 4) that the trace still contains. Hybrid fusion also keeps and prioritizes a trace when corroborating facts miss at least two of its content terms (or any query keyword), so paraphrases like “adoption agency” do not evict “adoption agencies”. Long snippets keep a later sentence that names an entity the earlier matches left out, and a later sentence that states a new claim about a name already included. Hierarchy ranking scores long turns by the sentences that match the query. Current-state packing still keeps undated seed turns instead of dropping every trace whose time was inferred.
+- **Counting context.** For how-many questions, the dated “Event counts” block sums explicit quantities next to “time(s)” (digits or number words) per event label instead of counting one per trace row.
+- **Attribute “research” questions.** Hierarchy retrieval boosts “researching …” over generic “go do research” and prepends a specific research trace for local_fact attribute queries, so answers like adoption agencies are not drowned out by vague research mentions.
+- **Counting and quotes.** Event counts sum only dated traces and merge rollercoaster rides under one label; hierarchy retrieval favors units whose month falls inside a stated July–October (etc.) window on how-many questions; long snippets keep sentences that contain rare query terms (e.g. “circumference”).
+- **Bench retrieval_hit.** LongMemEval-style gold with a quoted span counts as a hit when the assembled context contains that span verbatim, even if the surrounding attribution wording differs (e.g. “Borges notes, …” vs “According to Borges, …”).
 - **Person questions.** A "who" question prefers rows that name the subject, and long snippets keep a later sentence when it covers a query word the first sentence missed.
 - **MemoryAgentBench sampling.** When the session cap drops a long document, keep the sessions that overlap the questions that will actually be asked, instead of the document prefix or the other questions in the file.
 - **Counting questions.** Month names are not entities, so "how many … from July to October" stays temporal and asks for a larger evidence set. Lexical match folds plurals and `rode`/`ride`. The LoCoMo session cap no longer drops LongMemEval answer sessions.

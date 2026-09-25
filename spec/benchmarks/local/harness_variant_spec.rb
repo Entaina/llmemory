@@ -13,14 +13,6 @@ RSpec.describe LocalBenchmark::Harness do
 
   before { Llmemory.reset_configuration! }
 
-  it "builds classic memory with memory_mode :classic" do
-    harness = described_class.new(variant: :classic, reader: ZeroMemBenchmark::Reader.new)
-    memory = harness.send(:build_memory, conversation)
-    harness.send(:assert_variant_memory_mode!, memory)
-    expect(memory.memory_mode).to eq(:classic)
-    expect(memory.trace_store).to be_nil
-  end
-
   it "builds hybrid memory with memory_mode :hybrid" do
     harness = described_class.new(variant: :hybrid, reader: ZeroMemBenchmark::Reader.new)
     memory = harness.send(:build_memory, conversation)

@@ -10,7 +10,7 @@ RSpec.describe "Zero-Mem local ablation" do
       user_id: user_id,
       session_id: "s1",
       trace_store: storage,
-      memory_mode: :zero_mem
+      memory_mode: :hybrid
     )
     turn_to_trace = {}
     Array(conv["sessions"]).each do |session|

@@ -52,14 +52,6 @@ module Llmemory
           disabled: []
         }
 
-        if @memory&.zero_mem_strict?
-          report[:disabled] = %i[consolidate reflect mine]
-          report[:consolidated] = false
-          step(report, :zero_mem_repair) { report[:zero_mem] = zero_mem_repair } if @memory.trace_store
-          step(report, :expire) { report[:expired] = expire } if @expire
-          return report
-        end
-
         step(report, :consolidate) { report[:consolidated] = consolidate } if @memory
         step(report, :reflect)     { report[:insights] = reflect } if @reflect
         step(report, :mine)        { report[:mined] = mine } if @mine_skills

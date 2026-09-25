@@ -10,7 +10,7 @@ RSpec.describe "Zero-Mem CI gates" do
       user_id: user_id,
       session_id: "s1",
       trace_store: trace_store,
-      memory_mode: :zero_mem
+      memory_mode: :hybrid
     )
   end
 
